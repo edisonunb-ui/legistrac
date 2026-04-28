@@ -2,15 +2,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { useUser, useAuthInstance } from "@/firebase";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { useUser, useAuthInstance, useFirestore } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutDashboard, Loader2 } from "lucide-react";
+import { LayoutDashboard, Loader2, Sparkles } from "lucide-react";
+import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -19,6 +20,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useUser();
   const auth = useAuthInstance();
+  const db = useFirestore();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -30,16 +32,50 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    
+    if (!auth || !db) {
+      toast({ title: "Erro", description: "Serviços não inicializados.", variant: "destructive" });
+      setSubmitting(false);
+      return;
+    }
+
     try {
-      if (!auth) throw new Error("Firebase Auth não inicializado.");
-      await signInWithEmailAndPassword(auth, email, password);
-      // O useEffect acima cuidará do redirecionamento
+      // Tenta logar
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (loginError: any) {
+        // Se o erro for usuário não encontrado, tenta registrar (comportamento de primeiro acesso)
+        if (loginError.code === "auth/user-not-found" || loginError.code === "auth/invalid-credential") {
+          toast({ title: "Primeiro Acesso", description: "Criando sua conta com as credenciais informadas..." });
+          
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          const newUser = userCredential.user;
+
+          // Define se é ADMIN com base no e-mail fornecido
+          const isAdmin = email.toLowerCase() === "edisonunb@gmail.com";
+
+          await setDoc(doc(db, "users", newUser.uid), {
+            uid: newUser.uid,
+            nome: email.split("@")[0],
+            email: email,
+            perfil: isAdmin ? "ADMIN" : "ASSESSOR",
+            ativo: true,
+            createdAt: serverTimestamp(),
+          });
+
+          toast({ title: "Sucesso", description: `Bem-vindo, ${isAdmin ? "Administrador" : "Assessor"}!` });
+        } else {
+          throw loginError;
+        }
+      }
     } catch (error: any) {
+      console.error(error);
       toast({
-        title: "Erro no Login",
-        description: "Verifique suas credenciais e tente novamente.",
+        title: "Erro no Acesso",
+        description: "Verifique suas credenciais. Se for seu primeiro acesso, use uma senha forte.",
         variant: "destructive",
       });
+    } finally {
       setSubmitting(false);
     }
   };
@@ -63,7 +99,7 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-3xl font-headline font-bold text-primary">LegisTrac</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Gestão Interna de Demandas de Gabinete
+            Gestão Interna de Gabinete
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
@@ -91,6 +127,9 @@ export default function LoginPage() {
                 required
                 disabled={submitting}
               />
+              <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1">
+                <Sparkles size={10} /> No primeiro acesso, a senha digitada será a sua definitiva.
+              </p>
             </div>
           </CardContent>
           <CardFooter>
@@ -98,10 +137,10 @@ export default function LoginPage() {
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Autenticando...
+                  Processando...
                 </>
               ) : (
-                "Entrar no Sistema"
+                "Entrar / Criar Conta"
               )}
             </Button>
           </CardFooter>

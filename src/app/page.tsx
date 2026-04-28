@@ -15,7 +15,8 @@ import {
   TrendingUp,
   PlusCircle,
   FileCheck,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -30,21 +31,25 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
-  // Monitorar perfil do usuário
   useEffect(() => {
-    if (!user || !db) {
-      if (!authLoading && !user) {
-        router.push("/login");
-      }
+    if (authLoading) return;
+    
+    if (!user) {
+      router.push("/login");
       return;
     }
+
+    if (!db) return;
 
     const unsubscribe = onSnapshot(doc(db, "users", user.uid), (snap) => {
       if (snap.exists()) {
         setProfile(snap.data() as UserProfile);
+      } else {
+        setProfile(null);
       }
       setProfileLoading(false);
-    }, () => {
+    }, (error) => {
+      console.error("Erro ao carregar perfil:", error);
       setProfileLoading(false);
     });
 
@@ -59,22 +64,44 @@ export default function Dashboard() {
     const now = new Date();
     return {
       totalAbertas: demands.filter((d: Demand) => d.status !== "FINALIZADO").length,
-      atrasadas: demands.filter((d: Demand) => d.status !== "FINALIZADO" && new Date(d.prazo) < now).length,
+      atrasadas: demands.filter((d: Demand) => d.status !== "FINALIZADO" && d.prazo && new Date(d.prazo) < now).length,
       minhas: demands.filter((d: Demand) => d.responsavelAtual === user.uid && d.status !== "FINALIZADO").length,
       aguardandoAdmin: demands.filter((d: Demand) => d.status === "AGUARDANDO_VEREADORA").length,
     };
   }, [demands, user]);
 
-  if (authLoading || profileLoading) {
+  if (authLoading || (user && profileLoading)) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground animate-pulse font-medium">Carregando LegisTrac...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background text-primary">
+        <Loader2 className="h-10 w-10 animate-spin mb-4" />
+        <p className="font-medium animate-pulse">Carregando gabinete...</p>
       </div>
     );
   }
 
   if (!user) return null;
+
+  // Se o usuário está logado mas o perfil ainda não existe (delay do Firestore ou erro)
+  if (!profile && !profileLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="max-w-md w-full border-destructive">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-2 text-destructive">
+              <AlertTriangle size={48} />
+            </div>
+            <CardTitle>Perfil Não Encontrado</CardTitle>
+            <CardDescription>
+              Sua conta foi criada, mas o perfil de dados ainda não está pronto. Tente atualizar a página.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            <Button onClick={() => window.location.reload()}>Recarregar Sistema</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const statCards = [
     { title: "Total em Aberto", value: stats.totalAbertas, icon: ClipboardList, color: "text-blue-600", bg: "bg-blue-100" },
@@ -170,7 +197,7 @@ export default function Dashboard() {
                             )}>
                               {demand.status.replace("_", " ")}
                             </Badge>
-                            <p className="text-[10px] text-muted-foreground mt-1">Prazo: {new Date(demand.prazo).toLocaleDateString()}</p>
+                            <p className="text-[10px] text-muted-foreground mt-1">Prazo: {demand.prazo ? new Date(demand.prazo).toLocaleDateString() : "S/P"}</p>
                           </div>
                         </div>
                       </Link>
