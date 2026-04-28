@@ -25,9 +25,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      if (!user) {
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      if (!firebaseUser) {
         setProfile(null);
         setLoading(false);
       }
@@ -43,7 +43,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const unsubscribeDoc = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         setProfile(docSnap.data() as UserProfile);
+      } else {
+        setProfile(null);
       }
+      setLoading(false);
+    }, (error) => {
+      console.error("Erro ao carregar perfil no Context:", error);
       setLoading(false);
     });
 

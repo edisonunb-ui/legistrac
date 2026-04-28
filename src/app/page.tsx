@@ -1,11 +1,12 @@
 
 "use client";
 
-import { useUser, useFirestore, useCollection } from "@/firebase";
+import { useFirestore, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useEffect, useMemo, useState } from "react";
-import { collection, query, orderBy, doc, onSnapshot } from "firebase/firestore";
-import { Demand, UserProfile } from "@/lib/types";
+import { useAuth } from "@/components/auth-context";
+import { useEffect, useMemo } from "react";
+import { collection, query, orderBy } from "firebase/firestore";
+import { Demand } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
   ClipboardList, 
@@ -25,36 +26,15 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
-  const { user, loading: authLoading } = useUser();
+  const { user, profile, loading } = useAuth();
   const db = useFirestore();
   const router = useRouter();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading) return;
-    
-    if (!user) {
+    if (!loading && !user) {
       router.push("/login");
-      return;
     }
-
-    if (!db) return;
-
-    const unsubscribe = onSnapshot(doc(db, "users", user.uid), (snap) => {
-      if (snap.exists()) {
-        setProfile(snap.data() as UserProfile);
-      } else {
-        setProfile(null);
-      }
-      setProfileLoading(false);
-    }, (error) => {
-      console.error("Erro ao carregar perfil:", error);
-      setProfileLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [user, db, authLoading, router]);
+  }, [user, loading, router]);
 
   const demandsQuery = useMemo(() => db ? query(collection(db, "demandas"), orderBy("dataCriacao", "desc")) : null, [db]);
   const { data: demands = [], loading: demandsLoading } = useCollection(demandsQuery);
@@ -70,7 +50,7 @@ export default function Dashboard() {
     };
   }, [demands, user]);
 
-  if (authLoading || (user && profileLoading)) {
+  if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-primary">
         <Loader2 className="h-10 w-10 animate-spin mb-4" />
@@ -81,8 +61,7 @@ export default function Dashboard() {
 
   if (!user) return null;
 
-  // Se o usuário está logado mas o perfil ainda não existe (delay do Firestore ou erro)
-  if (!profile && !profileLoading) {
+  if (!profile) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="max-w-md w-full border-destructive">
@@ -90,9 +69,10 @@ export default function Dashboard() {
             <div className="flex justify-center mb-2 text-destructive">
               <AlertTriangle size={48} />
             </div>
-            <CardTitle>Perfil Não Encontrado</CardTitle>
+            <CardTitle>Perfil Não Vinculado</CardTitle>
             <CardDescription>
-              Sua conta foi criada, mas o perfil de dados ainda não está pronto. Tente atualizar a página.
+              Sua conta de acesso foi criada, mas ainda não há um perfil de dados vinculado no sistema.
+              Isso pode acontecer se você for um novo usuário aguardando autorização.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">

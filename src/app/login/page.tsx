@@ -1,23 +1,30 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, AuthError } from "firebase/auth";
-import { useUser, useAuthInstance, useFirestore } from "@/firebase";
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut,
+  deleteUser
+} from "firebase/auth";
+import { useAuthInstance, useFirestore } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutDashboard, Loader2, ShieldCheck, AlertCircle } from "lucide-react";
-import { doc, setDoc, serverTimestamp, getDocs, collection, query, where, updateDoc } from "firebase/firestore";
+import { LayoutDashboard, Loader2, AlertCircle } from "lucide-react";
+import { doc, setDoc, serverTimestamp, getDocs, collection, query, where, updateDoc, deleteField } from "firebase/firestore";
+import { useAuth } from "@/components/auth-context";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
-  const { user, loading: authLoading } = useUser();
+  const { user, loading: authLoading } = useAuth();
   const auth = useAuthInstance();
   const db = useFirestore();
   const { toast } = useToast();
@@ -37,65 +44,59 @@ export default function LoginPage() {
     const isMaster = cleanEmail === "edisonunb@gmail.com";
 
     try {
-      if (!auth || !db) throw new Error("Erro de conexão.");
+      if (!auth || !db) throw new Error("Erro de conexão com o banco.");
 
+      // 1. Tenta login normal
       try {
-        // 1. Tenta login direto
         await signInWithEmailAndPassword(auth, cleanEmail, password);
       } catch (loginError: any) {
-        // 2. Se falhar, verifica se é um novo usuário autorizado
-        const q = query(collection(db, "users"), where("email", "==", cleanEmail));
-        const querySnapshot = await getDocs(q);
-        
-        let authorizedUser = null;
-        if (!querySnapshot.empty) {
-          authorizedUser = querySnapshot.docs[0].data();
-        }
-
-        // Bloqueia se não for você e não estiver pré-cadastrado
-        if (!isMaster && !authorizedUser) {
-          throw new Error("Este e-mail não tem permissão para acessar o sistema. Entre em contato com o administrador.");
-        }
-
-        if (authorizedUser && authorizedUser.ativo === false) {
-          throw new Error("Seu acesso foi desativado pelo administrador.");
-        }
-
-        // 3. Se autorizado ou for você, cria a conta no Auth
-        try {
+        // 2. Se falhar (usuário não encontrado), tenta criar conta (Primeiro Acesso)
+        if (loginError.code === "auth/user-not-found" || loginError.code === "auth/invalid-credential") {
+          
           const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
           const newUser = userCredential.user;
 
-          // Se já existia um placeholder criado pelo ADM, atualiza ele com o UID real
-          if (authorizedUser && querySnapshot.docs[0].id) {
-            await updateDoc(doc(db, "users", querySnapshot.docs[0].id), {
-              uid: newUser.uid,
-              ativo: true,
-              dataVinculo: serverTimestamp()
-            });
-          } else {
-            // Se for o mestre ou novo, cria o documento
-            await setDoc(doc(db, "users", newUser.uid), {
-              uid: newUser.uid,
-              nome: cleanEmail.split("@")[0],
-              email: cleanEmail,
-              perfil: isMaster ? "ADMIN" : "ASSESSOR",
-              ativo: true,
-              createdAt: serverTimestamp(),
-            });
+          // Agora que está autenticado, podemos ler o Firestore para verificar se é convidado
+          const q = query(collection(db, "users"), where("email", "==", cleanEmail));
+          const querySnapshot = await getDocs(q);
+          
+          let authorizedDoc = null;
+          if (!querySnapshot.empty) {
+            authorizedDoc = querySnapshot.docs[0];
           }
 
-          toast({ title: "Bem-vindo!", description: "Sua conta foi vinculada e ativada." });
-        } catch (createError: any) {
-          if (createError.code === "auth/email-already-in-use") {
-            throw new Error("Senha incorreta para este e-mail.");
+          if (isMaster || authorizedDoc) {
+            // Cria ou atualiza o perfil no Firestore
+            if (authorizedDoc) {
+              await updateDoc(doc(db, "users", authorizedDoc.id), {
+                uid: newUser.uid,
+                ativo: true,
+                dataVinculo: serverTimestamp()
+              });
+            } else {
+              await setDoc(doc(db, "users", newUser.uid), {
+                uid: newUser.uid,
+                nome: cleanEmail.split("@")[0],
+                email: cleanEmail,
+                perfil: "ADMIN", // Edison é mestre
+                ativo: true,
+                createdAt: serverTimestamp(),
+              });
+            }
+            toast({ title: "Bem-vindo!", description: "Seu acesso foi configurado com sucesso." });
+          } else {
+            // Se não é mestre nem convidado, remove o usuário do Auth e desloga
+            await deleteUser(newUser);
+            await signOut(auth);
+            throw new Error("Seu e-mail não foi pré-autorizado pelo administrador.");
           }
-          throw createError;
+        } else {
+          throw loginError;
         }
       }
     } catch (error: any) {
       toast({
-        title: "Acesso Negado",
+        title: "Falha no Acesso",
         description: error.message,
         variant: "destructive",
       });
@@ -114,16 +115,16 @@ export default function LoginPage() {
             <LayoutDashboard size={40} />
           </div>
           <CardTitle className="text-3xl font-bold">LegisTrac</CardTitle>
-          <CardDescription>Gestão de Gabinete Restrita</CardDescription>
+          <CardDescription>Gestão de Gabinete Parlamentar</CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail Autorizado</Label>
+              <Label htmlFor="email">E-mail</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="seu-email@exemplo.com"
+                placeholder="seu-email@institucional.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -142,7 +143,7 @@ export default function LoginPage() {
             </div>
             <div className="p-3 bg-muted rounded-lg text-[11px] flex items-start gap-2 text-muted-foreground leading-tight">
               <AlertCircle size={14} className="shrink-0 mt-0.5" />
-              Apenas e-mails pré-cadastrados pelo administrador podem realizar o primeiro acesso.
+              Se for seu primeiro acesso, use o e-mail autorizado e defina sua senha agora.
             </div>
           </CardContent>
           <CardFooter>
