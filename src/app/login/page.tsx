@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutDashboard, Loader2, ShieldCheck, AlertCircle } from "lucide-react";
+import { LayoutDashboard, Loader2, ShieldCheck, AlertCircle, ArrowRight } from "lucide-react";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 export default function LoginPage() {
@@ -41,20 +41,18 @@ export default function LoginPage() {
     }
 
     try {
-      // Tenta login normal
       try {
         await signInWithEmailAndPassword(auth, email, password);
         toast({ title: "Bem-vindo", description: "Acesso autorizado ao gabinete." });
       } catch (loginError: any) {
         const error = loginError as AuthError;
         
-        // Se o usuário não existe, tenta criar para o admin ou assessor
-        if (error.code === "auth/invalid-credential" || error.code === "auth/user-not-found" || error.code === "auth/configuration-not-found") {
+        // Se o usuário não existe ou a senha está errada (Firebase retorna invalid-credential para ambos agora)
+        if (error.code === "auth/invalid-credential" || error.code === "auth/user-not-found") {
           try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const newUser = userCredential.user;
 
-            // Define ADMIN se for o seu e-mail
             const isAdmin = email.toLowerCase().trim() === "edisonunb@gmail.com";
 
             await setDoc(doc(db, "users", newUser.uid), {
@@ -72,19 +70,21 @@ export default function LoginPage() {
             if (cError.code === "auth/email-already-in-use") {
               throw new Error("Senha incorreta para este e-mail.");
             } else if (cError.code === "auth/configuration-not-found") {
-              throw new Error("A autenticação por e-mail/senha não está ativada no console do Firebase.");
+              throw new Error("Siga a imagem: Clique em 'E-mail/senha', ative e clique em 'Salvar' no Firebase Console.");
             } else {
               throw createError;
             }
           }
+        } else if (error.code === "auth/configuration-not-found") {
+          throw new Error("Siga a imagem: Clique em 'E-mail/senha', ative e clique em 'Salvar' no Firebase Console.");
         } else {
           throw loginError;
         }
       }
     } catch (error: any) {
       toast({
-        title: "Erro de Acesso",
-        description: error.message || "Falha na autenticação. Verifique seu console do Firebase.",
+        title: "Ação Necessária",
+        description: error.message || "Falha na autenticação.",
         variant: "destructive",
       });
     } finally {
@@ -130,7 +130,7 @@ export default function LoginPage() {
               {email.toLowerCase().trim() === "edisonunb@gmail.com" && (
                 <div className="mt-4 p-3 bg-blue-50 text-blue-700 text-[11px] rounded-lg border border-blue-100 flex gap-2">
                   <ShieldCheck size={16} className="shrink-0" />
-                  E-mail ADMIN detectado. A primeira senha digitada será a sua definitiva.
+                  E-mail ADMIN detectado. Use a senha que deseja cadastrar.
                 </div>
               )}
             </div>
@@ -140,9 +140,20 @@ export default function LoginPage() {
               {submitting ? <Loader2 className="animate-spin mr-2" /> : "Acessar Gabinete"}
             </Button>
             
-            <div className="p-3 bg-muted/50 rounded-lg flex items-start gap-2 text-[10px] text-muted-foreground">
-              <AlertCircle size={14} className="shrink-0 mt-0.5" />
-              <span>Se o erro "configuration-not-found" persistir, verifique se o provedor "E-mail/Password" está ATIVADO no Firebase Console do projeto projetojaque-3c3b8.</span>
+            <div className="p-4 bg-orange-50 rounded-lg border border-orange-100 text-[11px] text-orange-800 space-y-2">
+              <div className="flex items-center gap-2 font-bold">
+                <AlertCircle size={14} />
+                <span>INSTRUÇÃO PARA O CONSOLE (IMAGEM):</span>
+              </div>
+              <ol className="list-decimal list-inside space-y-1 ml-1">
+                <li>Na tela que você abriu, clique em <strong>E-mail/senha</strong>.</li>
+                <li>Mude a chave para <strong>Ativado</strong>.</li>
+                <li>Clique no botão <strong>Salvar</strong>.</li>
+              </ol>
+              <div className="flex items-center gap-1 text-[10px] font-medium mt-2 pt-2 border-t border-orange-200">
+                <ArrowRight size={10} />
+                <span>Depois disso, tente entrar aqui novamente.</span>
+              </div>
             </div>
           </CardFooter>
         </form>
