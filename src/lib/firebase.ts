@@ -4,6 +4,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
+// Credenciais fornecidas pelo usuário para o projeto projetojaque-3c3b8
 const firebaseConfig = {
   apiKey: "AIzaSyCag79TbgOLJSf_VSyI8wPzFC0MfBl7ON4",
   authDomain: "projetojaque-3c3b8.firebaseapp.com",
@@ -14,12 +15,12 @@ const firebaseConfig = {
   measurementId: "G-FX7Y5M7N8V"
 };
 
-// Initialize Firebase
+// Inicialização segura para Next.js
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Initialize Analytics conditionally (only in browser and if supported)
+// Analytics apenas no cliente
 const analytics = typeof window !== 'undefined' ? isSupported().then(yes => yes ? getAnalytics(app) : null) : null;
 
 export { auth, db, app, analytics };
