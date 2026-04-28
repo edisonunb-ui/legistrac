@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutDashboard, Loader2, AlertCircle, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Loader2, ShieldCheck, AlertCircle } from "lucide-react";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 export default function LoginPage() {
@@ -35,23 +35,22 @@ export default function LoginPage() {
     setSubmitting(true);
     
     if (!auth || !db) {
-      toast({ title: "Erro", description: "Firebase não disponível.", variant: "destructive" });
+      toast({ title: "Erro de Configuração", description: "O serviço Firebase não foi inicializado corretamente.", variant: "destructive" });
       setSubmitting(false);
       return;
     }
 
     try {
-      // Tenta login normal primeiro
+      // Tenta login normal
       try {
         await signInWithEmailAndPassword(auth, email, password);
-        toast({ title: "Bem-vindo", description: "Acesso autorizado." });
+        toast({ title: "Bem-vindo", description: "Acesso autorizado ao gabinete." });
       } catch (loginError: any) {
         const error = loginError as AuthError;
         
-        // Se falhar (usuário não existe ou senha errada no primeiro acesso)
-        if (error.code === "auth/invalid-credential" || error.code === "auth/user-not-found") {
+        // Se o usuário não existe, tenta criar para o admin ou assessor
+        if (error.code === "auth/invalid-credential" || error.code === "auth/user-not-found" || error.code === "auth/configuration-not-found") {
           try {
-            // Tenta criar o usuário (Fluxo de Cadastro Automático)
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const newUser = userCredential.user;
 
@@ -67,11 +66,13 @@ export default function LoginPage() {
               createdAt: serverTimestamp(),
             });
 
-            toast({ title: "Conta Criada", description: isAdmin ? "Administrador configurado." : "Acesso liberado." });
+            toast({ title: "Conta Criada", description: isAdmin ? "Você foi registrado como Administrador." : "Acesso liberado." });
           } catch (createError: any) {
             const cError = createError as AuthError;
             if (cError.code === "auth/email-already-in-use") {
-              throw new Error("Senha incorreta para este usuário.");
+              throw new Error("Senha incorreta para este e-mail.");
+            } else if (cError.code === "auth/configuration-not-found") {
+              throw new Error("A autenticação por e-mail/senha não está ativada no console do Firebase.");
             } else {
               throw createError;
             }
@@ -83,7 +84,7 @@ export default function LoginPage() {
     } catch (error: any) {
       toast({
         title: "Erro de Acesso",
-        description: error.message || "Falha na autenticação. Verifique sua chave de API no console.",
+        description: error.message || "Falha na autenticação. Verifique seu console do Firebase.",
         variant: "destructive",
       });
     } finally {
@@ -91,7 +92,7 @@ export default function LoginPage() {
     }
   };
 
-  if (authLoading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin" /></div>;
+  if (authLoading) return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="animate-spin text-primary" size={40} /></div>;
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
@@ -110,7 +111,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="edisonunb@gmail.com"
+                placeholder="Ex: edisonunb@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -134,10 +135,15 @@ export default function LoginPage() {
               )}
             </div>
           </CardContent>
-          <CardFooter>
-            <Button className="w-full h-12" type="submit" disabled={submitting}>
+          <CardFooter className="flex flex-col gap-4">
+            <Button className="w-full h-12 text-base font-semibold" type="submit" disabled={submitting}>
               {submitting ? <Loader2 className="animate-spin mr-2" /> : "Acessar Gabinete"}
             </Button>
+            
+            <div className="p-3 bg-muted/50 rounded-lg flex items-start gap-2 text-[10px] text-muted-foreground">
+              <AlertCircle size={14} className="shrink-0 mt-0.5" />
+              <span>Se o erro "configuration-not-found" persistir, verifique se o provedor "E-mail/Password" está ATIVADO no Firebase Console do projeto projetojaque-3c3b8.</span>
+            </div>
           </CardFooter>
         </form>
       </Card>
