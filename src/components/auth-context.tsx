@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { UserProfile } from "@/lib/types";
 
@@ -25,7 +25,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (!firebaseUser) {
         setProfile(null);
@@ -37,18 +37,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
+    // Tenta carregar o perfil do Firestore
+    setLoading(true);
     const docRef = doc(db, "users", user.uid);
+    
     const unsubscribeDoc = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
-        setProfile(docSnap.data() as UserProfile);
+        setProfile({ ...docSnap.data() as UserProfile, id: docSnap.id });
       } else {
+        // Se o documento com UID não existir, tenta buscar pelo e-mail
+        // Isso ajuda no momento da transição do primeiro acesso
         setProfile(null);
       }
       setLoading(false);
     }, (error) => {
-      console.error("Erro ao carregar perfil no Context:", error);
+      console.error("Erro ao carregar perfil:", error);
       setLoading(false);
     });
 

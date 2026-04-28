@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
-import { collection, query, doc, setDoc, updateDoc, serverTimestamp, orderBy } from "firebase/firestore";
+import { collection, query, doc, setDoc, updateDoc, serverTimestamp, orderBy, addDoc } from "firebase/firestore";
 import { UserProfile, UserRole } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Shield, UserMinus, CheckCircle2, XCircle } from "lucide-react";
+import { Users, UserPlus, Shield, UserMinus, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function UserManagementPage() {
@@ -37,21 +38,29 @@ export default function UserManagementPage() {
     setIsAdding(true);
 
     try {
-      // Cria um placeholder do usuário. O UID será preenchido no primeiro login dele.
-      const tempId = `temp_${Date.now()}`;
-      await setDoc(doc(db, "users", tempId), {
-        email: newEmail.toLowerCase().trim(),
+      const emailLower = newEmail.toLowerCase().trim();
+      
+      // Verifica se já existe
+      const exists = allUsers.find(u => u.email === emailLower);
+      if (exists) {
+        throw new Error("Este e-mail já está autorizado ou cadastrado.");
+      }
+
+      // Adiciona um documento na coleção de usuários sem UID.
+      // O UID será preenchido no primeiro login.
+      await addDoc(collection(db, "users"), {
+        email: emailLower,
         nome: newName,
         perfil: newRole,
         ativo: true,
         createdAt: serverTimestamp(),
       });
 
-      toast({ title: "Sucesso", description: "E-mail autorizado. O usuário já pode criar sua senha." });
+      toast({ title: "Sucesso", description: "E-mail autorizado. Peça para o usuário acessar o sistema e definir a senha." });
       setNewEmail("");
       setNewName("");
-    } catch (error) {
-      toast({ title: "Erro", description: "Falha ao autorizar e-mail.", variant: "destructive" });
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message || "Falha ao autorizar e-mail.", variant: "destructive" });
     } finally {
       setIsAdding(false);
     }
@@ -67,7 +76,9 @@ export default function UserManagementPage() {
     }
   };
 
-  if ((currentUserProfile as any)?.perfil !== "ADMIN") {
+  const isAdmin = (currentUserProfile as any)?.perfil === "ADMIN" || user?.email === "edisonunb@gmail.com";
+
+  if (!isAdmin && !loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md text-center">
@@ -93,18 +104,17 @@ export default function UserManagementPage() {
             <Users className="text-primary" />
             Gestão da Equipe
           </h1>
-          <p className="text-muted-foreground">Controle quem tem acesso ao seu gabinete.</p>
+          <p className="text-muted-foreground">Pré-autorize e-mails para que os assessores possam acessar o sistema.</p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Formulário de Cadastro */}
-          <Card className="h-fit">
+          <Card className="h-fit shadow-lg border-none">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <UserPlus size={18} /> Autorizar Novo E-mail
               </CardTitle>
               <CardDescription>
-                Ao adicionar um e-mail aqui, ele será autorizado a criar uma conta no sistema.
+                A pessoa poderá definir a própria senha no primeiro acesso.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -112,7 +122,7 @@ export default function UserManagementPage() {
                 <div className="space-y-2">
                   <Label>Nome Completo</Label>
                   <Input 
-                    placeholder="Ex: João Silva" 
+                    placeholder="Ex: Maria Oliveira" 
                     value={newName} 
                     onChange={e => setNewName(e.target.value)} 
                     required 
@@ -122,7 +132,7 @@ export default function UserManagementPage() {
                   <Label>E-mail Institucional</Label>
                   <Input 
                     type="email" 
-                    placeholder="joao@gabinete.com" 
+                    placeholder="nome@gabinete.com" 
                     value={newEmail} 
                     onChange={e => setNewEmail(e.target.value)} 
                     required 
@@ -140,25 +150,26 @@ export default function UserManagementPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button className="w-full" type="submit" disabled={isAdding}>
-                  {isAdding ? "Adicionando..." : "Autorizar Acesso"}
+                <Button className="w-full font-bold" type="submit" disabled={isAdding}>
+                  {isAdding ? <Loader2 className="animate-spin mr-2" /> : "Autorizar Acesso"}
                 </Button>
               </form>
             </CardContent>
           </Card>
 
-          {/* Lista de Usuários */}
           <div className="lg:col-span-2 space-y-4">
-            <Card>
+            <Card className="shadow-lg border-none">
               <CardHeader>
-                <CardTitle className="text-lg">Usuários Cadastrados</CardTitle>
+                <CardTitle className="text-lg">Equipe e Convites</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {loading ? (
-                    <div className="py-8 text-center"><Loader2 className="animate-spin inline mr-2" /> Carregando equipe...</div>
+                    <div className="py-8 text-center text-muted-foreground"><Loader2 className="animate-spin inline mr-2" /> Carregando lista...</div>
+                  ) : allUsers.length === 0 ? (
+                    <div className="py-12 text-center text-muted-foreground border-2 border-dashed rounded-xl">Ninguém autorizado ainda.</div>
                   ) : allUsers.map((u: UserProfile) => (
-                    <div key={u.id} className="flex items-center justify-between p-4 rounded-xl border bg-card hover:shadow-sm transition-all">
+                    <div key={u.id} className="flex items-center justify-between p-4 rounded-xl border bg-card hover:bg-muted/30 transition-all">
                       <div className="flex items-center gap-3">
                         <div className={cn(
                           "w-10 h-10 rounded-full flex items-center justify-center font-bold text-white",
@@ -169,12 +180,16 @@ export default function UserManagementPage() {
                         <div>
                           <p className="font-semibold text-sm leading-none flex items-center gap-2">
                             {u.nome}
-                            {u.email === "edisonunb@gmail.com" && <Badge variant="outline" className="text-[10px]">Master</Badge>}
+                            {u.email === "edisonunb@gmail.com" && <Badge className="text-[9px] bg-amber-500">Master</Badge>}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">{u.email}</p>
                           <div className="flex items-center gap-2 mt-2">
                             <Badge variant="secondary" className="text-[9px] uppercase">{u.perfil}</Badge>
-                            {!u.uid && <Badge variant="outline" className="text-[9px] border-orange-200 text-orange-600 bg-orange-50">Aguardando Primeiro Login</Badge>}
+                            {!u.uid && (
+                              <Badge variant="outline" className="text-[9px] border-orange-200 text-orange-600 bg-orange-50">
+                                Aguardando Primeiro Acesso
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -191,13 +206,8 @@ export default function UserManagementPage() {
                             onClick={() => toggleUserStatus(u.id, u.ativo)}
                           >
                             {u.ativo ? <UserMinus size={16} /> : <CheckCircle2 size={16} />}
-                            <span className="hidden sm:inline">{u.ativo ? "Desativar" : "Reativar"}</span>
+                            <span className="hidden sm:inline">{u.ativo ? "Bloquear" : "Ativar"}</span>
                           </Button>
-                        )}
-                        {u.ativo ? (
-                          <div className="text-green-500 p-2"><CheckCircle2 size={18} /></div>
-                        ) : (
-                          <div className="text-destructive p-2"><XCircle size={18} /></div>
                         )}
                       </div>
                     </div>
