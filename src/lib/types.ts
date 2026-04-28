@@ -21,7 +21,7 @@ export interface Demand {
   criadoPor: string;
   responsavelAtual: string;
   status: DemandStatus;
-  prazo: string; // ISO date string or similar
+  prazo: string; // ISO date string
   dataCriacao: Timestamp;
   dataAtualizacao: Timestamp;
   finalizada: boolean;

@@ -1,10 +1,6 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for generating concise summaries of demand descriptions.
- *
- * - generateDemandSummary - A function that generates a summary of a demand description.
- * - DemandSummaryInput - The input type for the generateDemandSummary function.
- * - DemandSummaryOutput - The return type for the generateDemandSummary function.
  */
 
 import {ai} from '@/ai/genkit';
@@ -30,10 +26,8 @@ const demandSummaryPrompt = ai.definePrompt({
   name: 'demandSummaryPrompt',
   input: {schema: DemandSummaryInputSchema},
   output: {schema: DemandSummaryOutputSchema},
-  prompt: `You are an AI assistant tasked with summarizing demand descriptions.
-
-Read the following demand description carefully and provide a concise summary that captures its core content. The summary should be brief, to the point, and easy to understand at a glance.
-
+  prompt: `You are an AI assistant tasked with summarizing political cabinet demands.
+Read the following demand description and provide a one-sentence summary that captures the essence of the request.
 Demand Description: {{{description}}}`,
 });
 

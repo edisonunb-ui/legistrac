@@ -1,16 +1,14 @@
 "use client";
 
-import { useAuth } from "@/components/auth-context";
+import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useEffect, useState } from "react";
-import { collection, query, where, getDocs, orderBy, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { Demand } from "@/lib/types";
+import { useEffect, useMemo } from "react";
+import { collection, query, orderBy, doc } from "firebase/firestore";
+import { Demand, UserProfile } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
   ClipboardList, 
   Clock, 
-  Users, 
   ShieldAlert, 
   ChevronRight,
   TrendingUp,
@@ -21,55 +19,37 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
-  const { user, profile, loading } = useAuth();
+  const { user, loading: authLoading } = useUser();
+  const db = useFirestore();
   const router = useRouter();
-  const [stats, setStats] = useState({
-    totalAbertas: 0,
-    atrasadas: 0,
-    minhas: 0,
-    aguardandoAdmin: 0,
-  });
-  const [recentDemands, setRecentDemands] = useState<Demand[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       router.push("/login");
     }
-  }, [user, loading, router]);
+  }, [user, authLoading, router]);
 
-  useEffect(() => {
-    if (!user) return;
+  const profileRef = useMemo(() => user && db ? doc(db, "users", user.uid) : null, [db, user]);
+  const { data: profile } = useDoc(profileRef);
 
-    const fetchData = async () => {
-      try {
-        const q = query(collection(db, "demandas"), orderBy("dataCriacao", "desc"));
-        const snapshot = await getDocs(q);
-        const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Demand));
+  const demandsQuery = useMemo(() => db ? query(collection(db, "demandas"), orderBy("dataCriacao", "desc")) : null, [db]);
+  const { data: demands = [], loading: demandsLoading } = useCollection(demandsQuery);
 
-        const now = new Date();
-        const statsObj = {
-          totalAbertas: all.filter(d => d.status !== "FINALIZADO").length,
-          atrasadas: all.filter(d => d.status !== "FINALIZADO" && new Date(d.prazo) < now).length,
-          minhas: all.filter(d => d.responsavelAtual === user.uid && d.status !== "FINALIZADO").length,
-          aguardandoAdmin: all.filter(d => d.status === "AGUARDANDO_VEREADORA").length,
-        };
-
-        setStats(statsObj);
-        setRecentDemands(all.slice(0, 5));
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setDataLoading(false);
-      }
+  const stats = useMemo(() => {
+    if (!demands || !user) return { totalAbertas: 0, atrasadas: 0, minhas: 0, aguardandoAdmin: 0 };
+    const now = new Date();
+    return {
+      totalAbertas: demands.filter((d: Demand) => d.status !== "FINALIZADO").length,
+      atrasadas: demands.filter((d: Demand) => d.status !== "FINALIZADO" && new Date(d.prazo) < now).length,
+      minhas: demands.filter((d: Demand) => d.responsavelAtual === user.uid && d.status !== "FINALIZADO").length,
+      aguardandoAdmin: demands.filter((d: Demand) => d.status === "AGUARDANDO_VEREADORA").length,
     };
+  }, [demands, user]);
 
-    fetchData();
-  }, [user]);
-
-  if (loading || !user) return null;
+  if (authLoading || !user) return null;
 
   const statCards = [
     { title: "Total em Aberto", value: stats.totalAbertas, icon: ClipboardList, color: "text-blue-600", bg: "bg-blue-100" },
@@ -78,6 +58,8 @@ export default function Dashboard() {
     { title: "Atrasadas", value: stats.atrasadas, icon: TrendingUp, color: "text-red-600", bg: "bg-red-100" },
   ];
 
+  const recentDemands = demands.slice(0, 5);
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -85,7 +67,7 @@ export default function Dashboard() {
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-headline font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Bem-vindo(a), {profile?.nome}. Veja o resumo do gabinete.</p>
+            <p className="text-muted-foreground mt-1">Bem-vindo(a), {(profile as any)?.nome}. Veja o resumo do gabinete.</p>
           </div>
           <Link href="/demandas/new">
             <Button className="font-semibold gap-2 shadow-lg">
@@ -128,7 +110,7 @@ export default function Dashboard() {
                 </Link>
               </CardHeader>
               <CardContent>
-                {dataLoading ? (
+                {demandsLoading ? (
                   <div className="space-y-4 py-4">
                     {[1, 2, 3].map(i => <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />)}
                   </div>
@@ -141,7 +123,7 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {recentDemands.map((demand) => (
+                    {recentDemands.map((demand: Demand) => (
                       <Link key={demand.id} href={`/demandas/${demand.id}`}>
                         <div className="flex items-center justify-between p-4 rounded-xl border hover:border-primary/50 hover:bg-primary/5 transition-all group">
                           <div className="flex-1 min-w-0 pr-4">
@@ -182,35 +164,15 @@ export default function Dashboard() {
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-xl font-bold">
-                    {profile?.nome[0]}
+                    {(profile as any)?.nome?.[0]}
                   </div>
                   <div>
-                    <p className="font-semibold">{profile?.nome}</p>
-                    <p className="text-xs opacity-80">{profile?.email}</p>
+                    <p className="font-semibold">{(profile as any)?.nome}</p>
+                    <p className="text-xs opacity-80">{(profile as any)?.email}</p>
                   </div>
                 </div>
                 <div className="pt-2">
-                  <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30">{profile?.perfil}</Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg">Dicas Rápidas</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm space-y-4">
-                <div className="flex gap-3">
-                  <div className="mt-1"><PlusCircle size={16} className="text-primary" /></div>
-                  <p className="text-muted-foreground">Clique em "Nova Demanda" para registrar uma nova solicitação.</p>
-                </div>
-                <div className="flex gap-3">
-                  <div className="mt-1"><Clock size={16} className="text-primary" /></div>
-                  <p className="text-muted-foreground">Mantenha os prazos atualizados para melhor controle do gabinete.</p>
-                </div>
-                <div className="flex gap-3">
-                  <div className="mt-1"><Users size={16} className="text-primary" /></div>
-                  <p className="text-muted-foreground">Envie demandas para outros assessores para distribuir o trabalho.</p>
+                  <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30">{(profile as any)?.perfil}</Badge>
                 </div>
               </CardContent>
             </Card>

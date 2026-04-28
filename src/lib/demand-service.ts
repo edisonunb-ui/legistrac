@@ -1,25 +1,21 @@
 import { 
   collection, 
   doc, 
-  addDoc, 
-  updateDoc, 
   serverTimestamp, 
   runTransaction,
-  query,
-  where,
-  getDocs,
-  orderBy,
-  limit,
-  Timestamp,
-  getDoc
+  getDoc,
+  Firestore
 } from "firebase/firestore";
-import { db } from "./firebase";
-import { Demand, DemandPriority, DemandStatus, TramiteAction, UserRole } from "./types";
+import { DemandPriority, DemandStatus, UserRole } from "./types";
 
 export async function createDemand(
+  db: Firestore,
   userId: string,
   data: { titulo: string; descricao: string; prazo: string; prioridade: DemandPriority }
 ) {
+  const demandRef = doc(collection(db, "demandas"));
+  const tramiteRef = doc(collection(db, "tramites"));
+
   const demandData = {
     ...data,
     criadoPor: userId,
@@ -30,11 +26,8 @@ export async function createDemand(
     finalizada: false,
   };
 
-  return await runTransaction(db, async (transaction) => {
-    const demandRef = doc(collection(db, "demandas"));
+  await runTransaction(db, async (transaction) => {
     transaction.set(demandRef, demandData);
-
-    const tramiteRef = doc(collection(db, "tramites"));
     transaction.set(tramiteRef, {
       demandaId: demandRef.id,
       de: userId,
@@ -43,12 +36,13 @@ export async function createDemand(
       observacao: "Demanda criada e atribuída ao criador.",
       data: serverTimestamp(),
     });
-
-    return demandRef.id;
   });
+
+  return demandRef.id;
 }
 
 export async function sendDemand(
+  db: Firestore,
   demandaId: string,
   de: string,
   para: string,
@@ -56,16 +50,17 @@ export async function sendDemand(
   paraRole: UserRole
 ) {
   const status: DemandStatus = paraRole === "ADMIN" ? "AGUARDANDO_VEREADORA" : "EM_ANDAMENTO";
+  const demandRef = doc(db, "demandas", demandaId);
+  const tramiteRef = doc(collection(db, "tramites"));
+  const notificationRef = doc(collection(db, "notificacoes"));
 
   await runTransaction(db, async (transaction) => {
-    const demandRef = doc(db, "demandas", demandaId);
     transaction.update(demandRef, {
       responsavelAtual: para,
       status: status,
       dataAtualizacao: serverTimestamp(),
     });
 
-    const tramiteRef = doc(collection(db, "tramites"));
     transaction.set(tramiteRef, {
       demandaId,
       de,
@@ -75,7 +70,6 @@ export async function sendDemand(
       data: serverTimestamp(),
     });
 
-    const notificationRef = doc(collection(db, "notificacoes"));
     transaction.set(notificationRef, {
       userId: para,
       mensagem: `Você recebeu uma nova demanda: ${demandaId}`,
@@ -87,20 +81,23 @@ export async function sendDemand(
 }
 
 export async function returnDemand(
+  db: Firestore,
   demandaId: string,
   de: string,
   para: string,
   observacao: string
 ) {
+  const demandRef = doc(db, "demandas", demandaId);
+  const tramiteRef = doc(collection(db, "tramites"));
+  const notificationRef = doc(collection(db, "notificacoes"));
+
   await runTransaction(db, async (transaction) => {
-    const demandRef = doc(db, "demandas", demandaId);
     transaction.update(demandRef, {
       responsavelAtual: para,
       status: "EM_ANDAMENTO",
       dataAtualizacao: serverTimestamp(),
     });
 
-    const tramiteRef = doc(collection(db, "tramites"));
     transaction.set(tramiteRef, {
       demandaId,
       de,
@@ -110,7 +107,6 @@ export async function returnDemand(
       data: serverTimestamp(),
     });
 
-    const notificationRef = doc(collection(db, "notificacoes"));
     transaction.set(notificationRef, {
       userId: para,
       mensagem: `Uma demanda foi devolvida para você: ${demandaId}`,
@@ -122,20 +118,23 @@ export async function returnDemand(
 }
 
 export async function finalizeDemand(
+  db: Firestore,
   demandaId: string,
   userId: string,
   criadorId: string,
   observacao: string
 ) {
+  const demandRef = doc(db, "demandas", demandaId);
+  const tramiteRef = doc(collection(db, "tramites"));
+  const notificationRef = doc(collection(db, "notificacoes"));
+
   await runTransaction(db, async (transaction) => {
-    const demandRef = doc(db, "demandas", demandaId);
     transaction.update(demandRef, {
       status: "FINALIZADO",
       finalizada: true,
       dataAtualizacao: serverTimestamp(),
     });
 
-    const tramiteRef = doc(collection(db, "tramites"));
     transaction.set(tramiteRef, {
       demandaId,
       de: userId,
@@ -145,7 +144,6 @@ export async function finalizeDemand(
       data: serverTimestamp(),
     });
 
-    const notificationRef = doc(collection(db, "notificacoes"));
     transaction.set(notificationRef, {
       userId: criadorId,
       mensagem: `Sua demanda foi finalizada: ${demandaId}`,
@@ -157,20 +155,23 @@ export async function finalizeDemand(
 }
 
 export async function reopenDemand(
+  db: Firestore,
   demandaId: string,
   userId: string,
   responsavelId: string,
   observacao: string
 ) {
+  const demandRef = doc(db, "demandas", demandaId);
+  const tramiteRef = doc(collection(db, "tramites"));
+  const notificationRef = doc(collection(db, "notificacoes"));
+
   await runTransaction(db, async (transaction) => {
-    const demandRef = doc(db, "demandas", demandaId);
     transaction.update(demandRef, {
       status: "EM_ANDAMENTO",
       finalizada: false,
       dataAtualizacao: serverTimestamp(),
     });
 
-    const tramiteRef = doc(collection(db, "tramites"));
     transaction.set(tramiteRef, {
       demandaId,
       de: userId,
@@ -180,7 +181,6 @@ export async function reopenDemand(
       data: serverTimestamp(),
     });
 
-    const notificationRef = doc(collection(db, "notificacoes"));
     transaction.set(notificationRef, {
       userId: responsavelId,
       mensagem: `Uma demanda foi reaberta e está sob sua responsabilidade: ${demandaId}`,

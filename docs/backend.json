@@ -1,0 +1,82 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile data",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "nome": { "type": "string" },
+        "email": { "type": "string" },
+        "perfil": { "type": "string", "enum": ["ADMIN", "ASSESSOR"] },
+        "ativo": { "type": "boolean" },
+        "createdAt": { "type": "object" }
+      },
+      "required": ["uid", "nome", "email", "perfil"]
+    },
+    "Demand": {
+      "title": "Demand",
+      "description": "A demand or request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "titulo": { "type": "string" },
+        "descricao": { "type": "string" },
+        "criadoPor": { "type": "string" },
+        "responsavelAtual": { "type": "string" },
+        "status": { "type": "string", "enum": ["ABERTO", "EM_ANDAMENTO", "AGUARDANDO_VEREADORA", "FINALIZADO"] },
+        "prazo": { "type": "string" },
+        "dataCriacao": { "type": "object" },
+        "dataAtualizacao": { "type": "object" },
+        "finalizada": { "type": "boolean" },
+        "prioridade": { "type": "string", "enum": ["BAIXA", "MEDIA", "ALTA"] }
+      }
+    },
+    "Tramite": {
+      "title": "Tramite",
+      "description": "Historical record of demand movement",
+      "type": "object",
+      "properties": {
+        "demandaId": { "type": "string" },
+        "de": { "type": "string" },
+        "para": { "type": "string" },
+        "acao": { "type": "string", "enum": ["ENVIO", "DEVOLUCAO", "FINALIZACAO", "REABERTURA"] },
+        "observacao": { "type": "string" },
+        "data": { "type": "object" }
+      }
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User notification",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "mensagem": { "type": "string" },
+        "demandaId": { "type": "string" },
+        "lida": { "type": "boolean" },
+        "data": { "type": "object" }
+      }
+    }
+  },
+  "auth": {
+    "providers": ["password"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles"
+    },
+    "/demandas/{demandaId}": {
+      "schema": "Demand",
+      "description": "Cabinet demands"
+    },
+    "/tramites/{tramiteId}": {
+      "schema": "Tramite",
+      "description": "Demand history (immutable)"
+    },
+    "/notificacoes/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
+    }
+  }
+}

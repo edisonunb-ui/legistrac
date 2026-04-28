@@ -1,12 +1,11 @@
 "use client";
 
-import { useAuth } from "@/components/auth-context";
+import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useEffect, useState, use } from "react";
-import { doc, onSnapshot, collection, query, where, orderBy, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useEffect, useState, useMemo, use } from "react";
+import { doc, collection, query, where, orderBy } from "firebase/firestore";
 import { Demand, Tramite, UserProfile } from "@/lib/types";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -46,53 +45,32 @@ import { generateDemandSummary } from "@/ai/flows/demand-summary-generation";
 
 export default function DemandDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { user, profile } = useAuth();
+  const { user } = useUser();
+  const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
-  const [demand, setDemand] = useState<Demand | null>(null);
-  const [tramites, setTramites] = useState<Tramite[]>([]);
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
+  
   const [summary, setSummary] = useState<string | null>(null);
   const [summarizing, setSummarizing] = useState(false);
-
-  // Modal states
   const [sendModalOpen, setSendModalOpen] = useState(false);
   const [obs, setObs] = useState("");
   const [selectedUser, setSelectedUser] = useState("");
 
-  useEffect(() => {
-    if (!id) return;
+  const demandRef = useMemo(() => id && db ? doc(db, "demandas", id) : null, [db, id]);
+  const { data: demand } = useDoc(demandRef);
 
-    const unsubscribeDemand = onSnapshot(doc(db, "demandas", id), (snap) => {
-      if (snap.exists()) {
-        setDemand({ id: snap.id, ...snap.data() } as Demand);
-      } else {
-        router.push("/demandas");
-      }
-      setLoading(false);
-    });
+  const tramitesQuery = useMemo(() => id && db ? query(
+    collection(db, "tramites"), 
+    where("demandaId", "==", id), 
+    orderBy("data", "desc")
+  ) : null, [db, id]);
+  const { data: tramites = [] } = useCollection(tramitesQuery);
 
-    const qTramites = query(
-      collection(db, "tramites"), 
-      where("demandaId", "==", id), 
-      orderBy("data", "desc")
-    );
-    const unsubscribeTramites = onSnapshot(qTramites, (snap) => {
-      setTramites(snap.docs.map(d => ({ id: d.id, ...d.data() } as Tramite)));
-    });
+  const usersQuery = useMemo(() => db ? query(collection(db, "users")) : null, [db]);
+  const { data: allUsers = [] } = useCollection(usersQuery);
 
-    const fetchUsers = async () => {
-      const uSnap = await getDocs(collection(db, "users"));
-      setUsers(uSnap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)));
-    };
-    fetchUsers();
-
-    return () => {
-      unsubscribeDemand();
-      unsubscribeTramites();
-    };
-  }, [id, router]);
+  const profileRef = useMemo(() => user && db ? doc(db, "users", user.uid) : null, [db, user]);
+  const { data: profile } = useDoc(profileRef);
 
   const handleGenerateSummary = async () => {
     if (!demand?.descricao) return;
@@ -108,12 +86,12 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   };
 
   const handleSend = async () => {
-    if (!demand || !user || !selectedUser) return;
-    const targetUser = users.find(u => u.uid === selectedUser);
+    if (!demand || !user || !selectedUser || !db) return;
+    const targetUser = allUsers.find((u: UserProfile) => u.uid === selectedUser);
     if (!targetUser) return;
 
     try {
-      await sendDemand(demand.id, user.uid, selectedUser, obs, targetUser.perfil);
+      await sendDemand(db, demand.id, user.uid, selectedUser, obs, targetUser.perfil);
       toast({ title: "Sucesso", description: "Demanda enviada." });
       setSendModalOpen(false);
       setObs("");
@@ -123,9 +101,9 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   };
 
   const handleReturn = async () => {
-    if (!demand || !user || !selectedUser) return;
+    if (!demand || !user || !selectedUser || !db) return;
     try {
-      await returnDemand(demand.id, user.uid, selectedUser, obs);
+      await returnDemand(db, demand.id, user.uid, selectedUser, obs);
       toast({ title: "Sucesso", description: "Demanda devolvida." });
       setSendModalOpen(false);
       setObs("");
@@ -135,9 +113,9 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   };
 
   const handleFinalize = async () => {
-    if (!demand || !user) return;
+    if (!demand || !user || !db) return;
     try {
-      await finalizeDemand(demand.id, user.uid, demand.criadoPor, obs || "Demanda finalizada pelo ADMIN.");
+      await finalizeDemand(db, demand.id, user.uid, demand.criadoPor, obs || "Demanda finalizada pelo ADMIN.");
       toast({ title: "Sucesso", description: "Demanda finalizada." });
       setObs("");
     } catch (e) {
@@ -146,9 +124,9 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   };
 
   const handleReopen = async () => {
-    if (!demand || !user) return;
+    if (!demand || !user || !db) return;
     try {
-      await reopenDemand(demand.id, user.uid, demand.responsavelAtual, obs || "Demanda reaberta pelo ADMIN.");
+      await reopenDemand(db, demand.id, user.uid, demand.responsavelAtual, obs || "Demanda reaberta pelo ADMIN.");
       toast({ title: "Sucesso", description: "Demanda reaberta." });
       setObs("");
     } catch (e) {
@@ -156,11 +134,10 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     }
   };
 
-  if (loading) return null;
-  if (!demand) return <div className="p-8 text-center">Demanda não encontrada.</div>;
+  if (!demand) return <div className="p-8 text-center">Carregando demanda...</div>;
 
   const isResponsible = demand.responsavelAtual === user?.uid;
-  const isAdmin = profile?.perfil === "ADMIN";
+  const isAdmin = (profile as any)?.perfil === "ADMIN";
 
   return (
     <div className="min-h-screen bg-background">
@@ -206,7 +183,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                             <SelectValue placeholder="Selecione um assessor ou admin" />
                           </SelectTrigger>
                           <SelectContent>
-                            {users.map(u => (
+                            {allUsers.map((u: UserProfile) => (
                               <SelectItem key={u.uid} value={u.uid}>{u.nome} ({u.perfil})</SelectItem>
                             ))}
                           </SelectContent>
@@ -222,8 +199,8 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                       </div>
                     </div>
                     <DialogFooter className="gap-2">
-                      <Button variant="outline" onClick={() => handleReturn()} className="gap-2"><RotateCcw size={16} /> Devolver</Button>
-                      <Button onClick={() => handleSend()} className="gap-2"><Send size={16} /> Enviar</Button>
+                      <Button variant="outline" onClick={handleReturn} className="gap-2"><RotateCcw size={16} /> Devolver</Button>
+                      <Button onClick={handleSend} className="gap-2"><Send size={16} /> Enviar</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -281,9 +258,9 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {tramites.map((t, idx) => {
-                    const deUser = users.find(u => u.uid === t.de)?.nome || "Sistema";
-                    const paraUser = users.find(u => u.uid === t.para)?.nome || "Sistema";
+                  {tramites.map((t: Tramite, idx: number) => {
+                    const deUser = allUsers.find((u: UserProfile) => u.uid === t.de)?.nome || "Sistema";
+                    const paraUser = allUsers.find((u: UserProfile) => u.uid === t.para)?.nome || "Sistema";
                     
                     return (
                       <div key={t.id} className="relative flex gap-4">
@@ -328,51 +305,33 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
               <CardHeader>
                 <CardTitle className="text-lg">Informações Rápidas</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-muted rounded-lg text-primary"><Calendar size={18} /></div>
-                    <div>
-                      <p className="text-[10px] uppercase text-muted-foreground font-bold">Prazo</p>
-                      <p className="font-semibold">{new Date(demand.prazo).toLocaleDateString()}</p>
-                    </div>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-muted rounded-lg text-primary"><Calendar size={18} /></div>
+                  <div>
+                    <p className="text-[10px] uppercase text-muted-foreground font-bold">Prazo</p>
+                    <p className="font-semibold">{new Date(demand.prazo).toLocaleDateString()}</p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-muted rounded-lg text-primary"><UserIcon size={18} /></div>
-                    <div>
-                      <p className="text-[10px] uppercase text-muted-foreground font-bold">Responsável Atual</p>
-                      <p className="font-semibold">
-                        {users.find(u => u.uid === demand.responsavelAtual)?.nome || "Desconhecido"}
-                        {isResponsible && " (Você)"}
-                      </p>
-                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-muted rounded-lg text-primary"><UserIcon size={18} /></div>
+                  <div>
+                    <p className="text-[10px] uppercase text-muted-foreground font-bold">Responsável Atual</p>
+                    <p className="font-semibold">
+                      {allUsers.find((u: UserProfile) => u.uid === demand.responsavelAtual)?.nome || "Desconhecido"}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-muted rounded-lg text-primary"><MessageSquare size={18} /></div>
-                    <div>
-                      <p className="text-[10px] uppercase text-muted-foreground font-bold">Prioridade</p>
-                      <Badge variant={demand.prioridade === "ALTA" ? "destructive" : demand.prioridade === "MEDIA" ? "secondary" : "outline"} className="mt-1 uppercase">
-                        {demand.prioridade}
-                      </Badge>
-                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-muted rounded-lg text-primary"><MessageSquare size={18} /></div>
+                  <div>
+                    <p className="text-[10px] uppercase text-muted-foreground font-bold">Prioridade</p>
+                    <Badge variant={demand.prioridade === "ALTA" ? "destructive" : demand.prioridade === "MEDIA" ? "secondary" : "outline"} className="mt-1 uppercase">
+                      {demand.prioridade}
+                    </Badge>
                   </div>
                 </div>
               </CardContent>
-            </Card>
-
-            <Card className="border-none shadow-sm overflow-hidden">
-              <CardHeader className="bg-primary text-primary-foreground pb-4">
-                <CardTitle className="text-sm uppercase tracking-wider font-bold opacity-80">Criado Por</CardTitle>
-                <div className="flex items-center gap-3 pt-2">
-                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold">
-                    {users.find(u => u.uid === demand.criadoPor)?.nome[0]}
-                  </div>
-                  <div>
-                    <p className="font-semibold">{users.find(u => u.uid === demand.criadoPor)?.nome}</p>
-                    <p className="text-[10px] opacity-80">{demand.dataCriacao?.toDate().toLocaleDateString()}</p>
-                  </div>
-                </div>
-              </CardHeader>
             </Card>
           </div>
         </div>

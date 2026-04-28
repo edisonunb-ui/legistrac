@@ -1,10 +1,9 @@
 "use client";
 
-import { useAuth } from "@/components/auth-context";
+import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useEffect, useState } from "react";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useEffect, useState, useMemo } from "react";
+import { collection, query, where, orderBy, doc } from "firebase/firestore";
 import { Demand } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -13,8 +12,7 @@ import {
   ChevronRight, 
   Calendar, 
   AlertCircle,
-  Clock,
-  ArrowUpDown
+  Clock
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -30,48 +28,42 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 export default function DemandListPage() {
-  const { user, profile } = useAuth();
-  const [demands, setDemands] = useState<Demand[]>([]);
-  const [filteredDemands, setFilteredDemands] = useState<Demand[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filterType, setFilterType] = useState<"TODAS" | "MINHAS">("MINHAS");
+  const { user } = useUser();
+  const db = useFirestore();
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState<"TODAS" | "MINHAS">("MINHAS");
   const [statusFilter, setStatusFilter] = useState("TODOS");
 
-  useEffect(() => {
-    if (!user) return;
+  const profileRef = useMemo(() => user && db ? doc(db, "users", user.uid) : null, [db, user]);
+  const { data: profile } = useDoc(profileRef);
 
-    let q = query(collection(db, "demandas"), orderBy("dataAtualizacao", "desc"));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Demand));
-      setDemands(all);
-      setLoading(false);
-    });
+  const demandsQuery = useMemo(() => {
+    if (!db) return null;
+    return query(collection(db, "demandas"), orderBy("dataAtualizacao", "desc"));
+  }, [db]);
+  const { data: allDemands = [], loading } = useCollection(demandsQuery);
 
-    return () => unsubscribe();
-  }, [user]);
-
-  useEffect(() => {
-    let result = [...demands];
+  const filteredDemands = useMemo(() => {
+    let result = [...allDemands];
 
     if (filterType === "MINHAS" && user) {
-      result = result.filter(d => d.responsavelAtual === user.uid);
+      result = result.filter((d: Demand) => d.responsavelAtual === user.uid);
     }
 
     if (searchTerm) {
-      result = result.filter(d => 
-        d.titulo.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        d.id.toLowerCase().includes(searchTerm.toLowerCase())
+      const term = searchTerm.toLowerCase();
+      result = result.filter((d: Demand) => 
+        d.titulo.toLowerCase().includes(term) || 
+        d.id.toLowerCase().includes(term)
       );
     }
 
     if (statusFilter !== "TODOS") {
-      result = result.filter(d => d.status === statusFilter);
+      result = result.filter((d: Demand) => d.status === statusFilter);
     }
 
-    setFilteredDemands(result);
-  }, [demands, filterType, searchTerm, statusFilter, user]);
+    return result;
+  }, [allDemands, filterType, searchTerm, statusFilter, user]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -105,7 +97,7 @@ export default function DemandListPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="MINHAS">Minhas Demandas</SelectItem>
-                    {profile?.perfil === "ADMIN" && <SelectItem value="TODAS">Todas (Geral)</SelectItem>}
+                    {(profile as any)?.perfil === "ADMIN" && <SelectItem value="TODAS">Todas (Geral)</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
@@ -138,11 +130,11 @@ export default function DemandListPage() {
               <AlertCircle size={48} className="text-muted-foreground" />
             </div>
             <h3 className="text-xl font-semibold mb-2">Nenhuma demanda encontrada</h3>
-            <p className="text-muted-foreground max-w-sm mx-auto">Não encontramos registros com os filtros aplicados. Tente ajustar sua busca.</p>
+            <p className="text-muted-foreground max-w-sm mx-auto">Não encontramos registros com os filtros aplicados.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredDemands.map((demand) => (
+            {filteredDemands.map((demand: Demand) => (
               <Link key={demand.id} href={`/demandas/${demand.id}`}>
                 <Card className="h-full border hover:border-primary hover:shadow-lg transition-all flex flex-col group">
                   <CardHeader className="pb-3">

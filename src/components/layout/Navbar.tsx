@@ -1,9 +1,8 @@
 "use client";
 
-import { useAuth } from "@/components/auth-context";
+import { useUser, useFirestore, useAuthInstance } from "@/firebase";
 import { Button } from "@/components/ui/button";
-import { Bell, LogOut, User, Menu, Home, ListTodo, PlusCircle, PieChart } from "lucide-react";
-import { auth, db } from "@/lib/firebase";
+import { Bell, LogOut, User, Home, ListTodo, PlusCircle, PieChart } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -14,40 +13,47 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useEffect, useState } from "react";
-import { collection, query, where, onSnapshot, updateDoc, doc, orderBy } from "firebase/firestore";
-import { Notification } from "@/lib/types";
+import { useEffect, useState, useMemo } from "react";
+import { collection, query, where, updateDoc, doc, orderBy } from "firebase/firestore";
+import { Notification, UserProfile } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useCollection, useDoc } from "@/firebase";
 
 export function Navbar() {
-  const { profile, user } = useAuth();
+  const { user } = useUser();
+  const db = useFirestore();
+  const auth = useAuthInstance();
   const router = useRouter();
   const pathname = usePathname();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const unreadCount = notifications.filter((n) => !n.lida).length;
 
-  useEffect(() => {
-    if (!user) return;
-    const q = query(
+  const userProfileQuery = useMemo(() => {
+    if (!db || !user) return null;
+    return doc(db, "users", user.uid);
+  }, [db, user]);
+  const { data: profile } = useDoc(userProfileQuery);
+
+  const notificationsQuery = useMemo(() => {
+    if (!db || !user) return null;
+    return query(
       collection(db, "notificacoes"),
       where("userId", "==", user.uid),
       orderBy("data", "desc")
     );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const notes = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Notification));
-      setNotifications(notes);
-    });
-    return () => unsubscribe();
-  }, [user]);
+  }, [db, user]);
+  const { data: notifications = [] } = useCollection(notificationsQuery);
+
+  const unreadCount = notifications.filter((n: Notification) => !n.lida).length;
 
   const handleLogout = async () => {
+    if (!auth) return;
     await signOut(auth);
     router.push("/login");
   };
 
   const markAsRead = async (note: Notification) => {
+    if (!db) return;
     if (!note.lida) {
       await updateDoc(doc(db, "notificacoes", note.id), { lida: true });
     }
@@ -110,7 +116,7 @@ export function Navbar() {
                     Nenhuma notificação por aqui.
                   </div>
                 ) : (
-                  notifications.map((note) => (
+                  notifications.map((note: Notification) => (
                     <div
                       key={note.id}
                       onClick={() => markAsRead(note)}
@@ -134,14 +140,14 @@ export function Navbar() {
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="flex items-center gap-2 px-3">
                 <User size={18} />
-                <span className="hidden sm:inline-block max-w-[100px] truncate">{profile?.nome || "Usuário"}</span>
+                <span className="hidden sm:inline-block max-w-[100px] truncate">{(profile as any)?.nome || "Usuário"}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>
-                <p className="font-semibold">{profile?.nome}</p>
-                <p className="text-xs text-muted-foreground font-normal">{profile?.email}</p>
-                <Badge variant="secondary" className="mt-2 text-[10px]">{profile?.perfil}</Badge>
+                <p className="font-semibold">{(profile as any)?.nome}</p>
+                <p className="text-xs text-muted-foreground font-normal">{(profile as any)?.email}</p>
+                <Badge variant="secondary" className="mt-2 text-[10px]">{(profile as any)?.perfil}</Badge>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/components/auth-context";
+import { useUser, useFirestore } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -17,7 +17,8 @@ import Link from "next/link";
 import { DemandPriority } from "@/lib/types";
 
 export default function NewDemandPage() {
-  const { user } = useAuth();
+  const { user } = useUser();
+  const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -30,11 +31,11 @@ export default function NewDemandPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !db) return;
     setLoading(true);
 
     try {
-      const demandId = await createDemand(user.uid, formData);
+      const demandId = await createDemand(db, user.uid, formData);
       toast({
         title: "Sucesso!",
         description: "Demanda criada e protocolo gerado.",
@@ -114,7 +115,7 @@ export default function NewDemandPage() {
                 <Label htmlFor="descricao">Descrição Detalhada</Label>
                 <Textarea 
                   id="descricao" 
-                  placeholder="Descreva aqui todos os detalhes da demanda, solicitações recebidas, etc." 
+                  placeholder="Descreva aqui todos os detalhes da demanda..." 
                   rows={8} 
                   required
                   value={formData.descricao}
