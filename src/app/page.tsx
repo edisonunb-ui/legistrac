@@ -1,9 +1,10 @@
+
 "use client";
 
-import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
+import { useUser, useFirestore, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useEffect, useMemo } from "react";
-import { collection, query, orderBy, doc } from "firebase/firestore";
+import { useEffect, useMemo, useState } from "react";
+import { collection, query, orderBy, doc, onSnapshot } from "firebase/firestore";
 import { Demand, UserProfile } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
@@ -13,7 +14,8 @@ import {
   ChevronRight,
   TrendingUp,
   PlusCircle,
-  FileCheck
+  FileCheck,
+  Loader2
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -25,15 +27,29 @@ export default function Dashboard() {
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
   const router = useRouter();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
+  // Monitorar perfil do usuário
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/login");
+    if (!user || !db) {
+      if (!authLoading && !user) {
+        router.push("/login");
+      }
+      return;
     }
-  }, [user, authLoading, router]);
 
-  const profileRef = useMemo(() => user && db ? doc(db, "users", user.uid) : null, [db, user]);
-  const { data: profile } = useDoc(profileRef);
+    const unsubscribe = onSnapshot(doc(db, "users", user.uid), (snap) => {
+      if (snap.exists()) {
+        setProfile(snap.data() as UserProfile);
+      }
+      setProfileLoading(false);
+    }, () => {
+      setProfileLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user, db, authLoading, router]);
 
   const demandsQuery = useMemo(() => db ? query(collection(db, "demandas"), orderBy("dataCriacao", "desc")) : null, [db]);
   const { data: demands = [], loading: demandsLoading } = useCollection(demandsQuery);
@@ -49,7 +65,16 @@ export default function Dashboard() {
     };
   }, [demands, user]);
 
-  if (authLoading || !user) return null;
+  if (authLoading || profileLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground animate-pulse font-medium">Carregando LegisTrac...</p>
+      </div>
+    );
+  }
+
+  if (!user) return null;
 
   const statCards = [
     { title: "Total em Aberto", value: stats.totalAbertas, icon: ClipboardList, color: "text-blue-600", bg: "bg-blue-100" },
@@ -67,7 +92,7 @@ export default function Dashboard() {
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-headline font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Bem-vindo(a), {(profile as any)?.nome}. Veja o resumo do gabinete.</p>
+            <p className="text-muted-foreground mt-1">Bem-vindo(a), {profile?.nome || 'Usuário'}. Veja o resumo do gabinete.</p>
           </div>
           <Link href="/demandas/new">
             <Button className="font-semibold gap-2 shadow-lg">
@@ -129,7 +154,7 @@ export default function Dashboard() {
                           <div className="flex-1 min-w-0 pr-4">
                             <h4 className="font-semibold truncate text-foreground group-hover:text-primary">{demand.titulo}</h4>
                             <div className="flex items-center gap-3 mt-1">
-                              <span className="text-xs text-muted-foreground">Responsável: {demand.responsavelAtual === user.uid ? "Você" : "Outro assessor"}</span>
+                              <span className="text-xs text-muted-foreground">Responsável: {demand.responsavelAtual === user.uid ? "Você" : "Equipe"}</span>
                               <Badge variant={demand.prioridade === "ALTA" ? "destructive" : demand.prioridade === "MEDIA" ? "secondary" : "outline"} className="text-[10px] h-4">
                                 {demand.prioridade}
                               </Badge>
@@ -164,15 +189,17 @@ export default function Dashboard() {
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-xl font-bold">
-                    {(profile as any)?.nome?.[0]}
+                    {profile?.nome?.[0] || "?"}
                   </div>
-                  <div>
-                    <p className="font-semibold">{(profile as any)?.nome}</p>
-                    <p className="text-xs opacity-80">{(profile as any)?.email}</p>
+                  <div className="min-w-0">
+                    <p className="font-semibold truncate">{profile?.nome || "Carregando..."}</p>
+                    <p className="text-xs opacity-80 truncate">{profile?.email || user.email}</p>
                   </div>
                 </div>
                 <div className="pt-2">
-                  <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30">{(profile as any)?.perfil}</Badge>
+                  <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 uppercase text-[10px]">
+                    {profile?.perfil || "USUÁRIO"}
+                  </Badge>
                 </div>
               </CardContent>
             </Card>

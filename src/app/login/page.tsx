@@ -1,41 +1,56 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { useAuth, useAuthInstance } from "@/firebase";
+import { useUser, useAuthInstance } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutDashboard } from "lucide-react";
+import { LayoutDashboard, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
+  const { user, loading: authLoading } = useUser();
   const auth = useAuthInstance();
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.push("/");
+    }
+  }, [user, authLoading, router]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     try {
-      if (!auth) return;
+      if (!auth) throw new Error("Firebase Auth não inicializado.");
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/");
+      // O useEffect acima cuidará do redirecionamento
     } catch (error: any) {
       toast({
         title: "Erro no Login",
         description: "Verifique suas credenciais e tente novamente.",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
@@ -62,6 +77,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={submitting}
               />
             </div>
             <div className="space-y-2">
@@ -73,12 +89,20 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={submitting}
               />
             </div>
           </CardContent>
           <CardFooter>
-            <Button className="w-full font-semibold" type="submit" disabled={loading}>
-              {loading ? "Entrando..." : "Entrar no Sistema"}
+            <Button className="w-full font-semibold" type="submit" disabled={submitting}>
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Autenticando...
+                </>
+              ) : (
+                "Entrar no Sistema"
+              )}
             </Button>
           </CardFooter>
         </form>
