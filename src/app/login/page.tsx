@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutDashboard, Loader2, ShieldCheck } from "lucide-react";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { LayoutDashboard, Loader2, ShieldCheck, AlertCircle } from "lucide-react";
+import { doc, setDoc, serverTimestamp, getDocs, collection, query, where, updateDoc } from "firebase/firestore";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -33,58 +33,70 @@ export default function LoginPage() {
     if (submitting) return;
     setSubmitting(true);
     
-    if (!auth || !db) {
-      toast({ title: "Erro de Sistema", description: "Falha ao conectar com o servidor.", variant: "destructive" });
-      setSubmitting(false);
-      return;
-    }
+    const cleanEmail = email.toLowerCase().trim();
+    const isMaster = cleanEmail === "edisonunb@gmail.com";
 
     try {
+      if (!auth || !db) throw new Error("Erro de conexão.");
+
       try {
-        // Tenta o login normal
-        await signInWithEmailAndPassword(auth, email, password);
-        toast({ title: "Bem-vindo de volta!", description: "Acesso autorizado ao gabinete." });
+        // 1. Tenta login direto
+        await signInWithEmailAndPassword(auth, cleanEmail, password);
       } catch (loginError: any) {
-        const error = loginError as AuthError;
+        // 2. Se falhar, verifica se é um novo usuário autorizado
+        const q = query(collection(db, "users"), where("email", "==", cleanEmail));
+        const querySnapshot = await getDocs(q);
         
-        // Se o usuário não existir, cria a conta automaticamente (fluxo de primeiro acesso)
-        if (error.code === "auth/invalid-credential" || error.code === "auth/user-not-found") {
-          try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const newUser = userCredential.user;
+        let authorizedUser = null;
+        if (!querySnapshot.empty) {
+          authorizedUser = querySnapshot.docs[0].data();
+        }
 
-            // Define perfil baseado no e-mail fornecido
-            const isAdmin = email.toLowerCase().trim() === "edisonunb@gmail.com";
+        // Bloqueia se não for você e não estiver pré-cadastrado
+        if (!isMaster && !authorizedUser) {
+          throw new Error("Este e-mail não tem permissão para acessar o sistema. Entre em contato com o administrador.");
+        }
 
+        if (authorizedUser && authorizedUser.ativo === false) {
+          throw new Error("Seu acesso foi desativado pelo administrador.");
+        }
+
+        // 3. Se autorizado ou for você, cria a conta no Auth
+        try {
+          const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
+          const newUser = userCredential.user;
+
+          // Se já existia um placeholder criado pelo ADM, atualiza ele com o UID real
+          if (authorizedUser && querySnapshot.docs[0].id) {
+            await updateDoc(doc(db, "users", querySnapshot.docs[0].id), {
+              uid: newUser.uid,
+              ativo: true,
+              dataVinculo: serverTimestamp()
+            });
+          } else {
+            // Se for o mestre ou novo, cria o documento
             await setDoc(doc(db, "users", newUser.uid), {
               uid: newUser.uid,
-              nome: email.split("@")[0],
-              email: email.toLowerCase().trim(),
-              perfil: isAdmin ? "ADMIN" : "ASSESSOR",
+              nome: cleanEmail.split("@")[0],
+              email: cleanEmail,
+              perfil: isMaster ? "ADMIN" : "ASSESSOR",
               ativo: true,
               createdAt: serverTimestamp(),
             });
-
-            toast({ 
-              title: "Conta Registrada!", 
-              description: isAdmin ? "Você é o Administrador do sistema." : "Perfil de Assessor criado." 
-            });
-          } catch (createError: any) {
-            const cError = createError as AuthError;
-            if (cError.code === "auth/email-already-in-use") {
-              throw new Error("Senha incorreta para este e-mail.");
-            } else {
-              throw createError;
-            }
           }
-        } else {
-          throw loginError;
+
+          toast({ title: "Bem-vindo!", description: "Sua conta foi vinculada e ativada." });
+        } catch (createError: any) {
+          if (createError.code === "auth/email-already-in-use") {
+            throw new Error("Senha incorreta para este e-mail.");
+          }
+          throw createError;
         }
       }
     } catch (error: any) {
       toast({
-        title: "Falha no Acesso",
-        description: error.message || "Verifique seus dados e tente novamente.",
+        title: "Acesso Negado",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -102,16 +114,16 @@ export default function LoginPage() {
             <LayoutDashboard size={40} />
           </div>
           <CardTitle className="text-3xl font-bold">LegisTrac</CardTitle>
-          <CardDescription>Gestão de Gabinete Político</CardDescription>
+          <CardDescription>Gestão de Gabinete Restrita</CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
+              <Label htmlFor="email">E-mail Autorizado</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="Ex: edisonunb@gmail.com"
+                placeholder="seu-email@exemplo.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -127,17 +139,15 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-              {email.toLowerCase().trim() === "edisonunb@gmail.com" && (
-                <div className="mt-4 p-3 bg-blue-50 text-blue-700 text-[11px] rounded-lg border border-blue-100 flex gap-2">
-                  <ShieldCheck size={16} className="shrink-0" />
-                  E-mail de administrador detectado.
-                </div>
-              )}
+            </div>
+            <div className="p-3 bg-muted rounded-lg text-[11px] flex items-start gap-2 text-muted-foreground leading-tight">
+              <AlertCircle size={14} className="shrink-0 mt-0.5" />
+              Apenas e-mails pré-cadastrados pelo administrador podem realizar o primeiro acesso.
             </div>
           </CardContent>
           <CardFooter>
             <Button className="w-full h-12 text-base font-semibold" type="submit" disabled={submitting}>
-              {submitting ? <Loader2 className="animate-spin mr-2" /> : "Acessar Gabinete"}
+              {submitting ? <Loader2 className="animate-spin mr-2" /> : "Acessar Sistema"}
             </Button>
           </CardFooter>
         </form>

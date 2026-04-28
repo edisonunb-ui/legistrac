@@ -17,7 +17,9 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow write: if false; // Users can't change profiles freely
+      allow create: if isAuthenticated(); // Permite criação no primeiro login
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow delete: if isAuthenticated() && isAdmin();
     }
 
     match /demandas/{demandaId} {
@@ -33,7 +35,7 @@ service cloud.firestore {
     match /tramites/{tramiteId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update, delete: if false; // Immutable history
+      allow update, delete: if false;
     }
 
     match /notificacoes/{notificacaoId} {

@@ -2,7 +2,7 @@
 
 import { useUser, useFirestore, useAuthInstance } from "@/firebase";
 import { Button } from "@/components/ui/button";
-import { Bell, LogOut, User, Home, ListTodo, PlusCircle, PieChart } from "lucide-react";
+import { Bell, LogOut, User, Home, ListTodo, PlusCircle, PieChart, Users } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -60,6 +60,8 @@ export function Navbar() {
     router.push(`/demandas/${note.demandaId}`);
   };
 
+  const isAdmin = (profile as any)?.perfil === "ADMIN";
+
   const navItems = [
     { label: "Início", icon: Home, href: "/" },
     { label: "Demandas", icon: ListTodo, href: "/demandas" },
@@ -91,6 +93,18 @@ export function Navbar() {
                 {item.label}
               </Link>
             ))}
+            {isAdmin && (
+              <Link
+                href="/usuarios"
+                className={cn(
+                  "px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 hover:bg-accent/10 hover:text-accent",
+                  pathname === "/usuarios" ? "text-primary bg-primary/5" : "text-muted-foreground"
+                )}
+              >
+                <Users size={16} />
+                Equipe
+              </Link>
+            )}
           </div>
         </div>
 
@@ -149,6 +163,13 @@ export function Navbar() {
                 <p className="text-xs text-muted-foreground font-normal">{(profile as any)?.email}</p>
                 <Badge variant="secondary" className="mt-2 text-[10px]">{(profile as any)?.perfil}</Badge>
               </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {isAdmin && (
+                <DropdownMenuItem onClick={() => router.push("/usuarios")} className="cursor-pointer">
+                  <Users size={16} className="mr-2" />
+                  Gerenciar Equipe
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
                 <LogOut size={16} className="mr-2" />
