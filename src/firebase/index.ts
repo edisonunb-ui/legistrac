@@ -3,22 +3,19 @@
 
 import { useEffect, useState } from "react";
 import { 
-  getFirestore, 
-  doc, 
   onSnapshot, 
-  collection, 
   Query, 
   DocumentReference,
   DocumentData,
   QuerySnapshot,
   DocumentSnapshot
 } from "firebase/firestore";
-import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { app } from "@/lib/firebase";
+import { onAuthStateChanged, User } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
 
-export const db = getFirestore(app);
-export const auth = getAuth(app);
-
+/**
+ * Custom hook to get the current authenticated user.
+ */
 export function useUser() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,14 +31,23 @@ export function useUser() {
   return { user, loading };
 }
 
+/**
+ * Hook to access the Firestore instance.
+ */
 export function useFirestore() {
   return db;
 }
 
+/**
+ * Hook to access the Auth instance.
+ */
 export function useAuthInstance() {
   return auth;
 }
 
+/**
+ * Hook to listen to a single document in Firestore.
+ */
 export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,7 +61,11 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
 
     const unsubscribe = onSnapshot(ref, 
       (docSnap: DocumentSnapshot<T>) => {
-        setData(docSnap.exists() ? { ...docSnap.data() as T, id: docSnap.id } : null);
+        if (docSnap.exists()) {
+          setData({ ...docSnap.data() as T, id: docSnap.id } as T);
+        } else {
+          setData(null);
+        }
         setLoading(false);
       },
       (err) => {
@@ -70,6 +80,9 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
   return { data, loading, error };
 }
 
+/**
+ * Hook to listen to a collection or query in Firestore.
+ */
 export function useCollection<T = DocumentData>(q: Query<T> | null) {
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
