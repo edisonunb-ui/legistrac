@@ -3,12 +3,12 @@
 
 import { useState, useEffect } from "react";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { useAuthInstance, useFirestore } from "@/firebase";
+import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutDashboard, Loader2, LogIn } from "lucide-react";
+import { LayoutDashboard, Loader2 } from "lucide-react";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/components/auth-context";
 
@@ -16,8 +16,6 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const auth = useAuthInstance();
-  const db = useFirestore();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -42,21 +40,21 @@ export default function LoginPage() {
       const isMaster = loggedUser.email?.toLowerCase() === "edisonunb@gmail.com";
 
       if (!userSnap.exists()) {
-        // Se for o primeiro acesso, verifica se é Master ou se está autorizado (opcional)
-        // Por padrão, vamos criar o perfil. O controle de ADM Master acontece aqui.
+        // Se for o primeiro acesso, criamos o perfil
+        // O MASTER é sempre ADMIN, outros entram como ASSESSOR (que você pode promover depois)
         await setDoc(userRef, {
           uid: loggedUser.uid,
           nome: loggedUser.displayName || "Usuário",
           email: loggedUser.email,
           photoURL: loggedUser.photoURL,
-          perfil: isMaster ? "ADMIN" : "ASSESSOR", // Master é sempre ADMIN
+          perfil: isMaster ? "ADMIN" : "ASSESSOR",
           ativo: true,
           createdAt: serverTimestamp(),
         });
         
         toast({ 
           title: "Bem-vindo!", 
-          description: isMaster ? "Perfil de Administrador Master configurado." : "Seu perfil foi criado com sucesso." 
+          description: isMaster ? "Perfil de Administrador Master configurado." : "Seu perfil foi criado. Aguarde autorização do ADM." 
         });
       } else {
         // Atualiza apenas dados básicos se já existir
@@ -72,9 +70,15 @@ export default function LoginPage() {
       router.push("/");
     } catch (error: any) {
       console.error("Erro no login:", error);
+      
+      let message = "Não foi possível completar o login com o Google.";
+      if (error.code === "auth/configuration-not-found") {
+        message = "O login por Google ainda não foi ativado no Console do Firebase.";
+      }
+
       toast({
         title: "Erro ao acessar",
-        description: "Não foi possível completar o login com o Google.",
+        description: message,
         variant: "destructive",
       });
     } finally {
