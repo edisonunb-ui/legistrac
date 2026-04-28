@@ -10,8 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutDashboard, Loader2, Sparkles } from "lucide-react";
-import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { LayoutDashboard, Loader2, Sparkles, AlertCircle } from "lucide-react";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -40,30 +40,46 @@ export default function LoginPage() {
     }
 
     try {
-      // Tenta logar
+      // 1. Tenta fazer o login direto
       try {
         await signInWithEmailAndPassword(auth, email, password);
+        toast({ title: "Sucesso", description: "Login realizado com sucesso!" });
       } catch (loginError: any) {
-        // Se o erro for usuário não encontrado, tenta registrar (comportamento de primeiro acesso)
-        if (loginError.code === "auth/user-not-found" || loginError.code === "auth/invalid-credential") {
-          toast({ title: "Primeiro Acesso", description: "Criando sua conta com as credenciais informadas..." });
-          
-          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-          const newUser = userCredential.user;
+        console.log("Erro no login:", loginError.code);
+        
+        // 2. Se falhar por credencial inválida, tentamos criar (fluxo de primeiro acesso)
+        // O Firebase retorna 'auth/invalid-credential' tanto para senha errada quanto para user não existe
+        if (loginError.code === "auth/invalid-credential" || loginError.code === "auth/user-not-found") {
+          try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const newUser = userCredential.user;
 
-          // Define se é ADMIN com base no e-mail fornecido
-          const isAdmin = email.toLowerCase() === "edisonunb@gmail.com";
+            // Define se é ADMIN com base no e-mail fornecido
+            const isAdmin = email.toLowerCase() === "edisonunb@gmail.com";
 
-          await setDoc(doc(db, "users", newUser.uid), {
-            uid: newUser.uid,
-            nome: email.split("@")[0],
-            email: email,
-            perfil: isAdmin ? "ADMIN" : "ASSESSOR",
-            ativo: true,
-            createdAt: serverTimestamp(),
-          });
+            await setDoc(doc(db, "users", newUser.uid), {
+              uid: newUser.uid,
+              nome: email.split("@")[0],
+              email: email,
+              perfil: isAdmin ? "ADMIN" : "ASSESSOR",
+              ativo: true,
+              createdAt: serverTimestamp(),
+            });
 
-          toast({ title: "Sucesso", description: `Bem-vindo, ${isAdmin ? "Administrador" : "Assessor"}!` });
+            toast({ title: "Conta Criada", description: `Bem-vindo, ${isAdmin ? "Administrador" : "Assessor"}!` });
+          } catch (createError: any) {
+            console.error("Erro na criação:", createError.code);
+            // Se a criação falhar porque o e-mail já existe, significa que a senha do login inicial estava errada
+            if (createError.code === "auth/email-already-in-use") {
+              throw new Error("Senha incorreta para este e-mail.");
+            } else if (createError.code === "auth/weak-password") {
+              throw new Error("A senha deve ter pelo menos 6 caracteres.");
+            } else if (createError.code === "auth/operation-not-allowed") {
+              throw new Error("O login por E-mail/Senha não está ativado no Console do Firebase.");
+            } else {
+              throw createError;
+            }
+          }
         } else {
           throw loginError;
         }
@@ -72,7 +88,7 @@ export default function LoginPage() {
       console.error(error);
       toast({
         title: "Erro no Acesso",
-        description: "Verifique suas credenciais. Se for seu primeiro acesso, use uma senha forte.",
+        description: error.message || "Verifique suas credenciais ou a conexão.",
         variant: "destructive",
       });
     } finally {
@@ -127,20 +143,24 @@ export default function LoginPage() {
                 required
                 disabled={submitting}
               />
-              <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1">
-                <Sparkles size={10} /> No primeiro acesso, a senha digitada será a sua definitiva.
-              </p>
+              <div className="bg-muted/50 p-3 rounded-lg flex gap-2 items-start mt-4 border">
+                <AlertCircle size={16} className="text-primary shrink-0 mt-0.5" />
+                <p className="text-[11px] text-muted-foreground leading-tight">
+                  No primeiro acesso, a senha digitada será a sua definitiva. 
+                  Use ao menos 6 caracteres.
+                </p>
+              </div>
             </div>
           </CardContent>
           <CardFooter>
-            <Button className="w-full font-semibold" type="submit" disabled={submitting}>
+            <Button className="w-full font-semibold h-12" type="submit" disabled={submitting}>
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processando...
+                  Verificando...
                 </>
               ) : (
-                "Entrar / Criar Conta"
+                "Entrar ou Criar Conta"
               )}
             </Button>
           </CardFooter>
