@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useAuthInstance } from "@/firebase";
@@ -17,6 +18,7 @@ import { useEffect, useState, useMemo } from "react";
 import { collection, query, where, updateDoc, doc, orderBy } from "firebase/firestore";
 import { Notification, UserProfile } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useCollection, useDoc } from "@/firebase";
@@ -152,28 +154,34 @@ export function Navbar() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2 px-3">
-                <User size={18} />
-                <span className="hidden sm:inline-block max-w-[100px] truncate">{(profile as any)?.nome || "Usuário"}</span>
+              <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={(profile as any)?.photoURL || ""} alt={(profile as any)?.nome || ""} />
+                  <AvatarFallback>{(profile as any)?.nome?.[0] || <User />}</AvatarFallback>
+                </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>
-                <p className="font-semibold">{(profile as any)?.nome}</p>
-                <p className="text-xs text-muted-foreground font-normal">{(profile as any)?.email}</p>
-                <Badge variant="secondary" className="mt-2 text-[10px]">{(profile as any)?.perfil}</Badge>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{(profile as any)?.nome}</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {(profile as any)?.email}
+                  </p>
+                  <Badge variant="secondary" className="mt-2 text-[10px] w-fit">{(profile as any)?.perfil}</Badge>
+                </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               {isAdmin && (
-                <DropdownMenuItem onClick={() => router.push("/usuarios")} className="cursor-pointer">
-                  <Users size={16} className="mr-2" />
-                  Gerenciar Equipe
+                <DropdownMenuItem onClick={() => router.push("/usuarios")}>
+                  <Users className="mr-2 h-4 w-4" />
+                  <span>Gerenciar Equipe</span>
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
-                <LogOut size={16} className="mr-2" />
-                Sair
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sair</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

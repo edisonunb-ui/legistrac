@@ -13,7 +13,6 @@ const firebaseConfig = {
   measurementId: "G-FX7Y5M7N8V"
 };
 
-// Inicialização estável para Next.js
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
