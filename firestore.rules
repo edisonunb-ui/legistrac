@@ -1,0 +1,46 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isAdmin() {
+      return getUserData().perfil == "ADMIN";
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Users can't change profiles freely
+    }
+
+    match /demandas/{demandaId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.responsavelAtual == request.auth.uid || 
+        isAdmin()
+      );
+      allow delete: if false;
+    }
+
+    match /tramites/{tramiteId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Immutable history
+    }
+
+    match /notificacoes/{notificacaoId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if false;
+    }
+  }
+}
