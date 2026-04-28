@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, AuthError } from "firebase/auth";
 import { useUser, useAuthInstance, useFirestore } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutDashboard, Loader2, Sparkles, AlertCircle } from "lucide-react";
+import { LayoutDashboard, Loader2, AlertCircle } from "lucide-react";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 export default function LoginPage() {
@@ -31,36 +31,41 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     setSubmitting(true);
     
     if (!auth || !db) {
-      toast({ title: "Erro", description: "Serviços não inicializados.", variant: "destructive" });
+      toast({ title: "Erro Crítico", description: "Serviços do Firebase não inicializados corretamente.", variant: "destructive" });
       setSubmitting(false);
       return;
     }
 
     try {
-      // 1. Tenta fazer o login direto
       try {
+        // Tenta logar primeiro
         await signInWithEmailAndPassword(auth, email, password);
         toast({ title: "Sucesso", description: "Login realizado com sucesso!" });
       } catch (loginError: any) {
-        console.log("Erro no login:", loginError.code);
+        const error = loginError as AuthError;
         
-        // 2. Se falhar por credencial inválida, tentamos criar (fluxo de primeiro acesso)
-        // O Firebase retorna 'auth/invalid-credential' tanto para senha errada quanto para user não existe
-        if (loginError.code === "auth/invalid-credential" || loginError.code === "auth/user-not-found") {
+        // Se o erro for chave inválida, o problema é na config do projeto
+        if (error.code === "auth/invalid-api-key") {
+          throw new Error("A chave de API do Firebase está inválida. Verifique o console do Firebase.");
+        }
+
+        // Fluxo de criação de conta (Primeiro Acesso)
+        if (error.code === "auth/invalid-credential" || error.code === "auth/user-not-found") {
           try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const newUser = userCredential.user;
 
-            // Define se é ADMIN com base no e-mail fornecido
-            const isAdmin = email.toLowerCase() === "edisonunb@gmail.com";
+            // Define se é ADMIN (edisonunb@gmail.com)
+            const isAdmin = email.toLowerCase().trim() === "edisonunb@gmail.com";
 
             await setDoc(doc(db, "users", newUser.uid), {
               uid: newUser.uid,
               nome: email.split("@")[0],
-              email: email,
+              email: email.toLowerCase().trim(),
               perfil: isAdmin ? "ADMIN" : "ASSESSOR",
               ativo: true,
               createdAt: serverTimestamp(),
@@ -68,14 +73,11 @@ export default function LoginPage() {
 
             toast({ title: "Conta Criada", description: `Bem-vindo, ${isAdmin ? "Administrador" : "Assessor"}!` });
           } catch (createError: any) {
-            console.error("Erro na criação:", createError.code);
-            // Se a criação falhar porque o e-mail já existe, significa que a senha do login inicial estava errada
-            if (createError.code === "auth/email-already-in-use") {
+            const cError = createError as AuthError;
+            if (cError.code === "auth/email-already-in-use") {
               throw new Error("Senha incorreta para este e-mail.");
-            } else if (createError.code === "auth/weak-password") {
+            } else if (cError.code === "auth/weak-password") {
               throw new Error("A senha deve ter pelo menos 6 caracteres.");
-            } else if (createError.code === "auth/operation-not-allowed") {
-              throw new Error("O login por E-mail/Senha não está ativado no Console do Firebase.");
             } else {
               throw createError;
             }
@@ -85,10 +87,10 @@ export default function LoginPage() {
         }
       }
     } catch (error: any) {
-      console.error(error);
+      console.error("Erro no login:", error);
       toast({
-        title: "Erro no Acesso",
-        description: error.message || "Verifique suas credenciais ou a conexão.",
+        title: "Falha no Acesso",
+        description: error.message || "Ocorreu um erro inesperado.",
         variant: "destructive",
       });
     } finally {
@@ -146,8 +148,7 @@ export default function LoginPage() {
               <div className="bg-muted/50 p-3 rounded-lg flex gap-2 items-start mt-4 border">
                 <AlertCircle size={16} className="text-primary shrink-0 mt-0.5" />
                 <p className="text-[11px] text-muted-foreground leading-tight">
-                  No primeiro acesso, a senha digitada será a sua definitiva. 
-                  Use ao menos 6 caracteres.
+                  Se for seu primeiro acesso, use sua senha definitiva (mínimo 6 caracteres).
                 </p>
               </div>
             </div>
@@ -157,7 +158,7 @@ export default function LoginPage() {
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Verificando...
+                  Processando...
                 </>
               ) : (
                 "Entrar ou Criar Conta"
