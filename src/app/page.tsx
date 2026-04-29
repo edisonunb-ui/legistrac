@@ -60,7 +60,6 @@ export default function Dashboard() {
         createdAt: serverTimestamp(),
       }, { merge: true });
       toast({ title: "Perfil Criado", description: "Sincronizando dados..." });
-      // Forçar atualização do contexto
       setTimeout(() => window.location.reload(), 1000);
     } catch (e) {
       toast({ title: "Erro", description: "Não foi possível criar o perfil.", variant: "destructive" });

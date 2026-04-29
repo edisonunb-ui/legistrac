@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { LayoutDashboard, Loader2, ShieldAlert, Lock, Mail } from "lucide-react";
-import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/components/auth-context";
 import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
 
@@ -38,7 +38,6 @@ export default function LoginPage() {
     const emailLower = userEmail.toLowerCase();
     const userRef = doc(db, "users", uid);
     
-    // Forçar a criação do perfil se ele estiver na lista de autorizados
     await setDoc(userRef, {
       uid: uid,
       nome: emailLower.split('@')[0],
@@ -46,7 +45,7 @@ export default function LoginPage() {
       perfil: emailLower === "edisonunb@gmail.com" ? "ADMIN" : "ASSESSOR",
       ativo: true,
       updatedAt: serverTimestamp(),
-      createdAt: serverTimestamp(), // O merge cuidará para não sobrescrever se já existir
+      createdAt: serverTimestamp(),
     }, { merge: true });
   };
 
@@ -56,7 +55,6 @@ export default function LoginPage() {
     
     const emailLower = email.toLowerCase().trim();
     
-    // Verificação rigorosa contra a lista de autorizados
     if (!VEREADORES_AUTORIZADOS.includes(emailLower)) {
       toast({
         title: "Acesso Negado",
@@ -70,11 +68,9 @@ export default function LoginPage() {
 
     try {
       try {
-        // Tenta o login normal
         const userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
         await ensureUserProfile(userCredential.user.uid, emailLower);
       } catch (loginError: any) {
-        // Se o usuário não existir (primeiro acesso), cria ele na hora com a senha digitada
         if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential') {
           const userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
           await ensureUserProfile(userCredential.user.uid, emailLower);

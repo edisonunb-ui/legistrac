@@ -34,7 +34,6 @@ export default function NewDemandPage() {
   });
 
   useEffect(() => {
-    // Lógica de "Diligência" exatamente como no exemplo do Questionário
     if (!authorizedEmail) {
       const email = prompt("Para iniciar a diligência, por favor, insira seu e-mail de vereador/assessor:");
       
@@ -45,7 +44,6 @@ export default function NewDemandPage() {
         alert("E-mail não autorizado.");
         router.push("/demandas");
       } else if (email === null) {
-        // Usuário cancelou o prompt
         router.push("/demandas");
       }
     }
