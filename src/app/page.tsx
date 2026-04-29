@@ -40,7 +40,6 @@ export default function Dashboard() {
       return;
     }
 
-    // Lógica do Portão de Acesso (Gate) - Estilo Questionário
     if (!autorizadoEmail && !gateProcessed.current) {
       gateProcessed.current = true;
       const emailInserido = prompt("Para acessar o gabinete, por favor, insira seu e-mail de acesso:");

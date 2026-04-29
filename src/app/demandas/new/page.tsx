@@ -45,7 +45,6 @@ export default function NewDemandPage() {
       return;
     }
 
-    // Lógica do Portão de Acesso (Gate) - Estilo Questionário
     if (!autorizadoEmail && !gateProcessed.current) {
       gateProcessed.current = true;
       const email = prompt("Para iniciar a diligência, por favor, insira seu e-mail de vereador:");
