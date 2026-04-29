@@ -55,7 +55,7 @@ export default function LoginPage() {
       try {
         userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
       } catch (loginError: any) {
-        if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential') {
+        if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential' || loginError.code === 'auth/invalid-email') {
           userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
         } else {
           throw loginError;

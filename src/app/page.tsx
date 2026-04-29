@@ -16,12 +16,12 @@ import {
   Loader2,
   CheckCircle2
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
 import { signOut } from "firebase/auth";
-import { Badge } from "@/components/ui/badge";
 
 export default function Dashboard() {
   const { user, loading } = useUser();
