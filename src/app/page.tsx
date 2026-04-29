@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useFirestore, useCollection } from "@/firebase";
@@ -66,6 +65,7 @@ export default function Dashboard() {
         createdAt: serverTimestamp(),
       }, { merge: true });
       toast({ title: "Perfil Criado", description: "Sincronizando dados..." });
+      // Força um reload para o AuthContext captar o novo perfil
       window.location.reload();
     } catch (e) {
       toast({ title: "Erro", description: "Não foi possível criar o perfil.", variant: "destructive" });
@@ -83,6 +83,7 @@ export default function Dashboard() {
 
   if (!user) return null;
 
+  // Tela amigável de erro se o perfil não foi vinculado no Firestore
   if (!profile) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
