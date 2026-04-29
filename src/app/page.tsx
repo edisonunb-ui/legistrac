@@ -39,6 +39,7 @@ export default function Dashboard() {
       return;
     }
 
+    // Tenta pegar do sessionStorage para evitar loops e repetições
     const savedEmail = sessionStorage.getItem('gate_auth_email');
     
     if (savedEmail && VEREADORES_AUTORIZADOS.includes(savedEmail)) {
