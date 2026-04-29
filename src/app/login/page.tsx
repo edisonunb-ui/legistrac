@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { LayoutDashboard, Loader2, ShieldAlert, Lock, Mail } from "lucide-react";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { useAuth } from "@/components/auth-context";
 import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
 
@@ -35,9 +35,11 @@ export default function LoginPage() {
 
   const ensureUserProfile = async (uid: string, userEmail: string) => {
     if (!db) return;
-    const emailLower = userEmail.toLowerCase();
+    const emailLower = userEmail.toLowerCase().trim();
     const userRef = doc(db, "users", uid);
     
+    // Verifica se já existe para evitar sobrescrever dados desnecessariamente, 
+    // mas garante que o perfil de ADMIN seja setado para o seu e-mail
     await setDoc(userRef, {
       uid: uid,
       nome: emailLower.split('@')[0],
@@ -67,23 +69,28 @@ export default function LoginPage() {
     setSubmitting(true);
 
     try {
+      let userCredential;
       try {
-        const userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
-        await ensureUserProfile(userCredential.user.uid, emailLower);
+        userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
       } catch (loginError: any) {
-        if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential') {
-          const userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
-          await ensureUserProfile(userCredential.user.uid, emailLower);
+        if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential' || loginError.code === 'auth/invalid-email') {
+          // Se não existe, tenta criar (primeiro acesso)
+          userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
           toast({ title: "Bem-vindo!", description: "Primeiro acesso realizado com sucesso." });
         } else {
           throw loginError;
         }
       }
-      router.push("/");
+      
+      if (userCredential) {
+        await ensureUserProfile(userCredential.user.uid, emailLower);
+        router.push("/");
+      }
     } catch (error: any) {
       console.error("Erro no login:", error);
       let message = "Não foi possível completar o acesso.";
       if (error.code === 'auth/wrong-password') message = "Senha incorreta.";
+      if (error.code === 'auth/weak-password') message = "A senha deve ter pelo menos 6 caracteres.";
       
       toast({
         title: "Erro de Acesso",

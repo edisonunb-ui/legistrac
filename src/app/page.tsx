@@ -3,7 +3,7 @@
 import { useFirestore, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useAuth } from "@/components/auth-context";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { collection, query, orderBy, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Demand } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,24 +14,38 @@ import {
   TrendingUp,
   PlusCircle,
   Loader2,
-  RefreshCcw
+  RefreshCcw,
+  CheckCircle2
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
 
 export default function Dashboard() {
   const { user, profile, loading } = useAuth();
   const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+  const [fixing, setFixing] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login");
     }
   }, [user, loading, router]);
+
+  // Tentativa de reparo automático se o usuário estiver logado mas sem perfil
+  useEffect(() => {
+    if (user && !profile && !loading && !fixing) {
+      const emailLower = user.email?.toLowerCase() || "";
+      if (VEREADORES_AUTORIZADOS.includes(emailLower)) {
+        console.log("Tentando reparo automático de perfil...");
+        handleFixProfile();
+      }
+    }
+  }, [user, profile, loading]);
 
   const demandsQuery = useMemo(() => db ? query(collection(db, "demandas"), orderBy("dataCriacao", "desc")) : null, [db]);
   const { data: demands = [] } = useCollection(demandsQuery);
@@ -48,7 +62,8 @@ export default function Dashboard() {
   }, [demands, user]);
 
   const handleFixProfile = async () => {
-    if (!user || !db) return;
+    if (!user || !db || fixing) return;
+    setFixing(true);
     try {
       const emailLower = user.email?.toLowerCase() || "";
       await setDoc(doc(db, "users", user.uid), {
@@ -57,17 +72,27 @@ export default function Dashboard() {
         email: emailLower,
         perfil: emailLower === "edisonunb@gmail.com" ? "ADMIN" : "ASSESSOR",
         ativo: true,
+        updatedAt: serverTimestamp(),
         createdAt: serverTimestamp(),
       }, { merge: true });
-      toast({ title: "Perfil Criado", description: "Sincronizando dados..." });
-      // Força recarregamento para atualizar o contexto
-      setTimeout(() => window.location.reload(), 1000);
+      
+      toast({ 
+        title: "Perfil Sincronizado", 
+        description: "Seu acesso foi configurado com sucesso.",
+      });
+      
+      // Pequeno delay para garantir que o Firestore processe antes do reload
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (e) {
-      toast({ title: "Erro", description: "Não foi possível criar o perfil.", variant: "destructive" });
+      console.error("Erro ao fixar perfil:", e);
+      setFixing(false);
+      toast({ title: "Erro", description: "Não foi possível vincular o perfil automaticamente.", variant: "destructive" });
     }
   };
 
-  if (loading) {
+  if (loading || (user && !profile && fixing)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-primary">
         <Loader2 className="h-10 w-10 animate-spin mb-4" />
@@ -78,7 +103,6 @@ export default function Dashboard() {
 
   if (!user) return null;
 
-  // Se o usuário está logado mas o documento no Firestore não existe
   if (!profile) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
@@ -93,9 +117,9 @@ export default function Dashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <Button onClick={handleFixProfile} className="gap-2 font-bold py-6">
-              <RefreshCcw size={20} />
-              Vincular Perfil Agora
+            <Button onClick={handleFixProfile} disabled={fixing} className="gap-2 font-bold py-6">
+              {fixing ? <Loader2 className="animate-spin" /> : <RefreshCcw size={20} />}
+              {fixing ? "Vinculando..." : "Vincular Perfil Agora"}
             </Button>
           </CardContent>
         </Card>
@@ -117,7 +141,10 @@ export default function Dashboard() {
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-headline font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Bem-vindo(a), {profile?.nome || 'Usuário'}. Veja o resumo do gabinete.</p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-muted-foreground">Bem-vindo(a), {profile?.nome || 'Usuário'}.</p>
+              <CheckCircle2 size={14} className="text-green-500" />
+            </div>
           </div>
           <Link href="/demandas/new">
             <Button className="font-semibold gap-2 shadow-lg">

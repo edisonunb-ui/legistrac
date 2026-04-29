@@ -36,7 +36,7 @@ export default function NewDemandPage() {
   useEffect(() => {
     // Se o email ainda não foi verificado localmente nesta sessão da página...
     if (!authorizedEmail) {
-      // Abre o pop-up (prompt) pedindo o email do usuário exatamente como no exemplo
+      // Abre o pop-up (prompt) pedindo o email do usuário exatamente como no seu exemplo
       const email = prompt("Para iniciar a diligência, por favor, insira seu e-mail de vereador/assessor:");
       
       // Se o email inserido estiver na lista oficial
