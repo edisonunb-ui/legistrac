@@ -43,6 +43,7 @@ export default function NewDemandPage() {
       return;
     }
 
+    // Lógica do Portão de Acesso (Gate)
     if (!autorizadoEmail) {
       const email = prompt("Para iniciar a diligência, por favor, insira seu e-mail de vereador:");
 
@@ -85,11 +86,9 @@ export default function NewDemandPage() {
 
   if (!autorizadoEmail || authLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <Loader2 className="mx-auto text-primary animate-spin" size={48} />
-          <p className="text-muted-foreground font-medium">Aguardando verificação de permissão...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-background text-primary">
+        <Loader2 className="animate-spin mb-4" size={40} />
+        <p className="font-medium">Aguardando autorização...</p>
       </div>
     );
   }

@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
 import { signOut } from "firebase/auth";
+import { Badge } from "@/components/ui/badge";
 
 export default function Dashboard() {
   const { user, loading } = useUser();
@@ -28,42 +29,42 @@ export default function Dashboard() {
   const auth = useAuthInstance();
   const router = useRouter();
   
+  // Passo 2: Estado para armazenar o email verificado (Portão de Acesso)
   const [autorizadoEmail, setAutorizadoEmail] = useState('');
-  const [gateChecking, setGateChecking] = useState(false);
 
+  // Passo 3: Implementar a lógica de verificação (Gate)
   useEffect(() => {
-    if (loading || gateChecking) return;
+    if (loading) return;
     
-    // 1. Verifica se está logado via Firebase
+    // Se não estiver logado no Firebase, vai para o login
     if (!user) {
       router.push("/login");
       return;
     }
 
-    // 2. Portão de Acesso (Gate) via Prompt
+    // Se logado no Firebase, mas ainda não passou pelo Portão de Acesso (Prompt)
     if (!autorizadoEmail) {
-      setGateChecking(true);
-      const email = prompt("Para acessar o gabinete, por favor, insira seu e-mail de acesso:");
+      const emailInserido = prompt("Para acessar o gabinete, por favor, insira seu e-mail de acesso:");
       
-      if (email && VEREADORES_AUTORIZADOS.includes(email.toLowerCase().trim())) {
-        setAutorizadoEmail(email.toLowerCase().trim());
-        setGateChecking(false);
-        alert("Acesso autorizado com sucesso.");
-      } else {
-        alert("Erro: E-mail não autorizado ou operação cancelada.");
-        setGateChecking(false);
-        // Desloga e limpa tudo para evitar loop infinito
-        if (auth) {
-          signOut(auth).then(() => {
-            setAutorizadoEmail('');
-            router.push("/login");
-          });
+      if (emailInserido) {
+        const emailClean = emailInserido.toLowerCase().trim();
+        if (VEREADORES_AUTORIZADOS.includes(emailClean)) {
+          setAutorizadoEmail(emailClean);
+          alert("Acesso autorizado com sucesso.");
         } else {
-          router.push("/login");
+          alert("Erro: E-mail não possui permissão de acesso.");
+          if (auth) {
+            signOut(auth).then(() => router.push("/login"));
+          }
+        }
+      } else {
+        alert("O acesso foi cancelado. Você será redirecionado.");
+        if (auth) {
+          signOut(auth).then(() => router.push("/login"));
         }
       }
     }
-  }, [user, loading, autorizadoEmail, router, auth, gateChecking]);
+  }, [user, loading, autorizadoEmail, router, auth]);
 
   const demandsQuery = useMemo(() => db ? query(collection(db, "demandas"), orderBy("dataCriacao", "desc")) : null, [db]);
   const { data: demands = [] } = useCollection(demandsQuery);
@@ -79,12 +80,12 @@ export default function Dashboard() {
     };
   }, [demands, user]);
 
-  // Enquanto verifica o Portão, mostra o Loader para evitar o loop visual
-  if (loading || !autorizadoEmail || !user) {
+  // Passo 4: Renderizar conteúdo apenas se autorizado
+  if (loading || !user || !autorizadoEmail) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-primary">
         <Loader2 className="h-10 w-10 animate-spin mb-4" />
-        <p className="font-medium">Verificando permissão de acesso...</p>
+        <p className="font-medium">Verificando autorização...</p>
       </div>
     );
   }
@@ -105,7 +106,9 @@ export default function Dashboard() {
             <h1 className="text-3xl font-headline font-bold text-foreground">Dashboard</h1>
             <div className="flex items-center gap-2 mt-1">
               <p className="text-muted-foreground">Logado como: {autorizadoEmail}</p>
-              {autorizadoEmail === 'edisonunb@gmail.com' && <Badge className="bg-amber-500">SUPER ADMIN</Badge>}
+              {autorizadoEmail === 'edisonunb@gmail.com' && (
+                <Badge className="bg-amber-500 text-white">SUPER ADMIN</Badge>
+              )}
               <CheckCircle2 size={14} className="text-green-500" />
             </div>
           </div>
@@ -136,13 +139,5 @@ export default function Dashboard() {
         </div>
       </main>
     </div>
-  );
-}
-
-function Badge({ children, className }: { children: React.ReactNode, className?: string }) {
-  return (
-    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold text-white uppercase ${className}`}>
-      {children}
-    </span>
   );
 }

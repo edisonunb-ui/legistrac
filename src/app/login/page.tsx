@@ -28,30 +28,11 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Redireciona para a home se já estiver logado
+    // Redireciona para o dashboard se o Firebase autenticar
     if (!authLoading && user) {
       router.push("/");
     }
   }, [user, authLoading, router]);
-
-  const ensureUserProfile = async (uid: string, userEmail: string) => {
-    if (!db) return;
-    const emailLower = userEmail.toLowerCase().trim();
-    const userRef = doc(db, "users", uid);
-    
-    // Define como ADMIN se for o email do SuperAdmin, caso contrário ASSESSOR
-    const isSuperAdmin = emailLower === "edisonunb@gmail.com";
-    
-    await setDoc(userRef, {
-      uid: uid,
-      nome: emailLower.split('@')[0],
-      email: emailLower,
-      perfil: isSuperAdmin ? "ADMIN" : "ASSESSOR",
-      ativo: true,
-      updatedAt: serverTimestamp(),
-      createdAt: serverTimestamp(),
-    }, { merge: true });
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +43,7 @@ export default function LoginPage() {
     if (!VEREADORES_AUTORIZADOS.includes(emailLower)) {
       toast({
         title: "Acesso Negado",
-        description: "Este e-mail não está na lista autorizada.",
+        description: "Este e-mail não está na lista autorizada do gabinete.",
         variant: "destructive",
       });
       return;
@@ -75,21 +56,31 @@ export default function LoginPage() {
       try {
         userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
       } catch (loginError: any) {
-        // Se o usuário não existir, cria um novo (primeiro acesso)
-        if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential') {
+        // Se o usuário não existir (primeiro acesso), cria no Firebase Auth
+        if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential' || loginError.code === 'auth/invalid-login-credentials') {
           userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
-          toast({ title: "Bem-vindo!", description: "Primeiro acesso realizado com sucesso." });
         } else {
           throw loginError;
         }
       }
       
       if (userCredential) {
-        await ensureUserProfile(userCredential.user.uid, emailLower);
+        // Garante que o documento do usuário exista no Firestore
+        const userRef = doc(db, "users", userCredential.user.uid);
+        await setDoc(userRef, {
+          uid: userCredential.user.uid,
+          nome: emailLower.split('@')[0],
+          email: emailLower,
+          perfil: (emailLower === "edisonunb@gmail.com") ? "ADMIN" : "ASSESSOR",
+          ativo: true,
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        }, { merge: true });
+
         router.push("/");
       }
     } catch (error: any) {
-      let message = "Não foi possível completar o acesso.";
+      let message = "Erro ao realizar acesso.";
       if (error.code === 'auth/wrong-password') message = "Senha incorreta.";
       if (error.code === 'auth/weak-password') message = "A senha deve ter pelo menos 6 caracteres.";
       
@@ -157,7 +148,7 @@ export default function LoginPage() {
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg flex gap-3 text-blue-700">
               <ShieldAlert className="shrink-0" size={18} />
               <p className="text-[10px]">
-                Apenas e-mails autorizados podem acessar. No primeiro login, sua senha será definida.
+                Apenas e-mails autorizados podem acessar. No primeiro acesso, sua senha será cadastrada.
               </p>
             </div>
 
@@ -172,7 +163,7 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="flex justify-center border-t bg-muted/30 py-4">
           <p className="text-[11px] text-muted-foreground text-center">
-            Acesso restrito a usuários pré-autorizados.
+            Acesso restrito ao gabinete parlamentar.
           </p>
         </CardFooter>
       </Card>
