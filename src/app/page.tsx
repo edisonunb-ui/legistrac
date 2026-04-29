@@ -1,12 +1,13 @@
+
 "use client";
 
 import { useFirestore, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useAuth } from "@/components/auth-context";
 import { useEffect, useMemo, useState } from "react";
-import { collection, query, orderBy, doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { collection, query, orderBy } from "firebase/firestore";
 import { Demand } from "@/lib/types";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { 
   ClipboardList, 
   Clock, 
@@ -14,115 +15,62 @@ import {
   TrendingUp,
   PlusCircle,
   Loader2,
-  RefreshCcw,
   CheckCircle2
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
 
 export default function Dashboard() {
-  const { user, profile, loading } = useAuth();
+  const { user, loading } = useAuth();
   const db = useFirestore();
   const router = useRouter();
-  const { toast } = useToast();
-  const [fixing, setFixing] = useState(false);
+  
+  // Passo 2: Estado para o email autorizado (conforme seu guia)
+  const [autorizadoEmail, setAutorizadoEmail] = useState('');
 
+  // Passo 3: Lógica de verificação via prompt
   useEffect(() => {
-    if (!loading && !user) {
+    if (loading) return;
+    if (!user) {
       router.push("/login");
+      return;
     }
-  }, [user, loading, router]);
 
-  // Tentativa de reparo automático se o usuário estiver logado mas sem perfil
-  useEffect(() => {
-    if (user && !profile && !loading && !fixing) {
-      const emailLower = user.email?.toLowerCase() || "";
-      if (VEREADORES_AUTORIZADOS.includes(emailLower)) {
-        console.log("Tentando reparo automático de perfil...");
-        handleFixProfile();
+    if (!autorizadoEmail) {
+      const email = prompt("Para acessar o gabinete, por favor, insira seu e-mail de acesso:");
+      
+      if (email && VEREADORES_AUTORIZADOS.includes(email.toLowerCase().trim())) {
+        setAutorizadoEmail(email.toLowerCase().trim());
+        alert("Acesso autorizado.");
+      } else {
+        alert("Erro: E-mail não possui permissão de acesso.");
+        router.push("/login");
       }
     }
-  }, [user, profile, loading]);
+  }, [user, loading, autorizadoEmail, router]);
 
   const demandsQuery = useMemo(() => db ? query(collection(db, "demandas"), orderBy("dataCriacao", "desc")) : null, [db]);
   const { data: demands = [] } = useCollection(demandsQuery);
 
   const stats = useMemo(() => {
-    if (!demands || !user) return { totalAbertas: 0, atrasadas: 0, minhas: 0, aguardandoAdmin: 0 };
+    if (!demands) return { totalAbertas: 0, atrasadas: 0, minhas: 0, aguardandoAdmin: 0 };
     const now = new Date();
     return {
       totalAbertas: demands.filter((d: Demand) => d.status !== "FINALIZADO").length,
       atrasadas: demands.filter((d: Demand) => d.status !== "FINALIZADO" && d.prazo && new Date(d.prazo) < now).length,
-      minhas: demands.filter((d: Demand) => d.responsavelAtual === user.uid && d.status !== "FINALIZADO").length,
+      minhas: demands.filter((d: Demand) => user && d.responsavelAtual === user.uid && d.status !== "FINALIZADO").length,
       aguardandoAdmin: demands.filter((d: Demand) => d.status === "AGUARDANDO_VEREADORA").length,
     };
   }, [demands, user]);
 
-  const handleFixProfile = async () => {
-    if (!user || !db || fixing) return;
-    setFixing(true);
-    try {
-      const emailLower = user.email?.toLowerCase() || "";
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        nome: emailLower.split('@')[0],
-        email: emailLower,
-        perfil: emailLower === "edisonunb@gmail.com" ? "ADMIN" : "ASSESSOR",
-        ativo: true,
-        updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp(),
-      }, { merge: true });
-      
-      toast({ 
-        title: "Perfil Sincronizado", 
-        description: "Seu acesso foi configurado com sucesso.",
-      });
-      
-      // Pequeno delay para garantir que o Firestore processe antes do reload
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-    } catch (e) {
-      console.error("Erro ao fixar perfil:", e);
-      setFixing(false);
-      toast({ title: "Erro", description: "Não foi possível vincular o perfil automaticamente.", variant: "destructive" });
-    }
-  };
-
-  if (loading || (user && !profile && fixing)) {
+  // Passo 4: Renderização condicional
+  if (loading || !autorizadoEmail) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-primary">
         <Loader2 className="h-10 w-10 animate-spin mb-4" />
-        <p className="font-medium animate-pulse">Carregando gabinete...</p>
-      </div>
-    );
-  }
-
-  if (!user) return null;
-
-  if (!profile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <Card className="max-w-md w-full border-primary shadow-2xl">
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-2 text-primary">
-              <ShieldAlert size={48} />
-            </div>
-            <CardTitle>Finalizando Acesso</CardTitle>
-            <CardDescription className="pt-2">
-              Estamos vinculando sua conta de e-mail ao sistema de gestão de gabinete.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <Button onClick={handleFixProfile} disabled={fixing} className="gap-2 font-bold py-6">
-              {fixing ? <Loader2 className="animate-spin" /> : <RefreshCcw size={20} />}
-              {fixing ? "Vinculando..." : "Vincular Perfil Agora"}
-            </Button>
-          </CardContent>
-        </Card>
+        <p className="font-medium">Aguardando verificação de permissão...</p>
       </div>
     );
   }
@@ -142,7 +90,7 @@ export default function Dashboard() {
           <div>
             <h1 className="text-3xl font-headline font-bold text-foreground">Dashboard</h1>
             <div className="flex items-center gap-2 mt-1">
-              <p className="text-muted-foreground">Bem-vindo(a), {profile?.nome || 'Usuário'}.</p>
+              <p className="text-muted-foreground">Bem-vindo, {autorizadoEmail}.</p>
               <CheckCircle2 size={14} className="text-green-500" />
             </div>
           </div>

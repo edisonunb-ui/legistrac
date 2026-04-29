@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore } from "@/firebase";
@@ -12,19 +13,20 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, ShieldCheck } from "lucide-react";
+import { ChevronLeft, Save, ShieldCheck, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority } from "@/lib/types";
 import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
 
 export default function NewDemandPage() {
-  const { user } = useUser();
+  const { user, loading: authLoading } = useUser();
   const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
   
-  const [loading, setLoading] = useState(false);
-  const [authorizedEmail, setAuthorizedEmail] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  // Passo 2: Estado para o email autorizado
+  const [autorizadoEmail, setAutorizadoEmail] = useState('');
   
   const [formData, setFormData] = useState({
     titulo: "",
@@ -33,30 +35,36 @@ export default function NewDemandPage() {
     prioridade: "MEDIA" as DemandPriority,
   });
 
+  // Passo 3: Implementar a lógica de verificação via prompt()
   useEffect(() => {
-    // Se o email ainda não foi verificado localmente nesta sessão da página...
-    if (!authorizedEmail) {
-      // Abre o pop-up (prompt) pedindo o email do usuário exatamente como no seu exemplo
-      const email = prompt("Para iniciar a diligência, por favor, insira seu e-mail de vereador/assessor:");
-      
-      // Se o email inserido estiver na lista oficial
-      if (email && VEREADORES_AUTORIZADOS.includes(email.toLowerCase().trim())) {
-        setAuthorizedEmail(email.toLowerCase().trim());
-        alert("E-mail verificado com sucesso! Pode prosseguir.");
-      } else if (email) {
-        alert("E-mail não autorizado.");
-        router.push("/demandas");
-      } else if (email === null) {
-        // Usuário cancelou o prompt
+    if (authLoading) return;
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    if (!autorizadoEmail) {
+      const email = prompt("Para iniciar a diligência, por favor, insira seu e-mail de vereador:");
+
+      if (email) {
+        if (VEREADORES_AUTORIZADOS.includes(email.trim().toLowerCase())) {
+          setAutorizadoEmail(email.trim().toLowerCase());
+          alert("E-mail verificado com sucesso! Pode prosseguir.");
+        } else {
+          alert("Erro: E-mail não possui permissão de acesso.");
+          router.push("/demandas");
+        }
+      } else {
+        alert("O acesso foi cancelado.");
         router.push("/demandas");
       }
     }
-  }, [authorizedEmail, router]);
+  }, [autorizadoEmail, user, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db || !authorizedEmail) return;
-    setLoading(true);
+    if (!user || !db || !autorizadoEmail) return;
+    setSaving(true);
 
     try {
       const demandId = await createDemand(db, user.uid, formData);
@@ -72,16 +80,17 @@ export default function NewDemandPage() {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  if (!authorizedEmail) {
+  // Passo 4: Renderização condicional
+  if (!autorizadoEmail || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
-          <ShieldCheck size={48} className="mx-auto text-primary animate-pulse" />
-          <p className="text-muted-foreground font-medium">Aguardando verificação de e-mail...</p>
+          <Loader2 className="mx-auto text-primary animate-spin" size={48} />
+          <p className="text-muted-foreground font-medium">Aguardando verificação de permissão...</p>
         </div>
       </div>
     );
@@ -99,7 +108,7 @@ export default function NewDemandPage() {
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-headline font-bold">Nova Demanda</h1>
             <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-              <ShieldCheck size={14} /> Autorizado: {authorizedEmail}
+              <ShieldCheck size={14} /> Autorizado: {autorizadoEmail}
             </div>
           </div>
           <p className="text-muted-foreground">Preencha os dados abaixo para registrar uma nova solicitação.</p>
@@ -165,9 +174,9 @@ export default function NewDemandPage() {
             </CardContent>
             <CardFooter className="flex justify-end gap-3 border-t pt-6 bg-muted/30">
               <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
-              <Button type="submit" className="font-semibold gap-2" disabled={loading}>
+              <Button type="submit" className="font-semibold gap-2" disabled={saving}>
                 <Save size={18} />
-                {loading ? "Registrando..." : "Registrar Demanda"}
+                {saving ? "Registrando..." : "Registrar Demanda"}
               </Button>
             </CardFooter>
           </form>
