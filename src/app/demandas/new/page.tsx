@@ -34,9 +34,12 @@ export default function NewDemandPage() {
   });
 
   useEffect(() => {
+    // Se o email ainda não foi verificado localmente nesta sessão da página...
     if (!authorizedEmail) {
+      // Abre o pop-up (prompt) pedindo o email do usuário exatamente como no exemplo
       const email = prompt("Para iniciar a diligência, por favor, insira seu e-mail de vereador/assessor:");
       
+      // Se o email inserido estiver na lista oficial
       if (email && VEREADORES_AUTORIZADOS.includes(email.toLowerCase().trim())) {
         setAuthorizedEmail(email.toLowerCase().trim());
         alert("E-mail verificado com sucesso! Pode prosseguir.");
@@ -44,6 +47,7 @@ export default function NewDemandPage() {
         alert("E-mail não autorizado.");
         router.push("/demandas");
       } else if (email === null) {
+        // Usuário cancelou o prompt
         router.push("/demandas");
       }
     }
