@@ -39,7 +39,6 @@ export default function Dashboard() {
       return;
     }
 
-    // Tenta pegar do sessionStorage para evitar loops e repetições
     const savedEmail = sessionStorage.getItem('gate_auth_email');
     
     if (savedEmail && VEREADORES_AUTORIZADOS.includes(savedEmail)) {
@@ -58,13 +57,19 @@ export default function Dashboard() {
         } else {
           alert("Erro: E-mail não possui permissão de acesso ao gabinete.");
           if (auth) {
-            signOut(auth).then(() => router.push("/login"));
+            signOut(auth).then(() => {
+              sessionStorage.removeItem('gate_auth_email');
+              router.push("/login");
+            });
           }
         }
       } else {
         alert("O acesso foi cancelado. Você será redirecionado.");
         if (auth) {
-          signOut(auth).then(() => router.push("/login"));
+          signOut(auth).then(() => {
+            sessionStorage.removeItem('gate_auth_email');
+            router.push("/login");
+          });
         }
       }
     }

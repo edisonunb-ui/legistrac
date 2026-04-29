@@ -3,13 +3,13 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCag79TbgOLJSf_VSyI8wPzFC0MfBl7ON4",
-  authDomain: "projetojaque-3c3b8.firebaseapp.com",
-  projectId: "projetojaque-3c3b8",
-  storageBucket: "projetojaque-3c3b8.firebasestorage.app",
-  messagingSenderId: "372698262234",
-  appId: "1:372698262234:web:c25797ba44250fa93813e3",
-  measurementId: "G-FX7Y5M7N8V"
+  apiKey: "AIzaSyBh9hcARIT6NNLM0T583mn9Ts5RqC2AgfI",
+  authDomain: "legistrac.firebaseapp.com",
+  projectId: "legistrac",
+  storageBucket: "legistrac.firebasestorage.app",
+  messagingSenderId: "736970891304",
+  appId: "1:1003754974955:web:0cb8d3fad5bb3c9e38951d",
+  measurementId: "G-Z4LT5NN6B0"
 };
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
