@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { LayoutDashboard, Loader2, ShieldAlert, Lock, Mail } from "lucide-react";
-import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { useAuth } from "@/components/auth-context";
 import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
 
@@ -32,13 +32,41 @@ export default function LoginPage() {
     }
   }, [user, authLoading, router]);
 
+  const ensureUserProfile = async (uid: string, userEmail: string) => {
+    const emailLower = userEmail.toLowerCase();
+    const userRef = doc(db, "users", uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      // Tenta encontrar um convite pré-existente pelo e-mail
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("email", "==", emailLower));
+      const querySnapshot = await getDocs(q);
+      
+      let existingData = {};
+      if (!querySnapshot.empty) {
+        existingData = querySnapshot.docs[0].data();
+        // Opcional: deletar o convite antigo ou apenas mesclar
+      }
+
+      await setDoc(userRef, {
+        ...existingData,
+        uid: uid,
+        nome: emailLower.split('@')[0],
+        email: emailLower,
+        perfil: emailLower === "edisonunb@gmail.com" ? "ADMIN" : "ASSESSOR",
+        ativo: true,
+        createdAt: serverTimestamp(),
+      }, { merge: true });
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting || !auth || !db) return;
     
     const emailLower = email.toLowerCase().trim();
     
-    // Verificação de autorização antes de qualquer coisa
     if (!VEREADORES_AUTORIZADOS.includes(emailLower)) {
       toast({
         title: "Acesso Negado",
@@ -51,34 +79,19 @@ export default function LoginPage() {
     setSubmitting(true);
 
     try {
-      // Tenta fazer login
       try {
-        await signInWithEmailAndPassword(auth, emailLower, password);
+        const userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
+        await ensureUserProfile(userCredential.user.uid, emailLower);
       } catch (loginError: any) {
-        // Se o erro for 'user-not-found', tentamos o "Primeiro Acesso" (cadastro automático)
+        // Códigos de erro que sugerem que o usuário não existe
         if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential') {
-          // Verifica se o usuário já existe no Auth mas a senha está errada
-          // O Firebase não permite saber isso facilmente por segurança, 
-          // então tentamos criar a conta se o login falhar.
-          await createUserWithEmailAndPassword(auth, emailLower, password);
-          
-          // Se criou com sucesso, salva no Firestore
-          const userRef = doc(db, "users", auth.currentUser!.uid);
-          await setDoc(userRef, {
-            uid: auth.currentUser!.uid,
-            nome: emailLower.split('@')[0],
-            email: emailLower,
-            perfil: emailLower === "edisonunb@gmail.com" ? "ADMIN" : "ASSESSOR",
-            ativo: true,
-            createdAt: serverTimestamp(),
-          }, { merge: true });
-
-          toast({ title: "Bem-vindo!", description: "Conta criada e acesso autorizado." });
+          const userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
+          await ensureUserProfile(userCredential.user.uid, emailLower);
+          toast({ title: "Bem-vindo!", description: "Primeiro acesso realizado com sucesso." });
         } else {
           throw loginError;
         }
       }
-      
       router.push("/");
     } catch (error: any) {
       console.error("Erro no login:", error);
@@ -149,7 +162,7 @@ export default function LoginPage() {
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg flex gap-3 text-blue-700">
               <ShieldAlert className="shrink-0" size={18} />
               <p className="text-[10px]">
-                Primeiro acesso? Use seu e-mail autorizado e a senha que deseja cadastrar.
+                Primeiro acesso? Use seu e-mail da lista de vereadores e a senha que deseja cadastrar.
               </p>
             </div>
 
@@ -164,7 +177,7 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="flex justify-center border-t bg-muted/30 py-4">
           <p className="text-[11px] text-muted-foreground text-center">
-            Acesso restrito a vereadores e assessores autorizados.
+            Acesso restrito a vereadores autorizados.
           </p>
         </CardFooter>
       </Card>

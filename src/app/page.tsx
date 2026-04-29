@@ -5,7 +5,7 @@ import { useFirestore, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useAuth } from "@/components/auth-context";
 import { useEffect, useMemo } from "react";
-import { collection, query, orderBy } from "firebase/firestore";
+import { collection, query, orderBy, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Demand } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
@@ -17,18 +17,21 @@ import {
   PlusCircle,
   FileCheck,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  RefreshCcw
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
   const { user, profile, loading } = useAuth();
   const db = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -50,6 +53,25 @@ export default function Dashboard() {
     };
   }, [demands, user]);
 
+  const handleFixProfile = async () => {
+    if (!user || !db) return;
+    try {
+      const emailLower = user.email?.toLowerCase() || "";
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        nome: emailLower.split('@')[0],
+        email: emailLower,
+        perfil: emailLower === "edisonunb@gmail.com" ? "ADMIN" : "ASSESSOR",
+        ativo: true,
+        createdAt: serverTimestamp(),
+      }, { merge: true });
+      toast({ title: "Perfil Criado", description: "Sincronizando dados..." });
+      window.location.reload();
+    } catch (e) {
+      toast({ title: "Erro", description: "Não foi possível criar o perfil.", variant: "destructive" });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-primary">
@@ -63,20 +85,25 @@ export default function Dashboard() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="max-w-md w-full border-destructive">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+        <Card className="max-w-md w-full border-primary shadow-2xl">
           <CardHeader className="text-center">
-            <div className="flex justify-center mb-2 text-destructive">
-              <AlertTriangle size={48} />
+            <div className="flex justify-center mb-2 text-primary">
+              <ShieldAlert size={48} />
             </div>
-            <CardTitle>Perfil Não Vinculado</CardTitle>
-            <CardDescription>
-              Sua conta de acesso foi criada, mas ainda não há um perfil de dados vinculado no sistema.
-              Isso pode acontecer se você for um novo usuário aguardando autorização.
+            <CardTitle>Finalizando Acesso</CardTitle>
+            <CardDescription className="pt-2">
+              Estamos vinculando sua conta de e-mail ao sistema de gestão de gabinete.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex justify-center">
-            <Button onClick={() => window.location.reload()}>Recarregar Sistema</Button>
+          <CardContent className="flex flex-col gap-4">
+            <Button onClick={handleFixProfile} className="gap-2 font-bold py-6">
+              <RefreshCcw size={20} />
+              Vincular Perfil Agora
+            </Button>
+            <p className="text-[10px] text-muted-foreground text-center">
+              Apenas um passo necessário para seu primeiro acesso.
+            </p>
           </CardContent>
         </Card>
       </div>
