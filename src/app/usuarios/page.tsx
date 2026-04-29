@@ -4,7 +4,7 @@
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
-import { collection, query, doc, setDoc, updateDoc, serverTimestamp, orderBy, addDoc } from "firebase/firestore";
+import { collection, query, doc, updateDoc, serverTimestamp, orderBy, addDoc } from "firebase/firestore";
 import { UserProfile, UserRole } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Shield, UserMinus, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Users, UserPlus, Shield, UserMinus, CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function UserManagementPage() {
@@ -40,14 +40,11 @@ export default function UserManagementPage() {
     try {
       const emailLower = newEmail.toLowerCase().trim();
       
-      // Verifica se já existe
       const exists = allUsers.find(u => u.email === emailLower);
       if (exists) {
-        throw new Error("Este e-mail já está autorizado ou cadastrado.");
+        throw new Error("Este e-mail já está cadastrado.");
       }
 
-      // Adiciona um documento na coleção de usuários sem UID.
-      // O UID será preenchido no primeiro login.
       await addDoc(collection(db, "users"), {
         email: emailLower,
         nome: newName,
@@ -56,11 +53,11 @@ export default function UserManagementPage() {
         createdAt: serverTimestamp(),
       });
 
-      toast({ title: "Sucesso", description: "E-mail autorizado. Peça para o usuário acessar o sistema e definir a senha." });
+      toast({ title: "Sucesso", description: "Usuário autorizado no sistema." });
       setNewEmail("");
       setNewName("");
     } catch (error: any) {
-      toast({ title: "Erro", description: error.message || "Falha ao autorizar e-mail.", variant: "destructive" });
+      toast({ title: "Erro", description: error.message || "Falha ao autorizar usuário.", variant: "destructive" });
     } finally {
       setIsAdding(false);
     }
@@ -76,6 +73,7 @@ export default function UserManagementPage() {
     }
   };
 
+  // Edisonunb@gmail.com é o Super Admin Master
   const isAdmin = (currentUserProfile as any)?.perfil === "ADMIN" || user?.email === "edisonunb@gmail.com";
 
   if (!isAdmin && !loading) {
@@ -104,17 +102,17 @@ export default function UserManagementPage() {
             <Users className="text-primary" />
             Gestão da Equipe
           </h1>
-          <p className="text-muted-foreground">Pré-autorize e-mails para que os assessores possam acessar o sistema.</p>
+          <p className="text-muted-foreground">Controle quem pode acessar o gabinete parlamentar.</p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <Card className="h-fit shadow-lg border-none">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <UserPlus size={18} /> Autorizar Novo E-mail
+                <UserPlus size={18} /> Autorizar Novo Usuário
               </CardTitle>
               <CardDescription>
-                A pessoa poderá definir a própria senha no primeiro acesso.
+                O usuário definirá sua senha no primeiro login.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -129,7 +127,7 @@ export default function UserManagementPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>E-mail Institucional</Label>
+                  <Label>E-mail de Acesso</Label>
                   <Input 
                     type="email" 
                     placeholder="nome@gabinete.com" 
@@ -139,14 +137,14 @@ export default function UserManagementPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Perfil de Acesso</Label>
+                  <Label>Perfil</Label>
                   <Select value={newRole} onValueChange={(v: UserRole) => setNewRole(v)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ASSESSOR">Assessor</SelectItem>
-                      <SelectItem value="ADMIN">Administrador (ADMIN)</SelectItem>
+                      <SelectItem value="ADMIN">Administrador</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -160,14 +158,12 @@ export default function UserManagementPage() {
           <div className="lg:col-span-2 space-y-4">
             <Card className="shadow-lg border-none">
               <CardHeader>
-                <CardTitle className="text-lg">Equipe e Convites</CardTitle>
+                <CardTitle className="text-lg">Usuários Ativos</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {loading ? (
-                    <div className="py-8 text-center text-muted-foreground"><Loader2 className="animate-spin inline mr-2" /> Carregando lista...</div>
-                  ) : allUsers.length === 0 ? (
-                    <div className="py-12 text-center text-muted-foreground border-2 border-dashed rounded-xl">Ninguém autorizado ainda.</div>
+                    <div className="py-8 text-center text-muted-foreground"><Loader2 className="animate-spin inline mr-2" /> Carregando...</div>
                   ) : allUsers.map((u: UserProfile) => (
                     <div key={u.id} className="flex items-center justify-between p-4 rounded-xl border bg-card hover:bg-muted/30 transition-all">
                       <div className="flex items-center gap-3">
@@ -183,14 +179,7 @@ export default function UserManagementPage() {
                             {u.email === "edisonunb@gmail.com" && <Badge className="text-[9px] bg-amber-500">Master</Badge>}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">{u.email}</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Badge variant="secondary" className="text-[9px] uppercase">{u.perfil}</Badge>
-                            {!u.uid && (
-                              <Badge variant="outline" className="text-[9px] border-orange-200 text-orange-600 bg-orange-50">
-                                Aguardando Primeiro Acesso
-                              </Badge>
-                            )}
-                          </div>
+                          <Badge variant="secondary" className="text-[9px] uppercase mt-2">{u.perfil}</Badge>
                         </div>
                       </div>
                       
@@ -201,7 +190,7 @@ export default function UserManagementPage() {
                             size="sm" 
                             className={cn(
                               "gap-2",
-                              u.ativo ? "text-destructive hover:text-destructive" : "text-green-600 hover:text-green-600"
+                              u.ativo ? "text-destructive" : "text-green-600"
                             )}
                             onClick={() => toggleUserStatus(u.id, u.ativo)}
                           >

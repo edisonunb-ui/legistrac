@@ -29,34 +29,41 @@ export default function Dashboard() {
   const router = useRouter();
   
   const [autorizadoEmail, setAutorizadoEmail] = useState('');
+  const [gateChecking, setGateChecking] = useState(false);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || gateChecking) return;
     
-    // Se não há usuário logado no Firebase, vai para o login
+    // 1. Verifica se está logado via Firebase
     if (!user) {
       router.push("/login");
       return;
     }
 
-    // Lógica do Portão de Acesso (Gate)
+    // 2. Portão de Acesso (Gate) via Prompt
     if (!autorizadoEmail) {
+      setGateChecking(true);
       const email = prompt("Para acessar o gabinete, por favor, insira seu e-mail de acesso:");
       
       if (email && VEREADORES_AUTORIZADOS.includes(email.toLowerCase().trim())) {
         setAutorizadoEmail(email.toLowerCase().trim());
-        alert("Acesso autorizado.");
+        setGateChecking(false);
+        alert("Acesso autorizado com sucesso.");
       } else {
-        alert("Erro: E-mail não possui permissão de acesso ou operação cancelada.");
-        // Em vez de apenas redirecionar (causando loop), fazemos logout para limpar a sessão
+        alert("Erro: E-mail não autorizado ou operação cancelada.");
+        setGateChecking(false);
+        // Desloga e limpa tudo para evitar loop infinito
         if (auth) {
-          signOut(auth).then(() => router.push("/login"));
+          signOut(auth).then(() => {
+            setAutorizadoEmail('');
+            router.push("/login");
+          });
         } else {
           router.push("/login");
         }
       }
     }
-  }, [user, loading, autorizadoEmail, router, auth]);
+  }, [user, loading, autorizadoEmail, router, auth, gateChecking]);
 
   const demandsQuery = useMemo(() => db ? query(collection(db, "demandas"), orderBy("dataCriacao", "desc")) : null, [db]);
   const { data: demands = [] } = useCollection(demandsQuery);
@@ -72,11 +79,12 @@ export default function Dashboard() {
     };
   }, [demands, user]);
 
+  // Enquanto verifica o Portão, mostra o Loader para evitar o loop visual
   if (loading || !autorizadoEmail || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-primary">
         <Loader2 className="h-10 w-10 animate-spin mb-4" />
-        <p className="font-medium">Aguardando verificação de permissão...</p>
+        <p className="font-medium">Verificando permissão de acesso...</p>
       </div>
     );
   }
@@ -96,7 +104,8 @@ export default function Dashboard() {
           <div>
             <h1 className="text-3xl font-headline font-bold text-foreground">Dashboard</h1>
             <div className="flex items-center gap-2 mt-1">
-              <p className="text-muted-foreground">Bem-vindo, {autorizadoEmail}.</p>
+              <p className="text-muted-foreground">Logado como: {autorizadoEmail}</p>
+              {autorizadoEmail === 'edisonunb@gmail.com' && <Badge className="bg-amber-500">SUPER ADMIN</Badge>}
               <CheckCircle2 size={14} className="text-green-500" />
             </div>
           </div>
@@ -127,5 +136,13 @@ export default function Dashboard() {
         </div>
       </main>
     </div>
+  );
+}
+
+function Badge({ children, className }: { children: React.ReactNode, className?: string }) {
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold text-white uppercase ${className}`}>
+      {children}
+    </span>
   );
 }

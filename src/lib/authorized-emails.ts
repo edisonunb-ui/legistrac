@@ -3,7 +3,7 @@
  * Somente estes emails podem realizar o primeiro acesso ou login.
  */
 export const VEREADORES_AUTORIZADOS = [
-  'edisonunb@gmail.com', // ADM Master
+  'edisonunb@gmail.com', // SuperAdmin / Master
   'gabinete.professoraflavia@gmail.com',
   'gabinetevereadorevandro@gmail.com',
   'josiasvereador@gmail.com',

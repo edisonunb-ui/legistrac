@@ -28,6 +28,7 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Redireciona para a home se já estiver logado
     if (!authLoading && user) {
       router.push("/");
     }
@@ -38,11 +39,14 @@ export default function LoginPage() {
     const emailLower = userEmail.toLowerCase().trim();
     const userRef = doc(db, "users", uid);
     
+    // Define como ADMIN se for o email do SuperAdmin, caso contrário ASSESSOR
+    const isSuperAdmin = emailLower === "edisonunb@gmail.com";
+    
     await setDoc(userRef, {
       uid: uid,
       nome: emailLower.split('@')[0],
       email: emailLower,
-      perfil: emailLower === "edisonunb@gmail.com" ? "ADMIN" : "ASSESSOR",
+      perfil: isSuperAdmin ? "ADMIN" : "ASSESSOR",
       ativo: true,
       updatedAt: serverTimestamp(),
       createdAt: serverTimestamp(),
@@ -58,7 +62,7 @@ export default function LoginPage() {
     if (!VEREADORES_AUTORIZADOS.includes(emailLower)) {
       toast({
         title: "Acesso Negado",
-        description: "Este e-mail não está na lista de vereadores autorizados.",
+        description: "Este e-mail não está na lista autorizada.",
         variant: "destructive",
       });
       return;
@@ -71,7 +75,8 @@ export default function LoginPage() {
       try {
         userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
       } catch (loginError: any) {
-        if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential' || loginError.code === 'auth/invalid-email') {
+        // Se o usuário não existir, cria um novo (primeiro acesso)
+        if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential') {
           userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
           toast({ title: "Bem-vindo!", description: "Primeiro acesso realizado com sucesso." });
         } else {
@@ -119,7 +124,7 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail Institucional</Label>
+              <Label htmlFor="email">E-mail de Acesso</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input 
@@ -152,7 +157,7 @@ export default function LoginPage() {
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg flex gap-3 text-blue-700">
               <ShieldAlert className="shrink-0" size={18} />
               <p className="text-[10px]">
-                Apenas e-mails autorizados podem logar. Use o e-mail e defina sua senha no primeiro acesso.
+                Apenas e-mails autorizados podem acessar. No primeiro login, sua senha será definida.
               </p>
             </div>
 
@@ -161,13 +166,13 @@ export default function LoginPage() {
               type="submit"
               disabled={submitting}
             >
-              {submitting ? <Loader2 className="animate-spin" /> : "Acessar Gabinete"}
+              {submitting ? <Loader2 className="animate-spin" /> : "Entrar no Sistema"}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="flex justify-center border-t bg-muted/30 py-4">
           <p className="text-[11px] text-muted-foreground text-center">
-            Acesso restrito a vereadores autorizados.
+            Acesso restrito a usuários pré-autorizados.
           </p>
         </CardFooter>
       </Card>
