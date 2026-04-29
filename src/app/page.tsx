@@ -39,7 +39,7 @@ export default function Dashboard() {
       return;
     }
 
-    // Lógica do Portão de Acesso (Gate) - Executa apenas uma vez
+    // Lógica do Portão de Acesso (Gate) - Executa apenas uma vez para evitar loops
     if (!autorizadoEmail && !gateProcessed.current) {
       gateProcessed.current = true;
       const emailInserido = prompt("Para acessar o gabinete, por favor, insira seu e-mail de acesso:");
@@ -48,7 +48,7 @@ export default function Dashboard() {
         const emailClean = emailInserido.toLowerCase().trim();
         if (VEREADORES_AUTORIZADOS.includes(emailClean)) {
           setAutorizadoEmail(emailClean);
-          alert("Acesso autorizado com sucesso.");
+          // Opcional: alert("Acesso autorizado com sucesso.");
         } else {
           alert("Erro: E-mail não possui permissão de acesso.");
           if (auth) {
@@ -83,7 +83,7 @@ export default function Dashboard() {
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-primary">
         <Loader2 className="h-10 w-10 animate-spin mb-4" />
         <p className="font-medium text-center">
-          {loading ? "Iniciando sessão..." : "Verificando autorização..."}
+          {loading ? "Iniciando sessão..." : "Verificando autorização de acesso..."}
         </p>
       </div>
     );

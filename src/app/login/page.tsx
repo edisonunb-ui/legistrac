@@ -54,6 +54,7 @@ export default function LoginPage() {
       try {
         userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
       } catch (loginError: any) {
+        // No primeiro login, cria a conta automaticamente para facilitar
         if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential') {
           userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
         } else {
@@ -62,6 +63,7 @@ export default function LoginPage() {
       }
       
       if (userCredential) {
+        // Garante a criação do perfil no Firestore com o cargo correto
         const userRef = doc(db, "users", userCredential.user.uid);
         await setDoc(userRef, {
           uid: userCredential.user.uid,

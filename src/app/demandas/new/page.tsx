@@ -44,14 +44,13 @@ export default function NewDemandPage() {
       return;
     }
 
-    // Lógica do Portão de Acesso (Gate)
+    // Lógica do Portão de Acesso (Gate) - Estilo Questionário
     if (!autorizadoEmail && !gateProcessed.current) {
       gateProcessed.current = true;
       const email = prompt("Para iniciar a diligência, por favor, insira seu e-mail de vereador:");
 
       if (email && VEREADORES_AUTORIZADOS.includes(email.trim().toLowerCase())) {
         setAutorizadoEmail(email.trim().toLowerCase());
-        alert("E-mail verificado com sucesso! Pode prosseguir.");
       } else {
         alert("Erro: E-mail não autorizado ou operação cancelada.");
         if (auth) {
