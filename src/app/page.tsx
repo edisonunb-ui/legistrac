@@ -4,7 +4,7 @@
 import { useFirestore, useCollection, useUser, useAuthInstance } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useEffect, useMemo, useState, useRef } from "react";
-import { collection, query, orderBy } from "firebase/firestore";
+import { collection, query, orderBy, doc } from "firebase/firestore";
 import { Demand } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
 import { signOut } from "firebase/auth";
 import { Badge } from "@/components/ui/badge";
+import { useDoc } from "@/firebase";
 
 export default function Dashboard() {
   const { user, loading } = useUser();
@@ -40,6 +41,7 @@ export default function Dashboard() {
       return;
     }
 
+    // Lógica do Portão de Acesso (Gate) conforme solicitado
     if (!autorizadoEmail && !gateProcessed.current) {
       gateProcessed.current = true;
       const emailInserido = prompt("Para acessar o gabinete, por favor, insira seu e-mail de acesso:");
@@ -62,6 +64,9 @@ export default function Dashboard() {
       }
     }
   }, [user, loading, autorizadoEmail, router, auth]);
+
+  const profileRef = useMemo(() => user && db ? doc(db, "users", user.uid) : null, [db, user]);
+  const { data: profile } = useDoc(profileRef);
 
   const demandsQuery = useMemo(() => db ? query(collection(db, "demandas"), orderBy("dataCriacao", "desc")) : null, [db]);
   const { data: demands = [] } = useCollection(demandsQuery);
@@ -104,8 +109,8 @@ export default function Dashboard() {
             <h1 className="text-3xl font-headline font-bold text-foreground">Dashboard</h1>
             <div className="flex items-center gap-2 mt-1">
               <p className="text-muted-foreground text-sm">Acesso: {autorizadoEmail}</p>
-              {autorizadoEmail === 'edisonunb@gmail.com' && (
-                <Badge className="bg-amber-500 text-white text-[10px]">SUPER ADMIN</Badge>
+              {(profile as any)?.perfil === 'ADMIN' && (
+                <Badge className="bg-amber-500 text-white text-[10px]">ADMINISTRADOR</Badge>
               )}
               <CheckCircle2 size={14} className="text-green-500" />
             </div>

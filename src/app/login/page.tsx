@@ -39,6 +39,7 @@ export default function LoginPage() {
     
     const emailLower = email.toLowerCase().trim();
     
+    // Verificação de segurança: Apenas e-mails autorizados podem fazer login/cadastro
     if (!VEREADORES_AUTORIZADOS.includes(emailLower)) {
       toast({
         title: "Acesso Negado",
@@ -53,8 +54,10 @@ export default function LoginPage() {
     try {
       let userCredential;
       try {
+        // Tenta fazer login
         userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
       } catch (loginError: any) {
+        // Se o usuário não existir, cria a conta automaticamente (conforme solicitado)
         if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential') {
           userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
         } else {
@@ -63,6 +66,7 @@ export default function LoginPage() {
       }
       
       if (userCredential) {
+        // Garante a criação do perfil no Firestore
         const userRef = doc(db, "users", userCredential.user.uid);
         await setDoc(userRef, {
           uid: userCredential.user.uid,
