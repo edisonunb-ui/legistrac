@@ -16,7 +16,6 @@ import {
   PlusCircle,
   FileCheck,
   Loader2,
-  AlertTriangle,
   RefreshCcw
 } from "lucide-react";
 import Link from "next/link";
@@ -65,7 +64,6 @@ export default function Dashboard() {
         createdAt: serverTimestamp(),
       }, { merge: true });
       toast({ title: "Perfil Criado", description: "Sincronizando dados..." });
-      // Força um reload para o AuthContext captar o novo perfil
       window.location.reload();
     } catch (e) {
       toast({ title: "Erro", description: "Não foi possível criar o perfil.", variant: "destructive" });
@@ -83,7 +81,6 @@ export default function Dashboard() {
 
   if (!user) return null;
 
-  // Tela amigável de erro se o perfil não foi vinculado no Firestore
   if (!profile) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
@@ -102,9 +99,6 @@ export default function Dashboard() {
               <RefreshCcw size={20} />
               Vincular Perfil Agora
             </Button>
-            <p className="text-[10px] text-muted-foreground text-center">
-              Apenas um passo necessário para seu primeiro acesso.
-            </p>
           </CardContent>
         </Card>
       </div>
@@ -117,8 +111,6 @@ export default function Dashboard() {
     { title: "Aguardando ADMIN", value: stats.aguardandoAdmin, icon: ShieldAlert, color: "text-orange-600", bg: "bg-orange-100" },
     { title: "Atrasadas", value: stats.atrasadas, icon: TrendingUp, color: "text-red-600", bg: "bg-red-100" },
   ];
-
-  const recentDemands = demands.slice(0, 5);
 
   return (
     <div className="min-h-screen bg-background">
@@ -153,92 +145,6 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="border-none shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div>
-                  <CardTitle className="text-xl font-headline font-bold">Demandas Recentes</CardTitle>
-                  <CardDescription>As últimas atualizações do sistema.</CardDescription>
-                </div>
-                <Link href="/demandas">
-                  <Button variant="ghost" size="sm" className="text-primary gap-1">
-                    Ver todas <ChevronRight size={16} />
-                  </Button>
-                </Link>
-              </CardHeader>
-              <CardContent>
-                {demandsLoading ? (
-                  <div className="space-y-4 py-4">
-                    {[1, 2, 3].map(i => <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />)}
-                  </div>
-                ) : recentDemands.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="inline-block p-4 bg-muted rounded-full mb-4">
-                      <FileCheck className="text-muted-foreground" size={32} />
-                    </div>
-                    <p className="text-muted-foreground">Nenhuma demanda encontrada.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {recentDemands.map((demand: Demand) => (
-                      <Link key={demand.id} href={`/demandas/${demand.id}`}>
-                        <div className="flex items-center justify-between p-4 rounded-xl border hover:border-primary/50 hover:bg-primary/5 transition-all group">
-                          <div className="flex-1 min-w-0 pr-4">
-                            <h4 className="font-semibold truncate text-foreground group-hover:text-primary">{demand.titulo}</h4>
-                            <div className="flex items-center gap-3 mt-1">
-                              <span className="text-xs text-muted-foreground">Responsável: {demand.responsavelAtual === user.uid ? "Você" : "Equipe"}</span>
-                              <Badge variant={demand.prioridade === "ALTA" ? "destructive" : demand.prioridade === "MEDIA" ? "secondary" : "outline"} className="text-[10px] h-4">
-                                {demand.prioridade}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <Badge className={cn(
-                              "text-[10px]",
-                              demand.status === "ABERTO" && "bg-blue-500",
-                              demand.status === "EM_ANDAMENTO" && "bg-purple-500",
-                              demand.status === "AGUARDANDO_VEREADORA" && "bg-orange-500",
-                              demand.status === "FINALIZADO" && "bg-green-500"
-                            )}>
-                              {demand.status.replace("_", " ")}
-                            </Badge>
-                            <p className="text-[10px] text-muted-foreground mt-1">Prazo: {demand.prazo ? new Date(demand.prazo).toLocaleDateString() : "S/P"}</p>
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="space-y-6">
-            <Card className="border-none shadow-sm bg-primary text-primary-foreground">
-              <CardHeader>
-                <CardTitle className="text-lg">Meu Perfil</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-xl font-bold">
-                    {profile?.nome?.[0] || "?"}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold truncate">{profile?.nome || "Carregando..."}</p>
-                    <p className="text-xs opacity-80 truncate">{profile?.email || user.email}</p>
-                  </div>
-                </div>
-                <div className="pt-2">
-                  <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 uppercase text-[10px]">
-                    {profile?.perfil || "USUÁRIO"}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </div>
       </main>
     </div>

@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
-import { useAuth } from '../provider';
+import { useAuthInstance } from '../provider';
 
 export function useUser() {
-  const auth = useAuth();
+  const auth = useAuthInstance();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
