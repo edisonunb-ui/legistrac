@@ -1,0 +1,18 @@
+
+/**
+ * Lista de emails autorizados a acessar o sistema e criar demandas.
+ * Você pode editar esta lista diretamente aqui ou através da página de Equipe.
+ */
+export const VEREADORES_AUTORIZADOS = [
+  'edisonunb@gmail.com', // ADM Master
+  'gabinete.professoraflavia@gmail.com',
+  'gabinetevereadorevandro@gmail.com',
+  'josiasvereador@gmail.com',
+  'vereadora.juntospelavida@gmail.com',
+  'contatovereadoredilson@gmail.com',
+  'gabinetejoaocorreia@gmail.com',
+  'gabineteosmar@gmail.com',
+  'ouvidoriagabineteduda@gmail.com',
+  'contato@adrianoprojetofixo.com.br',
+  'vereadora.haidasales@gmail.com'
+];

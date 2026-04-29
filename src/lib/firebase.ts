@@ -2,7 +2,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getAnalytics, isSupported } from "firebase/analytics";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCag79TbgOLJSf_VSyI8wPzFC0MfBl7ON4",
@@ -14,16 +13,8 @@ const firebaseConfig = {
   measurementId: "G-FX7Y5M7N8V"
 };
 
-// Inicializa o Firebase apenas uma vez
+// Inicializa o Firebase
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-// Inicializa Analytics apenas no cliente e se suportado
-if (typeof window !== "undefined") {
-  isSupported().then((supported) => {
-    if (supported) getAnalytics(app);
-  });
-}
-
-export { auth, db, app };
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export { app };
