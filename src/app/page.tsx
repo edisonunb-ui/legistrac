@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useFirestore, useCollection, useUser, useAuthInstance } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { collection, query, orderBy } from "firebase/firestore";
 import { Demand } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,21 +28,20 @@ export default function Dashboard() {
   const auth = useAuthInstance();
   const router = useRouter();
   
-  // Passo 2: Estado para armazenar o email verificado (Portão de Acesso)
   const [autorizadoEmail, setAutorizadoEmail] = useState('');
+  const gateProcessed = useRef(false);
 
-  // Passo 3: Implementar a lógica de verificação (Gate)
   useEffect(() => {
     if (loading) return;
     
-    // Se não estiver logado no Firebase, vai para o login
     if (!user) {
       router.push("/login");
       return;
     }
 
-    // Se logado no Firebase, mas ainda não passou pelo Portão de Acesso (Prompt)
-    if (!autorizadoEmail) {
+    // Lógica do Portão de Acesso (Gate) - Executa apenas uma vez
+    if (!autorizadoEmail && !gateProcessed.current) {
+      gateProcessed.current = true;
       const emailInserido = prompt("Para acessar o gabinete, por favor, insira seu e-mail de acesso:");
       
       if (emailInserido) {
@@ -80,12 +78,13 @@ export default function Dashboard() {
     };
   }, [demands, user]);
 
-  // Passo 4: Renderizar conteúdo apenas se autorizado
   if (loading || !user || !autorizadoEmail) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-primary">
         <Loader2 className="h-10 w-10 animate-spin mb-4" />
-        <p className="font-medium">Verificando autorização...</p>
+        <p className="font-medium text-center">
+          {loading ? "Iniciando sessão..." : "Verificando autorização..."}
+        </p>
       </div>
     );
   }
@@ -105,9 +104,9 @@ export default function Dashboard() {
           <div>
             <h1 className="text-3xl font-headline font-bold text-foreground">Dashboard</h1>
             <div className="flex items-center gap-2 mt-1">
-              <p className="text-muted-foreground">Logado como: {autorizadoEmail}</p>
+              <p className="text-muted-foreground text-sm">Acesso: {autorizadoEmail}</p>
               {autorizadoEmail === 'edisonunb@gmail.com' && (
-                <Badge className="bg-amber-500 text-white">SUPER ADMIN</Badge>
+                <Badge className="bg-amber-500 text-white text-[10px]">SUPER ADMIN</Badge>
               )}
               <CheckCircle2 size={14} className="text-green-500" />
             </div>
@@ -126,7 +125,7 @@ export default function Dashboard() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">{card.title}</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{card.title}</p>
                     <h3 className="text-3xl font-bold mt-1">{card.value}</h3>
                   </div>
                   <div className={`p-3 rounded-xl ${card.bg} ${card.color}`}>

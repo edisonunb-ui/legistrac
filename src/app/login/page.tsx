@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -28,7 +27,6 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Redireciona para o dashboard se o Firebase autenticar
     if (!authLoading && user) {
       router.push("/");
     }
@@ -56,8 +54,7 @@ export default function LoginPage() {
       try {
         userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
       } catch (loginError: any) {
-        // Se o usuário não existir (primeiro acesso), cria no Firebase Auth
-        if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential' || loginError.code === 'auth/invalid-login-credentials') {
+        if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential') {
           userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
         } else {
           throw loginError;
@@ -65,7 +62,6 @@ export default function LoginPage() {
       }
       
       if (userCredential) {
-        // Garante que o documento do usuário exista no Firestore
         const userRef = doc(db, "users", userCredential.user.uid);
         await setDoc(userRef, {
           uid: userCredential.user.uid,
@@ -82,7 +78,6 @@ export default function LoginPage() {
     } catch (error: any) {
       let message = "Erro ao realizar acesso.";
       if (error.code === 'auth/wrong-password') message = "Senha incorreta.";
-      if (error.code === 'auth/weak-password') message = "A senha deve ter pelo menos 6 caracteres.";
       
       toast({
         title: "Erro de Acesso",
@@ -109,7 +104,7 @@ export default function LoginPage() {
           <div className="flex justify-center mb-4 text-primary">
             <LayoutDashboard size={40} />
           </div>
-          <CardTitle className="text-3xl font-bold">LegisTrac</CardTitle>
+          <CardTitle className="text-3xl font-bold text-primary">LegisTrac</CardTitle>
           <CardDescription>Gestão de Gabinete Parlamentar</CardDescription>
         </CardHeader>
         <CardContent>
@@ -148,7 +143,7 @@ export default function LoginPage() {
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg flex gap-3 text-blue-700">
               <ShieldAlert className="shrink-0" size={18} />
               <p className="text-[10px]">
-                Apenas e-mails autorizados podem acessar. No primeiro acesso, sua senha será cadastrada.
+                Acesso restrito. No primeiro login, sua senha será cadastrada automaticamente.
               </p>
             </div>
 
@@ -162,8 +157,8 @@ export default function LoginPage() {
           </form>
         </CardContent>
         <CardFooter className="flex justify-center border-t bg-muted/30 py-4">
-          <p className="text-[11px] text-muted-foreground text-center">
-            Acesso restrito ao gabinete parlamentar.
+          <p className="text-[11px] text-muted-foreground text-center italic">
+            "A tecnologia a serviço da transparência parlamentar."
           </p>
         </CardFooter>
       </Card>

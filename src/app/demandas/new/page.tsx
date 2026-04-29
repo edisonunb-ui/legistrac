@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useUser, useFirestore, useAuthInstance } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createDemand } from "@/lib/demand-service";
 import { Button } from "@/components/ui/button";
@@ -28,6 +27,7 @@ export default function NewDemandPage() {
   
   const [saving, setSaving] = useState(false);
   const [autorizadoEmail, setAutorizadoEmail] = useState('');
+  const gateProcessed = useRef(false);
   
   const [formData, setFormData] = useState({
     titulo: "",
@@ -38,13 +38,15 @@ export default function NewDemandPage() {
 
   useEffect(() => {
     if (authLoading) return;
+    
     if (!user) {
       router.push("/login");
       return;
     }
 
     // Lógica do Portão de Acesso (Gate)
-    if (!autorizadoEmail) {
+    if (!autorizadoEmail && !gateProcessed.current) {
+      gateProcessed.current = true;
       const email = prompt("Para iniciar a diligência, por favor, insira seu e-mail de vereador:");
 
       if (email && VEREADORES_AUTORIZADOS.includes(email.trim().toLowerCase())) {
@@ -86,9 +88,9 @@ export default function NewDemandPage() {
 
   if (!autorizadoEmail || authLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background text-primary">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-primary">
         <Loader2 className="animate-spin mb-4" size={40} />
-        <p className="font-medium">Aguardando autorização...</p>
+        <p className="font-medium">Aguardando autorização de diligência...</p>
       </div>
     );
   }
