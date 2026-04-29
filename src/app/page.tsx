@@ -11,18 +11,14 @@ import {
   ClipboardList, 
   Clock, 
   ShieldAlert, 
-  ChevronRight,
   TrendingUp,
   PlusCircle,
-  FileCheck,
   Loader2,
   RefreshCcw
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
@@ -38,7 +34,7 @@ export default function Dashboard() {
   }, [user, loading, router]);
 
   const demandsQuery = useMemo(() => db ? query(collection(db, "demandas"), orderBy("dataCriacao", "desc")) : null, [db]);
-  const { data: demands = [], loading: demandsLoading } = useCollection(demandsQuery);
+  const { data: demands = [] } = useCollection(demandsQuery);
 
   const stats = useMemo(() => {
     if (!demands || !user) return { totalAbertas: 0, atrasadas: 0, minhas: 0, aguardandoAdmin: 0 };
@@ -64,7 +60,8 @@ export default function Dashboard() {
         createdAt: serverTimestamp(),
       }, { merge: true });
       toast({ title: "Perfil Criado", description: "Sincronizando dados..." });
-      window.location.reload();
+      // Forçar atualização do contexto
+      setTimeout(() => window.location.reload(), 1000);
     } catch (e) {
       toast({ title: "Erro", description: "Não foi possível criar o perfil.", variant: "destructive" });
     }

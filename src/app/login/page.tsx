@@ -37,18 +37,17 @@ export default function LoginPage() {
     if (!db) return;
     const emailLower = userEmail.toLowerCase();
     const userRef = doc(db, "users", uid);
-    const userSnap = await getDoc(userRef);
-
-    if (!userSnap.exists()) {
-      await setDoc(userRef, {
-        uid: uid,
-        nome: emailLower.split('@')[0],
-        email: emailLower,
-        perfil: emailLower === "edisonunb@gmail.com" ? "ADMIN" : "ASSESSOR",
-        ativo: true,
-        createdAt: serverTimestamp(),
-      }, { merge: true });
-    }
+    
+    // Forçar a criação do perfil se ele estiver na lista de autorizados
+    await setDoc(userRef, {
+      uid: uid,
+      nome: emailLower.split('@')[0],
+      email: emailLower,
+      perfil: emailLower === "edisonunb@gmail.com" ? "ADMIN" : "ASSESSOR",
+      ativo: true,
+      updatedAt: serverTimestamp(),
+      createdAt: serverTimestamp(), // O merge cuidará para não sobrescrever se já existir
+    }, { merge: true });
   };
 
   const handleLogin = async (e: React.FormEvent) => {

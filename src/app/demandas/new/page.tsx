@@ -34,20 +34,18 @@ export default function NewDemandPage() {
   });
 
   useEffect(() => {
-    // Se o email ainda não foi verificado...
+    // Lógica de "Diligência" exatamente como no exemplo do Questionário
     if (!authorizedEmail) {
-      // Abre um pop-up pedindo o email do usuário exatamente como no seu exemplo
       const email = prompt("Para iniciar a diligência, por favor, insira seu e-mail de vereador/assessor:");
       
-      // Se o email inserido estiver na lista...
-      if (email && VEREADORES_AUTORIZADOS.includes(email.toLowerCase())) {
-        setAuthorizedEmail(email.toLowerCase());
+      if (email && VEREADORES_AUTORIZADOS.includes(email.toLowerCase().trim())) {
+        setAuthorizedEmail(email.toLowerCase().trim());
         alert("E-mail verificado com sucesso! Pode prosseguir.");
       } else if (email) {
-        alert("E-mail não autorizado."); // Se não estiver na lista
+        alert("E-mail não autorizado.");
         router.push("/demandas");
-      } else {
-        // Se o usuário cancelar o pop-up
+      } else if (email === null) {
+        // Usuário cancelou o prompt
         router.push("/demandas");
       }
     }
@@ -81,7 +79,7 @@ export default function NewDemandPage() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
           <ShieldCheck size={48} className="mx-auto text-primary animate-pulse" />
-          <p className="text-muted-foreground font-medium">Verificando autorização...</p>
+          <p className="text-muted-foreground font-medium">Aguardando verificação de e-mail...</p>
         </div>
       </div>
     );
