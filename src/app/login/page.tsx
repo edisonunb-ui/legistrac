@@ -57,6 +57,7 @@ export default function LoginPage() {
     
     const emailLower = email.toLowerCase().trim();
     
+    // Verificação rigorosa contra a lista de autorizados
     if (!VEREADORES_AUTORIZADOS.includes(emailLower)) {
       toast({
         title: "Acesso Negado",
@@ -70,9 +71,11 @@ export default function LoginPage() {
 
     try {
       try {
+        // Tenta o login normal
         const userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
         await ensureUserProfile(userCredential.user.uid, emailLower);
       } catch (loginError: any) {
+        // Se o usuário não existir (primeiro acesso), cria ele na hora com a senha digitada
         if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential') {
           const userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
           await ensureUserProfile(userCredential.user.uid, emailLower);
