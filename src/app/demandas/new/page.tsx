@@ -3,7 +3,7 @@
 
 import { useUser, useFirestore, useAuthInstance } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createDemand } from "@/lib/demand-service";
 import { Button } from "@/components/ui/button";
@@ -27,8 +27,7 @@ export default function NewDemandPage() {
   const { toast } = useToast();
   
   const [saving, setSaving] = useState(false);
-  const [autorizadoEmail, setAutorizadoEmail] = useState('');
-  const gateProcessed = useRef(false);
+  const [autorizadoEmail, setAutorizadoEmail] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     titulo: "",
@@ -45,12 +44,17 @@ export default function NewDemandPage() {
       return;
     }
 
-    if (!autorizadoEmail && !gateProcessed.current) {
-      gateProcessed.current = true;
+    const savedEmail = sessionStorage.getItem('gate_auth_email');
+
+    if (savedEmail && VEREADORES_AUTORIZADOS.includes(savedEmail)) {
+      setAutorizadoEmail(savedEmail);
+    } else {
       const email = prompt("Para iniciar a diligência, por favor, insira seu e-mail de vereador:");
 
       if (email && VEREADORES_AUTORIZADOS.includes(email.trim().toLowerCase())) {
-        setAutorizadoEmail(email.trim().toLowerCase());
+        const emailClean = email.trim().toLowerCase();
+        sessionStorage.setItem('gate_auth_email', emailClean);
+        setAutorizadoEmail(emailClean);
       } else {
         alert("Erro: E-mail não autorizado ou operação cancelada.");
         if (auth) {
@@ -60,7 +64,7 @@ export default function NewDemandPage() {
         }
       }
     }
-  }, [autorizadoEmail, user, authLoading, router, auth]);
+  }, [user, authLoading, router, auth]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -30,8 +30,8 @@ export default function Dashboard() {
   const auth = useAuthInstance();
   const router = useRouter();
   
-  const [autorizadoEmail, setAutorizadoEmail] = useState('');
-  const gateProcessed = useRef(false);
+  const [autorizadoEmail, setAutorizadoEmail] = useState<string | null>(null);
+  const [checkingGate, setCheckingGate] = useState(true);
 
   useEffect(() => {
     if (loading) return;
@@ -41,15 +41,22 @@ export default function Dashboard() {
       return;
     }
 
-    // Lógica do Portão de Acesso (Gate) conforme solicitado
-    if (!autorizadoEmail && !gateProcessed.current) {
-      gateProcessed.current = true;
+    // Tenta recuperar autorização da sessão para evitar loop
+    const savedEmail = sessionStorage.getItem('gate_auth_email');
+    
+    if (savedEmail && VEREADORES_AUTORIZADOS.includes(savedEmail)) {
+      setAutorizadoEmail(savedEmail);
+      setCheckingGate(false);
+    } else {
       const emailInserido = prompt("Para acessar o gabinete, por favor, insira seu e-mail de acesso:");
       
       if (emailInserido) {
         const emailClean = emailInserido.toLowerCase().trim();
         if (VEREADORES_AUTORIZADOS.includes(emailClean)) {
+          sessionStorage.setItem('gate_auth_email', emailClean);
           setAutorizadoEmail(emailClean);
+          setCheckingGate(false);
+          alert("Acesso autorizado.");
         } else {
           alert("Erro: E-mail não possui permissão de acesso.");
           if (auth) {
@@ -63,7 +70,7 @@ export default function Dashboard() {
         }
       }
     }
-  }, [user, loading, autorizadoEmail, router, auth]);
+  }, [user, loading, auth, router]);
 
   const profileRef = useMemo(() => user && db ? doc(db, "users", user.uid) : null, [db, user]);
   const { data: profile } = useDoc(profileRef);
@@ -82,7 +89,7 @@ export default function Dashboard() {
     };
   }, [demands, user]);
 
-  if (loading || !user || !autorizadoEmail) {
+  if (loading || !user || checkingGate) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-primary">
         <Loader2 className="h-10 w-10 animate-spin mb-4" />
