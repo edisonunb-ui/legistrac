@@ -19,7 +19,7 @@ git push origin main
 ## 2. Publicar Online (Site no Ar)
 No Firebase Studio:
 1. Clique no botão azul **"Publish"** no canto superior direito.
-2. Siga as janelas. Quando pedir para criar ou selecionar projeto, **selecione o projeto projetojaque-3c3b8** da lista. Não crie um novo para não exceder a cota.
+2. Siga as janelas. Quando pedir para criar ou selecionar projeto, **selecione o seu projeto oficial** da lista. Não crie um novo para não exceder a cota.
 3. Ao final, o site estará no ar no link oficial fornecido pelo Firebase.
 
 ## 3. Segurança e Acesso
