@@ -1,4 +1,3 @@
-
 /**
  * Lista de emails autorizados a acessar o sistema e criar demandas.
  * Baseado no sistema de Questionário de Creche/Escolar.

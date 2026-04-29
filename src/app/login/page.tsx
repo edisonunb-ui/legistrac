@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -14,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { LayoutDashboard, Loader2, ShieldAlert, Lock, Mail } from "lucide-react";
-import { doc, setDoc, serverTimestamp, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { useAuth } from "@/components/auth-context";
 import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
 
@@ -38,19 +37,7 @@ export default function LoginPage() {
     const userSnap = await getDoc(userRef);
 
     if (!userSnap.exists()) {
-      // Tenta encontrar um convite pré-existente pelo e-mail
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("email", "==", emailLower));
-      const querySnapshot = await getDocs(q);
-      
-      let existingData = {};
-      if (!querySnapshot.empty) {
-        existingData = querySnapshot.docs[0].data();
-        // Opcional: deletar o convite antigo ou apenas mesclar
-      }
-
       await setDoc(userRef, {
-        ...existingData,
         uid: uid,
         nome: emailLower.split('@')[0],
         email: emailLower,
@@ -83,7 +70,6 @@ export default function LoginPage() {
         const userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
         await ensureUserProfile(userCredential.user.uid, emailLower);
       } catch (loginError: any) {
-        // Códigos de erro que sugerem que o usuário não existe
         if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential') {
           const userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
           await ensureUserProfile(userCredential.user.uid, emailLower);
@@ -177,7 +163,7 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="flex justify-center border-t bg-muted/30 py-4">
           <p className="text-[11px] text-muted-foreground text-center">
-            Acesso restrito a vereadores autorizados.
+            Acesso restrito a vereadores autorizados conforme lista de diligência.
           </p>
         </CardFooter>
       </Card>
