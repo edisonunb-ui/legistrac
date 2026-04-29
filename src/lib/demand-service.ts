@@ -1,9 +1,9 @@
+
 import { 
   collection, 
   doc, 
   serverTimestamp, 
   runTransaction,
-  getDoc,
   Firestore
 } from "firebase/firestore";
 import { DemandPriority, DemandStatus, UserRole } from "./types";
