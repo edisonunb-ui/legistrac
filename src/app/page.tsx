@@ -41,14 +41,15 @@ export default function Dashboard() {
       return;
     }
 
-    // Tenta recuperar autorização da sessão para evitar loop
+    // Tenta recuperar autorização da sessão para evitar loop e piscadas
     const savedEmail = sessionStorage.getItem('gate_auth_email');
     
     if (savedEmail && VEREADORES_AUTORIZADOS.includes(savedEmail)) {
       setAutorizadoEmail(savedEmail);
       setCheckingGate(false);
     } else {
-      const emailInserido = prompt("Para acessar o gabinete, por favor, insira seu e-mail de acesso:");
+      // Abre o prompt apenas se não estiver autorizado nesta sessão
+      const emailInserido = prompt("Para acessar o gabinete LegisTrac, por favor, insira seu e-mail de acesso:");
       
       if (emailInserido) {
         const emailClean = emailInserido.toLowerCase().trim();
@@ -56,9 +57,9 @@ export default function Dashboard() {
           sessionStorage.setItem('gate_auth_email', emailClean);
           setAutorizadoEmail(emailClean);
           setCheckingGate(false);
-          alert("Acesso autorizado.");
+          alert("Acesso autorizado ao LegisTrac.");
         } else {
-          alert("Erro: E-mail não possui permissão de acesso.");
+          alert("Erro: E-mail não possui permissão de acesso ao gabinete.");
           if (auth) {
             signOut(auth).then(() => router.push("/login"));
           }
@@ -94,7 +95,7 @@ export default function Dashboard() {
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-primary">
         <Loader2 className="h-10 w-10 animate-spin mb-4" />
         <p className="font-medium text-center">
-          {loading ? "Iniciando sessão..." : "Aguardando verificação de permissão..."}
+          {loading ? "Iniciando sessão..." : "Verificando autorização LegisTrac..."}
         </p>
       </div>
     );
@@ -113,12 +114,12 @@ export default function Dashboard() {
       <main className="container mx-auto px-4 py-8">
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-headline font-bold text-foreground">Dashboard</h1>
+            <h1 className="text-3xl font-headline font-bold text-foreground">Dashboard LegisTrac</h1>
             <div className="flex items-center gap-2 mt-1">
-              <p className="text-muted-foreground text-sm">Acesso: {autorizadoEmail}</p>
-              {(profile as any)?.perfil === 'ADMIN' && (
-                <Badge className="bg-amber-500 text-white text-[10px]">ADMINISTRADOR</Badge>
-              )}
+              <p className="text-muted-foreground text-sm">Autorizado: {autorizadoEmail}</p>
+              {(profile as any)?.perfil === 'ADMIN' || user.email === 'edisonunb@gmail.com' ? (
+                <Badge className="bg-amber-500 text-white text-[10px]">SUPER ADMIN</Badge>
+              ) : null}
               <CheckCircle2 size={14} className="text-green-500" />
             </div>
           </div>

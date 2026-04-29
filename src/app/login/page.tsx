@@ -43,7 +43,7 @@ export default function LoginPage() {
     if (!VEREADORES_AUTORIZADOS.includes(emailLower)) {
       toast({
         title: "Acesso Negado",
-        description: "Este e-mail não está na lista autorizada do gabinete.",
+        description: "Este e-mail não possui autorização no gabinete LegisTrac.",
         variant: "destructive",
       });
       return;
@@ -57,7 +57,7 @@ export default function LoginPage() {
         // Tenta fazer login
         userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
       } catch (loginError: any) {
-        // Se o usuário não existir, cria a conta automaticamente (conforme solicitado)
+        // Se o usuário não existir, cria a conta automaticamente
         if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential') {
           userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
         } else {
@@ -66,7 +66,7 @@ export default function LoginPage() {
       }
       
       if (userCredential) {
-        // Garante a criação do perfil no Firestore
+        // Garante a criação do perfil no Firestore com privilégios master para edisonunb
         const userRef = doc(db, "users", userCredential.user.uid);
         await setDoc(userRef, {
           uid: userCredential.user.uid,
@@ -81,7 +81,7 @@ export default function LoginPage() {
         router.push("/");
       }
     } catch (error: any) {
-      let message = "Erro ao realizar acesso.";
+      let message = "Erro ao realizar acesso ao LegisTrac.";
       if (error.code === 'auth/wrong-password') message = "Senha incorreta.";
       
       toast({
@@ -148,7 +148,7 @@ export default function LoginPage() {
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg flex gap-3 text-blue-700">
               <ShieldAlert className="shrink-0" size={18} />
               <p className="text-[10px]">
-                Acesso restrito. No primeiro login, sua senha será cadastrada automaticamente.
+                Acesso restrito LegisTrac. No primeiro login, sua senha será cadastrada automaticamente.
               </p>
             </div>
 
@@ -157,13 +157,13 @@ export default function LoginPage() {
               type="submit"
               disabled={submitting}
             >
-              {submitting ? <Loader2 className="animate-spin" /> : "Entrar no Sistema"}
+              {submitting ? <Loader2 className="animate-spin" /> : "Entrar no LegisTrac"}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="flex justify-center border-t bg-muted/30 py-4">
           <p className="text-[11px] text-muted-foreground text-center italic">
-            "A tecnologia a serviço da transparência parlamentar."
+            "Tecnologia e Transparência: Gabinete LegisTrac."
           </p>
         </CardFooter>
       </Card>
