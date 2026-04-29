@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useUser, useFirestore, useAuthInstance } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createDemand } from "@/lib/demand-service";
 import { Button } from "@/components/ui/button";
@@ -25,9 +24,9 @@ export default function NewDemandPage() {
   const auth = useAuthInstance();
   const router = useRouter();
   const { toast } = useToast();
-  
   const [saving, setSaving] = useState(false);
   const [autorizadoEmail, setAutorizadoEmail] = useState<string | null>(null);
+  const promptShown = useRef(false);
   
   const [formData, setFormData] = useState({
     titulo: "",
@@ -48,7 +47,8 @@ export default function NewDemandPage() {
 
     if (savedEmail && VEREADORES_AUTORIZADOS.includes(savedEmail)) {
       setAutorizadoEmail(savedEmail);
-    } else {
+    } else if (!promptShown.current) {
+      promptShown.current = true;
       const email = prompt("Para iniciar a diligência, por favor, insira seu e-mail de vereador:");
 
       if (email && VEREADORES_AUTORIZADOS.includes(email.trim().toLowerCase())) {

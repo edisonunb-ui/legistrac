@@ -2,7 +2,7 @@
 
 import { useFirestore, useCollection, useUser, useAuthInstance, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { collection, query, orderBy, doc } from "firebase/firestore";
 import { Demand } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,9 +27,9 @@ export default function Dashboard() {
   const db = useFirestore();
   const auth = useAuthInstance();
   const router = useRouter();
-  
   const [autorizadoEmail, setAutorizadoEmail] = useState<string | null>(null);
   const [checkingGate, setCheckingGate] = useState(true);
+  const promptShown = useRef(false);
 
   useEffect(() => {
     if (loading) return;
@@ -39,14 +39,13 @@ export default function Dashboard() {
       return;
     }
 
-    // Tenta recuperar autorização da sessão para impedir loops
     const savedEmail = sessionStorage.getItem('gate_auth_email');
     
     if (savedEmail && VEREADORES_AUTORIZADOS.includes(savedEmail)) {
       setAutorizadoEmail(savedEmail);
       setCheckingGate(false);
-    } else {
-      // Abre o prompt apenas se não estiver autorizado nesta sessão
+    } else if (!promptShown.current) {
+      promptShown.current = true;
       const emailInserido = prompt("Para acessar o gabinete LegisTrac, por favor, insira seu e-mail de acesso:");
       
       if (emailInserido) {
