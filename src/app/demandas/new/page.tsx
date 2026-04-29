@@ -34,7 +34,7 @@ export default function NewDemandPage() {
     prioridade: "MEDIA" as DemandPriority,
   });
 
-  // Lógica de verificação que você gosta (prompt)
+  // Lógica de verificação por pop-up (prompt) conforme o sistema QuestionarioCreche.tsx
   useEffect(() => {
     if (!authorizedEmail) {
       const email = prompt("Para iniciar a diligência, por favor, insira seu e-mail de vereador/assessor:");
@@ -46,6 +46,7 @@ export default function NewDemandPage() {
         alert("E-mail não autorizado.");
         router.push("/demandas");
       } else {
+        // Se cancelar o prompt, volta para a lista
         router.push("/demandas");
       }
     }

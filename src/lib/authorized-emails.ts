@@ -1,7 +1,7 @@
 
 /**
  * Lista de emails autorizados a acessar o sistema e criar demandas.
- * Você pode editar esta lista diretamente aqui ou através da página de Equipe.
+ * Baseado no sistema de Questionário de Creche/Escolar.
  */
 export const VEREADORES_AUTORIZADOS = [
   'edisonunb@gmail.com', // ADM Master
