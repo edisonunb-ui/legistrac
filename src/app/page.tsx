@@ -1,9 +1,8 @@
-
 "use client";
 
-import { useFirestore, useCollection, useUser, useAuthInstance } from "@/firebase";
+import { useFirestore, useCollection, useUser, useAuthInstance, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { collection, query, orderBy, doc } from "firebase/firestore";
 import { Demand } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
 import { signOut } from "firebase/auth";
 import { Badge } from "@/components/ui/badge";
-import { useDoc } from "@/firebase";
 
 export default function Dashboard() {
   const { user, loading } = useUser();
@@ -41,7 +39,7 @@ export default function Dashboard() {
       return;
     }
 
-    // Tenta recuperar autorização da sessão para evitar loop e piscadas
+    // Tenta recuperar autorização da sessão para impedir loops
     const savedEmail = sessionStorage.getItem('gate_auth_email');
     
     if (savedEmail && VEREADORES_AUTORIZADOS.includes(savedEmail)) {
@@ -57,7 +55,6 @@ export default function Dashboard() {
           sessionStorage.setItem('gate_auth_email', emailClean);
           setAutorizadoEmail(emailClean);
           setCheckingGate(false);
-          alert("Acesso autorizado ao LegisTrac.");
         } else {
           alert("Erro: E-mail não possui permissão de acesso ao gabinete.");
           if (auth) {
