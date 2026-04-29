@@ -5,7 +5,7 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword 
 } from "firebase/auth";
-import { auth, db } from "@/lib/firebase";
+import { useAuthInstance, useFirestore } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -23,6 +23,8 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const auth = useAuthInstance();
+  const db = useFirestore();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -32,6 +34,7 @@ export default function LoginPage() {
   }, [user, authLoading, router]);
 
   const ensureUserProfile = async (uid: string, userEmail: string) => {
+    if (!db) return;
     const emailLower = userEmail.toLowerCase();
     const userRef = doc(db, "users", uid);
     const userSnap = await getDoc(userRef);
@@ -54,7 +57,6 @@ export default function LoginPage() {
     
     const emailLower = email.toLowerCase().trim();
     
-    // Verificação rigorosa baseada na lista de autorizados
     if (!VEREADORES_AUTORIZADOS.includes(emailLower)) {
       toast({
         title: "Acesso Negado",
@@ -68,11 +70,9 @@ export default function LoginPage() {
 
     try {
       try {
-        // Tenta o login
         const userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
         await ensureUserProfile(userCredential.user.uid, emailLower);
       } catch (loginError: any) {
-        // Se o erro for de usuário não encontrado, mas está na lista, permite o primeiro acesso (criação de senha)
         if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential') {
           const userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
           await ensureUserProfile(userCredential.user.uid, emailLower);
@@ -151,7 +151,7 @@ export default function LoginPage() {
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg flex gap-3 text-blue-700">
               <ShieldAlert className="shrink-0" size={18} />
               <p className="text-[10px]">
-                Primeiro acesso? Use seu e-mail da lista de vereadores e a senha que deseja cadastrar.
+                Apenas e-mails autorizados podem logar. Use o e-mail e defina sua senha no primeiro acesso.
               </p>
             </div>
 
@@ -166,7 +166,7 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="flex justify-center border-t bg-muted/30 py-4">
           <p className="text-[11px] text-muted-foreground text-center">
-            Acesso restrito a vereadores autorizados conforme lista de diligência.
+            Acesso restrito a vereadores autorizados.
           </p>
         </CardFooter>
       </Card>
