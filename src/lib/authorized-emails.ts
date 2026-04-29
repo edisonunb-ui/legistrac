@@ -1,3 +1,4 @@
+
 /**
  * Lista de emails autorizados a acessar o sistema e criar demandas.
  * Somente estes emails podem realizar o primeiro acesso ou login.
