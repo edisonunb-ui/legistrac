@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -5,7 +6,7 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword 
 } from "firebase/auth";
-import { useAuthInstance, useFirestore } from "@/firebase";
+import { useAuthInstance, useFirestore, useUser } from "@/firebase";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -13,8 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { LayoutDashboard, Loader2, ShieldAlert, Lock, Mail } from "lucide-react";
-import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
-import { useAuth } from "@/components/auth-context";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
 
 export default function LoginPage() {
@@ -22,7 +22,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useUser();
   const auth = useAuthInstance();
   const db = useFirestore();
   const { toast } = useToast();
@@ -38,8 +38,6 @@ export default function LoginPage() {
     const emailLower = userEmail.toLowerCase().trim();
     const userRef = doc(db, "users", uid);
     
-    // Verifica se já existe para evitar sobrescrever dados desnecessariamente, 
-    // mas garante que o perfil de ADMIN seja setado para o seu e-mail
     await setDoc(userRef, {
       uid: uid,
       nome: emailLower.split('@')[0],
@@ -74,7 +72,6 @@ export default function LoginPage() {
         userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
       } catch (loginError: any) {
         if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential' || loginError.code === 'auth/invalid-email') {
-          // Se não existe, tenta criar (primeiro acesso)
           userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
           toast({ title: "Bem-vindo!", description: "Primeiro acesso realizado com sucesso." });
         } else {
@@ -87,7 +84,6 @@ export default function LoginPage() {
         router.push("/");
       }
     } catch (error: any) {
-      console.error("Erro no login:", error);
       let message = "Não foi possível completar o acesso.";
       if (error.code === 'auth/wrong-password') message = "Senha incorreta.";
       if (error.code === 'auth/weak-password') message = "A senha deve ter pelo menos 6 caracteres.";

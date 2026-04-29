@@ -1,9 +1,8 @@
 
 "use client";
 
-import { useFirestore, useCollection } from "@/firebase";
+import { useFirestore, useCollection, useUser, useAuthInstance } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useAuth } from "@/components/auth-context";
 import { useEffect, useMemo, useState } from "react";
 import { collection, query, orderBy } from "firebase/firestore";
 import { Demand } from "@/lib/types";
@@ -21,23 +20,26 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
+import { signOut } from "firebase/auth";
 
 export default function Dashboard() {
-  const { user, loading } = useAuth();
+  const { user, loading } = useUser();
   const db = useFirestore();
+  const auth = useAuthInstance();
   const router = useRouter();
   
-  // Passo 2: Estado para o email autorizado (conforme seu guia)
   const [autorizadoEmail, setAutorizadoEmail] = useState('');
 
-  // Passo 3: Lógica de verificação via prompt
   useEffect(() => {
     if (loading) return;
+    
+    // Se não há usuário logado no Firebase, vai para o login
     if (!user) {
       router.push("/login");
       return;
     }
 
+    // Lógica do Portão de Acesso (Gate)
     if (!autorizadoEmail) {
       const email = prompt("Para acessar o gabinete, por favor, insira seu e-mail de acesso:");
       
@@ -45,11 +47,16 @@ export default function Dashboard() {
         setAutorizadoEmail(email.toLowerCase().trim());
         alert("Acesso autorizado.");
       } else {
-        alert("Erro: E-mail não possui permissão de acesso.");
-        router.push("/login");
+        alert("Erro: E-mail não possui permissão de acesso ou operação cancelada.");
+        // Em vez de apenas redirecionar (causando loop), fazemos logout para limpar a sessão
+        if (auth) {
+          signOut(auth).then(() => router.push("/login"));
+        } else {
+          router.push("/login");
+        }
       }
     }
-  }, [user, loading, autorizadoEmail, router]);
+  }, [user, loading, autorizadoEmail, router, auth]);
 
   const demandsQuery = useMemo(() => db ? query(collection(db, "demandas"), orderBy("dataCriacao", "desc")) : null, [db]);
   const { data: demands = [] } = useCollection(demandsQuery);
@@ -65,8 +72,7 @@ export default function Dashboard() {
     };
   }, [demands, user]);
 
-  // Passo 4: Renderização condicional
-  if (loading || !autorizadoEmail) {
+  if (loading || !autorizadoEmail || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-primary">
         <Loader2 className="h-10 w-10 animate-spin mb-4" />

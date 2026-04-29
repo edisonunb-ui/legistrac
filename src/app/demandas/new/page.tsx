@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useUser, useFirestore } from "@/firebase";
+import { useUser, useFirestore, useAuthInstance } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -17,15 +17,16 @@ import { ChevronLeft, Save, ShieldCheck, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority } from "@/lib/types";
 import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
+import { signOut } from "firebase/auth";
 
 export default function NewDemandPage() {
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
+  const auth = useAuthInstance();
   const router = useRouter();
   const { toast } = useToast();
   
   const [saving, setSaving] = useState(false);
-  // Passo 2: Estado para o email autorizado
   const [autorizadoEmail, setAutorizadoEmail] = useState('');
   
   const [formData, setFormData] = useState({
@@ -35,7 +36,6 @@ export default function NewDemandPage() {
     prioridade: "MEDIA" as DemandPriority,
   });
 
-  // Passo 3: Implementar a lógica de verificação via prompt()
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -46,20 +46,19 @@ export default function NewDemandPage() {
     if (!autorizadoEmail) {
       const email = prompt("Para iniciar a diligência, por favor, insira seu e-mail de vereador:");
 
-      if (email) {
-        if (VEREADORES_AUTORIZADOS.includes(email.trim().toLowerCase())) {
-          setAutorizadoEmail(email.trim().toLowerCase());
-          alert("E-mail verificado com sucesso! Pode prosseguir.");
+      if (email && VEREADORES_AUTORIZADOS.includes(email.trim().toLowerCase())) {
+        setAutorizadoEmail(email.trim().toLowerCase());
+        alert("E-mail verificado com sucesso! Pode prosseguir.");
+      } else {
+        alert("Erro: E-mail não autorizado ou operação cancelada.");
+        if (auth) {
+          signOut(auth).then(() => router.push("/login"));
         } else {
-          alert("Erro: E-mail não possui permissão de acesso.");
           router.push("/demandas");
         }
-      } else {
-        alert("O acesso foi cancelado.");
-        router.push("/demandas");
       }
     }
-  }, [autorizadoEmail, user, authLoading, router]);
+  }, [autorizadoEmail, user, authLoading, router, auth]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,8 +83,7 @@ export default function NewDemandPage() {
     }
   };
 
-  // Passo 4: Renderização condicional
-  if (!autorizadoEmail || authLoading) {
+  if (!autorizadoEmail || authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
