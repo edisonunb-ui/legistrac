@@ -15,9 +15,17 @@ O "LegisTrac" é um sistema de Gestão de Gabinete Parlamentar focado no rastrei
 
 **3. Esqueleto de Dados (Firestore):**
 - **Coleção `users`:** Perfis com `uid`, `email`, `nome`, `perfil` (ADMIN/ASSESSOR).
-- **Coleção `demandas`:** `titulo`, `descricao`, `status` (ABERTO, EM_ANDAMENTO, AGUARDANDO_VEREADORA, FINALIZADO), `prioridade`, `prazo`.
-- **Coleção `tramites`:** Histórico imutável de movimentações.
-- **Coleção `notificacoes`:** Alertas em tempo real.
+- **Coleção `demandas`:** 
+  - `titulo`: String
+  - `descricao`: String (Conteúdo detalhado da solicitação)
+  - `status`: String (ABERTO, EM_ANDAMENTO, AGUARDANDO_VEREADORA, FINALIZADO)
+  - `prioridade`: String (BAIXA, MEDIA, ALTA)
+  - `prazo`: String (Data ISO)
+  - `responsavelAtual`: String (UID do usuário)
+  - `criadoPor`: String (UID do criador)
+  - `dataCriacao`, `dataAtualizacao`: ServerTimestamp
+- **Coleção `tramites`:** Histórico imutável de movimentações entre assessores e gabinete.
+- **Coleção `notificacoes`:** Alertas em tempo real para o responsavel atual.
 
 **4. Regras de Acesso (Diligência):**
 - O sistema usa um "Portão de Acesso" (`src/lib/authorized-emails.ts`).
