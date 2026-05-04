@@ -1,6 +1,3 @@
 name = "legistrac"
 compatibility_date = "2024-11-01"
 pages_build_output_dir = ".vercel/output/static"
-
-# Esta configuração informa ao Wrangler/Cloudflare que este é um projeto Pages 
-# e onde encontrar os arquivos gerados pelo comando de build do Next.js.
