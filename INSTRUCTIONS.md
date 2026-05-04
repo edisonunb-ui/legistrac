@@ -18,12 +18,7 @@ git commit -m "Fix: Melhora tratamento de erro de provedor desativado"
 git push origin main
 ```
 
-## 3. Publicar Online
-No Firebase Studio:
-1. Clique no botão azul **"Publish"**.
-2. Selecione o projeto **legistrac**.
-3. O site estará no ar no link fornecido.
-
-## 4. Segurança e Acesso
+## 3. Segurança e Acesso
 - O e-mail `edisonunb@gmail.com` é o **SuperAdmin**.
 - Senha: `B21e1808771210*`
+- No primeiro acesso, o sistema criará sua conta automaticamente se o provedor acima estiver ativo.

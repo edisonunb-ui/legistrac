@@ -15,11 +15,13 @@ import { useToast } from "@/hooks/use-toast";
 import { LayoutDashboard, Loader2, ShieldAlert, Lock, Mail, AlertTriangle } from "lucide-react";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showConfigError, setShowConfigError] = useState(false);
   const router = useRouter();
   const { user, loading: authLoading } = useUser();
   const auth = useAuthInstance();
@@ -48,15 +50,18 @@ export default function LoginPage() {
     }
 
     setSubmitting(true);
+    setShowConfigError(false);
 
     try {
       let userCredential;
       try {
+        // Tenta logar primeiro
         userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
       } catch (loginError: any) {
+        // Se o usuário não existir, tenta criar (auto-onboarding)
         if (
           loginError.code === 'auth/user-not-found' || 
-          loginError.code === 'auth/invalid-credential' || 
+          loginError.code === 'auth/invalid-credential' ||
           loginError.code === 'auth/invalid-email'
         ) {
           try {
@@ -96,18 +101,19 @@ export default function LoginPage() {
         router.push("/");
       }
     } catch (error: any) {
-      console.error("Login error code:", error.code);
+      console.error("Erro de Autenticação:", error.code, error.message);
       
       if (error.code === 'auth/operation-not-allowed') {
+        setShowConfigError(true);
         toast({
-          title: "Provedor Desativado",
-          description: "O login por E-mail/Senha não está ativado no Firebase Console. Acesse o console, vá em Authentication > Sign-in method e ative 'E-mail/Password'.",
+          title: "Configuração Necessária",
+          description: "O método de E-mail/Senha está desativado no Console do Firebase.",
           variant: "destructive",
         });
       } else {
         toast({
           title: "Erro de Acesso",
-          description: error.message || "Erro ao realizar acesso ao LegisTrac.",
+          description: error.message || "Verifique suas credenciais.",
           variant: "destructive",
         });
       }
@@ -132,18 +138,28 @@ export default function LoginPage() {
             <LayoutDashboard size={40} />
           </div>
           <CardTitle className="text-3xl font-bold text-primary">LegisTrac</CardTitle>
-          <CardDescription>Gestão de Gabinete Parlamentar</CardDescription>
+          <CardDescription>Gestão de Gabinete (Acesso Básico)</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {showConfigError && (
+            <Alert variant="destructive" className="bg-red-50">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Atenção Administrador</AlertTitle>
+              <AlertDescription className="text-xs">
+                Vá ao Console do Firebase > Authentication > Sign-in Method e **ATIVE** o provedor "E-mail/Senha".
+              </AlertDescription>
+            </Alert>
+          )}
+
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail de Acesso</Label>
+              <Label htmlFor="email">E-mail</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input 
                   id="email"
                   type="email"
-                  placeholder="seu@email.com"
+                  placeholder="edisonunb@gmail.com"
                   className="pl-10"
                   required
                   value={email}
@@ -158,23 +174,12 @@ export default function LoginPage() {
                 <Input 
                   id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Sua senha master"
                   className="pl-10"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-              </div>
-            </div>
-            
-            <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg flex gap-3 text-blue-700">
-              <ShieldAlert className="shrink-0" size={18} />
-              <div className="space-y-1">
-                <p className="text-[10px] font-bold">Instrução Importante:</p>
-                <p className="text-[10px]">
-                  No primeiro login, sua conta será registrada automaticamente. <br/>
-                  <b>SuperAdmin:</b> edisonunb@gmail.com
-                </p>
               </div>
             </div>
 
@@ -183,18 +188,14 @@ export default function LoginPage() {
               type="submit"
               disabled={submitting}
             >
-              {submitting ? <Loader2 className="animate-spin" /> : "Entrar no LegisTrac"}
+              {submitting ? <Loader2 className="animate-spin" /> : "Entrar"}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="flex flex-col gap-2 justify-center border-t bg-muted/30 py-4 text-center">
           <p className="text-[11px] text-muted-foreground italic">
-            "Tecnologia e Transparência: Gabinete LegisTrac."
+            "Tecnologia e Transparência no seu Gabinete."
           </p>
-          <div className="flex items-center gap-1 text-[9px] text-red-500 font-bold uppercase tracking-wider">
-            <AlertTriangle size={10} />
-            Certifique-se que o provedor E-mail/Senha está ativo no Firebase
-          </div>
         </CardFooter>
       </Card>
     </div>
