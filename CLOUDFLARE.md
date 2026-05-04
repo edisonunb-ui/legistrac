@@ -1,22 +1,13 @@
-# Implantação no Cloudflare Pages
+# Implantação no Cloudflare Pages (Final)
 
-Para implantar este projeto no Cloudflare Pages:
+Para resolver o erro de "principal = src/index.ts", siga estas configurações no painel do Cloudflare:
 
-1. **GitHub**: Faça o push do seu código para o seu repositório:
-   ```bash
-   git add .
-   git commit -m "Preparação final para Cloudflare"
-   git push origin main
-   ```
+1. **GitHub**: Faça o push do código atualizado.
+2. **Cloudflare Dashboard** (Configurações de Construção):
+   - **Framework preset**: `Next.js`.
+   - **Build command**: `npm run pages:build`.
+   - **Output directory**: `.vercel/output/static` (MUITO IMPORTANTE: Não use `.next`).
+3. **Environment Variables**:
+   - `NODE_VERSION`: `20` (ou superior).
 
-2. **Cloudflare Dashboard**:
-   - Vá para **Workers & Pages** > **Create application** > **Pages** > **Connect to Git**.
-   - Selecione seu repositório `legistrac`.
-   - **Build settings**:
-     - Framework preset: `Next.js`.
-     - Build command: `npm run build`.
-     - Output directory: `.next`.
-   - **Environment Variables**:
-     - `NODE_VERSION`: `20` (ou superior).
-
-3. **Pronto**: O Cloudflare detectará automaticamente a estrutura do Next.js e realizará o deploy.
+O arquivo `wrangler.toml` agora possui a linha `pages_build_output_dir`, que informa ao Cloudflare que este é um projeto Pages e não um Worker isolado. Isso corrigirá a falha que você viu nos logs.
