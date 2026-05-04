@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useFirestore, useCollection, useUser, useAuthInstance, useDoc } from "@/firebase";
@@ -40,7 +39,7 @@ export default function Dashboard() {
       return;
     }
 
-    const savedEmail = sessionStorage.getItem('gate_auth_email');
+    const savedEmail = typeof window !== 'undefined' ? sessionStorage.getItem('gate_auth_email') : null;
     
     if (savedEmail && VEREADORES_AUTORIZADOS.includes(savedEmail)) {
       setAutorizadoEmail(savedEmail);
@@ -52,14 +51,14 @@ export default function Dashboard() {
       if (emailInserido) {
         const emailClean = emailInserido.toLowerCase().trim();
         if (VEREADORES_AUTORIZADOS.includes(emailClean)) {
-          sessionStorage.setItem('gate_auth_email', emailClean);
+          if (typeof window !== 'undefined') sessionStorage.setItem('gate_auth_email', emailClean);
           setAutorizadoEmail(emailClean);
           setCheckingGate(false);
         } else {
           alert("Erro: E-mail não possui permissão de acesso ao gabinete.");
           if (auth) {
             signOut(auth).then(() => {
-              sessionStorage.removeItem('gate_auth_email');
+              if (typeof window !== 'undefined') sessionStorage.removeItem('gate_auth_email');
               router.push("/login");
             });
           }
@@ -68,7 +67,7 @@ export default function Dashboard() {
         alert("O acesso foi cancelado. Você será redirecionado.");
         if (auth) {
           signOut(auth).then(() => {
-            sessionStorage.removeItem('gate_auth_email');
+            if (typeof window !== 'undefined') sessionStorage.removeItem('gate_auth_email');
             router.push("/login");
           });
         }
