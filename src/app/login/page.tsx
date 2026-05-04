@@ -52,36 +52,58 @@ export default function LoginPage() {
     try {
       let userCredential;
       try {
+        // Tenta o login normal
         userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
       } catch (loginError: any) {
-        if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential' || loginError.code === 'auth/invalid-email') {
-          userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
+        // Se o usuário não existir (ou erro genérico de credencial no primeiro acesso), tenta criar
+        if (
+          loginError.code === 'auth/user-not-found' || 
+          loginError.code === 'auth/invalid-credential' || 
+          loginError.code === 'auth/invalid-email'
+        ) {
+          try {
+            userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
+          } catch (createError: any) {
+            // Se já existir no Auth mas a senha estava errada, cai aqui
+            if (createError.code === 'auth/email-already-in-use') {
+              throw new Error("Senha incorreta para este usuário.");
+            }
+            throw createError;
+          }
         } else {
           throw loginError;
         }
       }
       
       if (userCredential) {
+        // Garante que o perfil no Firestore esteja correto
         const userRef = doc(db, "users", userCredential.user.uid);
+        const isMaster = emailLower === "edisonunb@gmail.com";
+        
         await setDoc(userRef, {
           uid: userCredential.user.uid,
           nome: emailLower.split('@')[0],
           email: emailLower,
-          perfil: (emailLower === "edisonunb@gmail.com") ? "ADMIN" : "ASSESSOR",
+          perfil: isMaster ? "ADMIN" : "ASSESSOR",
           ativo: true,
           updatedAt: serverTimestamp(),
           createdAt: serverTimestamp(),
         }, { merge: true });
 
+        // Salva na sessão para evitar prompts
+        sessionStorage.setItem('gate_auth_email', emailLower);
+
+        toast({
+          title: "Bem-vindo!",
+          description: isMaster ? "Acesso administrativo liberado." : "Acesso de assessor liberado.",
+        });
+
         router.push("/");
       }
     } catch (error: any) {
-      let message = "Erro ao realizar acesso ao LegisTrac.";
-      if (error.code === 'auth/wrong-password') message = "Senha incorreta.";
-      
       toast({
         title: "Erro de Acesso",
-        description: message,
+        description: error.message || "Erro ao realizar acesso ao LegisTrac.",
         variant: "destructive",
       });
     } finally {
@@ -143,7 +165,8 @@ export default function LoginPage() {
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg flex gap-3 text-blue-700">
               <ShieldAlert className="shrink-0" size={18} />
               <p className="text-[10px]">
-                Acesso restrito LegisTrac. No primeiro login, sua senha será cadastrada automaticamente.
+                No primeiro login, sua conta será registrada automaticamente. <br/>
+                <b>SuperAdmin:</b> edisonunb@gmail.com
               </p>
             </div>
 

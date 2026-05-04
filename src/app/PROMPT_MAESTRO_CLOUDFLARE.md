@@ -2,6 +2,7 @@
 
 **Assunto:** Reconstrução e Implantação do Projeto LegisTrac (Gabinete Parlamentar)
 **Proprietário:** edisonunb@gmail.com (Paid Credits/SuperAdmin)
+**Senha Padrão Master:** B21e1808771210*
 **Projeto ID:** legistrac
 
 **1. Contexto do Produto:**
@@ -21,23 +22,19 @@ O "LegisTrac" é um sistema de Gestão de Gabinete Parlamentar focado no rastrei
 - **Coleção `users`:** Perfis com `uid`, `email`, `nome`, `perfil` (ADMIN/ASSESSOR).
 - **Coleção `demandas`:** 
   - `titulo`: String
-  - `descricao`: String (Conteúdo detalhado da solicitação)
+  - `descricao`: String
   - `status`: String (ABERTO, EM_ANDAMENTO, AGUARDANDO_VEREADORA, FINALIZADO)
   - `prioridade`: String (BAIXA, MEDIA, ALTA)
   - `prazo`: String (Data ISO)
   - `responsavelAtual`: String (UID do usuário)
   - `criadoPor`: String (UID do criador)
-  - `dataCriacao`, `dataAtualizacao`: ServerTimestamp
-- **Coleção `tramites`:** Histórico imutável de movimentações entre assessores e gabinete.
-- **Coleção `notificacoes`:** Alertas em tempo real para o responsavel atual.
+- **Coleção `tramites`:** Histórico imutável de movimentações.
+- **Coleção `notificacoes`:** Alertas em tempo real.
 
-**4. Regras de Acesso (Diligência):**
-- O sistema usa um "Portão de Acesso" (`src/lib/authorized-emails.ts`).
-- A conta `edisonunb@gmail.com` ignora restrições comuns e atua como master.
-- No login, se o e-mail estiver na lista, o Firestore cria automaticamente o perfil.
-
-**5. Credenciais de Serviço (Back-office):**
-O projeto está vinculado à conta de serviço: `firebase-adminsdk-fbsvc@legistrac.iam.gserviceaccount.com`.
+**4. Regras de Acesso e Login:**
+- O sistema usa um "Auto-Onboarding": no primeiro acesso de um e-mail autorizado em `src/lib/authorized-emails.ts`, o sistema cria a conta no Firebase Auth e o perfil no Firestore.
+- A conta `edisonunb@gmail.com` é forçada como `ADMIN` em todas as rotas e validações.
+- Senha inicial do Admin Master: `B21e1808771210*`.
 
 **Instrução de Reconstrução:**
-"Utilize esta especificação para configurar o projeto LegisTrac no domínio oficial. Garanta que o Firebase config aponte para o projeto 'legistrac' e que a lógica de SuperAdmin para 'edisonunb@gmail.com' seja a prioridade máxima. O build command deve ser 'npm run pages:build' e o diretório de saída '.vercel/output/static'."
+"Utilize esta especificação para configurar o projeto LegisTrac. Garanta que o Firebase config aponte para o projeto 'legistrac'. O build command deve ser 'npm run pages:build' e o diretório de saída '.vercel/output/static'."

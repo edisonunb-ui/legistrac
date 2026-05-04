@@ -39,9 +39,16 @@ export default function Dashboard() {
       return;
     }
 
+    // Tenta pegar o e-mail da sessão ou do próprio objeto de usuário autenticado
     const savedEmail = typeof window !== 'undefined' ? sessionStorage.getItem('gate_auth_email') : null;
+    const userEmail = user.email?.toLowerCase().trim();
     
-    if (savedEmail && VEREADORES_AUTORIZADOS.includes(savedEmail)) {
+    // Se o e-mail do usuário logado já estiver na lista, autoriza direto sem prompt
+    if (userEmail && VEREADORES_AUTORIZADOS.includes(userEmail)) {
+      setAutorizadoEmail(userEmail);
+      if (typeof window !== 'undefined') sessionStorage.setItem('gate_auth_email', userEmail);
+      setCheckingGate(false);
+    } else if (savedEmail && VEREADORES_AUTORIZADOS.includes(savedEmail)) {
       setAutorizadoEmail(savedEmail);
       setCheckingGate(false);
     } else if (!promptShown.current) {
