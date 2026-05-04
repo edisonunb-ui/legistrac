@@ -12,6 +12,10 @@ O "LegisTrac" é um sistema de Gestão de Gabinete Parlamentar focado no rastrei
 - **Estilização:** Tailwind CSS + ShadCN UI.
 - **Backend:** Firebase 11 (Auth e Firestore).
 - **GenAI:** Genkit (Google Gemini) para sumarização.
+- **Configuração Firebase Oficial:**
+  - apiKey: "AIzaSyBh9hcARIT6NNLM0T583mn9Ts5RqC2AgfI"
+  - authDomain: "legistrac.firebaseapp.com"
+  - projectId: "legistrac"
 
 **3. Esqueleto de Dados (Firestore):**
 - **Coleção `users`:** Perfis com `uid`, `email`, `nome`, `perfil` (ADMIN/ASSESSOR).
@@ -36,4 +40,4 @@ O "LegisTrac" é um sistema de Gestão de Gabinete Parlamentar focado no rastrei
 O projeto está vinculado à conta de serviço: `firebase-adminsdk-fbsvc@legistrac.iam.gserviceaccount.com`.
 
 **Instrução de Reconstrução:**
-"Utilize esta especificação para configurar o projeto LegisTrac no domínio oficial. Garanta que o Firebase config aponte para o projeto 'legistrac' e que a lógica de SuperAdmin para 'edisonunb@gmail.com' seja a prioridade máxima."
+"Utilize esta especificação para configurar o projeto LegisTrac no domínio oficial. Garanta que o Firebase config aponte para o projeto 'legistrac' e que a lógica de SuperAdmin para 'edisonunb@gmail.com' seja a prioridade máxima. O build command deve ser 'npm run pages:build' e o diretório de saída '.vercel/output/static'."
