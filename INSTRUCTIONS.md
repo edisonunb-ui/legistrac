@@ -1,27 +1,29 @@
-# Instruções para Publicação (GitHub e Online)
+# Instruções para Ativação e Publicação
 
-## 1. Enviar para o GitHub
-Como você já realizou o push inicial, utilize estes comandos para enviar novas atualizações:
+## 1. Ativar Autenticação no Firebase (Obrigatório)
+O erro `auth/operation-not-allowed` acontece porque o método de login está desativado. Siga estes passos:
+1. Acesse o [Console do Firebase](https://console.firebase.google.com/).
+2. Selecione o projeto **legistrac**.
+3. No menu lateral, clique em **Authentication**.
+4. Vá na aba **Sign-in method**.
+5. Clique em **Add new provider** (ou Adicionar novo provedor).
+6. Escolha **E-mail/Senha** (Email/Password).
+7. Ative o interruptor **Enable** (Ativar) e clique em **Save** (Salvar).
 
+## 2. Enviar para o GitHub
+Após ativar no console, envie o código atualizado:
 ```bash
-# Adicionar mudanças
 git add .
-
-# Criar um registro das mudanças
-git commit -m "Configuração final de produção e portão de acesso estável"
-
-# Enviar para o seu repositório
+git commit -m "Fix: Melhora tratamento de erro de provedor desativado"
 git push origin main
 ```
 
-**Seu repositório:** `https://github.com/edisonunb-ui/legistrac.git`
-
-## 2. Publicar Online (Site no Ar)
+## 3. Publicar Online
 No Firebase Studio:
-1. Clique no botão azul **"Publish"** no canto superior direito.
-2. Siga as janelas. Quando pedir para criar ou selecionar projeto, **selecione o seu projeto oficial** da lista. Não crie um novo para não exceder a cota.
-3. Ao final, o site estará no ar no link oficial fornecido pelo Firebase.
+1. Clique no botão azul **"Publish"**.
+2. Selecione o projeto **legistrac**.
+3. O site estará no ar no link fornecido.
 
-## 3. Segurança e Acesso
+## 4. Segurança e Acesso
 - O e-mail `edisonunb@gmail.com` é o **SuperAdmin**.
-- O sistema de **Portão de Acesso** agora usa memória de sessão (`sessionStorage`), impedindo loops e piscadas na tela.
+- Senha: `B21e1808771210*`

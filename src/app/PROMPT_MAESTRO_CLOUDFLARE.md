@@ -12,29 +12,27 @@ O "LegisTrac" é um sistema de Gestão de Gabinete Parlamentar focado no rastrei
 - **Framework:** Next.js 15.5.2 (App Router).
 - **Estilização:** Tailwind CSS + ShadCN UI.
 - **Backend:** Firebase 11 (Auth e Firestore).
-- **GenAI:** Genkit (Google Gemini) para sumarização.
 - **Configuração Firebase Oficial:**
   - apiKey: "AIzaSyBh9hcARIT6NNLM0T583mn9Ts5RqC2AgfI"
   - authDomain: "legistrac.firebaseapp.com"
   - projectId: "legistrac"
 
-**3. Esqueleto de Dados (Firestore):**
+**3. Configuração Necessária Manual (Importante!):**
+Para que o sistema funcione, o administrador deve acessar o [Console do Firebase](https://console.firebase.google.com/):
+1. Vá em **Authentication** > **Sign-in method**.
+2. Clique em **Add new provider**.
+3. Selecione **E-mail/Password** e ative a primeira opção (**Enable**).
+4. Clique em **Save**. Sem isso, ocorrerá o erro `auth/operation-not-allowed`.
+
+**4. Esqueleto de Dados (Firestore):**
 - **Coleção `users`:** Perfis com `uid`, `email`, `nome`, `perfil` (ADMIN/ASSESSOR).
-- **Coleção `demandas`:** 
-  - `titulo`: String
-  - `descricao`: String
-  - `status`: String (ABERTO, EM_ANDAMENTO, AGUARDANDO_VEREADORA, FINALIZADO)
-  - `prioridade`: String (BAIXA, MEDIA, ALTA)
-  - `prazo`: String (Data ISO)
-  - `responsavelAtual`: String (UID do usuário)
-  - `criadoPor`: String (UID do criador)
+- **Coleção `demandas`:** Títulos, descrições, status (ABERTO, EM_ANDAMENTO, AGUARDANDO_VEREADORA, FINALIZADO).
 - **Coleção `tramites`:** Histórico imutável de movimentações.
 - **Coleção `notificacoes`:** Alertas em tempo real.
 
-**4. Regras de Acesso e Login:**
+**5. Regras de Acesso:**
 - O sistema usa um "Auto-Onboarding": no primeiro acesso de um e-mail autorizado em `src/lib/authorized-emails.ts`, o sistema cria a conta no Firebase Auth e o perfil no Firestore.
-- A conta `edisonunb@gmail.com` é forçada como `ADMIN` em todas as rotas e validações.
-- Senha inicial do Admin Master: `B21e1808771210*`.
+- A conta `edisonunb@gmail.com` é forçada como `ADMIN`.
 
 **Instrução de Reconstrução:**
-"Utilize esta especificação para configurar o projeto LegisTrac. Garanta que o Firebase config aponte para o projeto 'legistrac'. O build command deve ser 'npm run pages:build' e o diretório de saída '.vercel/output/static'."
+"Utilize esta especificação para configurar o projeto LegisTrac. O build command deve ser 'npm run pages:build' e o diretório de saída '.vercel/output/static'."

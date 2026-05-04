@@ -12,7 +12,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutDashboard, Loader2, ShieldAlert, Lock, Mail } from "lucide-react";
+import { LayoutDashboard, Loader2, ShieldAlert, Lock, Mail, AlertTriangle } from "lucide-react";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
 
@@ -52,10 +52,8 @@ export default function LoginPage() {
     try {
       let userCredential;
       try {
-        // Tenta o login normal
         userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
       } catch (loginError: any) {
-        // Se o usuário não existir (ou erro genérico de credencial no primeiro acesso), tenta criar
         if (
           loginError.code === 'auth/user-not-found' || 
           loginError.code === 'auth/invalid-credential' || 
@@ -64,7 +62,6 @@ export default function LoginPage() {
           try {
             userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
           } catch (createError: any) {
-            // Se já existir no Auth mas a senha estava errada, cai aqui
             if (createError.code === 'auth/email-already-in-use') {
               throw new Error("Senha incorreta para este usuário.");
             }
@@ -76,7 +73,6 @@ export default function LoginPage() {
       }
       
       if (userCredential) {
-        // Garante que o perfil no Firestore esteja correto
         const userRef = doc(db, "users", userCredential.user.uid);
         const isMaster = emailLower === "edisonunb@gmail.com";
         
@@ -90,7 +86,6 @@ export default function LoginPage() {
           createdAt: serverTimestamp(),
         }, { merge: true });
 
-        // Salva na sessão para evitar prompts
         sessionStorage.setItem('gate_auth_email', emailLower);
 
         toast({
@@ -101,11 +96,21 @@ export default function LoginPage() {
         router.push("/");
       }
     } catch (error: any) {
-      toast({
-        title: "Erro de Acesso",
-        description: error.message || "Erro ao realizar acesso ao LegisTrac.",
-        variant: "destructive",
-      });
+      console.error("Login error code:", error.code);
+      
+      if (error.code === 'auth/operation-not-allowed') {
+        toast({
+          title: "Provedor Desativado",
+          description: "O login por E-mail/Senha não está ativado no Firebase Console. Acesse o console, vá em Authentication > Sign-in method e ative 'E-mail/Password'.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro de Acesso",
+          description: error.message || "Erro ao realizar acesso ao LegisTrac.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -164,10 +169,13 @@ export default function LoginPage() {
             
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg flex gap-3 text-blue-700">
               <ShieldAlert className="shrink-0" size={18} />
-              <p className="text-[10px]">
-                No primeiro login, sua conta será registrada automaticamente. <br/>
-                <b>SuperAdmin:</b> edisonunb@gmail.com
-              </p>
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold">Instrução Importante:</p>
+                <p className="text-[10px]">
+                  No primeiro login, sua conta será registrada automaticamente. <br/>
+                  <b>SuperAdmin:</b> edisonunb@gmail.com
+                </p>
+              </div>
             </div>
 
             <Button 
@@ -179,10 +187,14 @@ export default function LoginPage() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex justify-center border-t bg-muted/30 py-4">
-          <p className="text-[11px] text-muted-foreground text-center italic">
+        <CardFooter className="flex flex-col gap-2 justify-center border-t bg-muted/30 py-4 text-center">
+          <p className="text-[11px] text-muted-foreground italic">
             "Tecnologia e Transparência: Gabinete LegisTrac."
           </p>
+          <div className="flex items-center gap-1 text-[9px] text-red-500 font-bold uppercase tracking-wider">
+            <AlertTriangle size={10} />
+            Certifique-se que o provedor E-mail/Senha está ativo no Firebase
+          </div>
         </CardFooter>
       </Card>
     </div>
