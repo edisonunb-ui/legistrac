@@ -11,16 +11,27 @@ import { DemandPriority, DemandStatus, UserRole } from "./types";
 export async function createDemand(
   db: Firestore,
   userId: string,
-  data: { titulo: string; descricao: string; prazo: string; prioridade: DemandPriority }
+  data: { 
+    titulo: string; 
+    descricao: string; 
+    prazo: string; 
+    prioridade: DemandPriority;
+    responsavelId?: string;
+  }
 ) {
   const demandRef = doc(collection(db, "demandas"));
   const tramiteRef = doc(collection(db, "tramites"));
+  const targetResponsavel = data.responsavelId || userId;
 
   const demandData = {
-    ...data,
+    id: demandRef.id, // Armazena o ID dentro do documento também
+    titulo: data.titulo,
+    descricao: data.descricao,
+    prazo: data.prazo,
+    prioridade: data.prioridade,
     criadoPor: userId,
-    responsavelAtual: userId,
-    status: "ABERTO" as DemandStatus,
+    responsavelAtual: targetResponsavel,
+    status: (targetResponsavel === userId ? "ABERTO" : "EM_ANDAMENTO") as DemandStatus,
     dataCriacao: serverTimestamp(),
     dataAtualizacao: serverTimestamp(),
     finalizada: false,
@@ -31,9 +42,9 @@ export async function createDemand(
     transaction.set(tramiteRef, {
       demandaId: demandRef.id,
       de: userId,
-      para: userId,
+      para: targetResponsavel,
       acao: "ENVIO",
-      observacao: "Demanda criada e atribuída ao criador.",
+      observacao: "Demanda inicial registrada no sistema.",
       data: serverTimestamp(),
     });
   });

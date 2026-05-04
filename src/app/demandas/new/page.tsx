@@ -1,8 +1,9 @@
+
 "use client";
 
-import { useUser, useFirestore, useAuthInstance } from "@/firebase";
+import { useUser, useFirestore, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createDemand } from "@/lib/demand-service";
 import { Button } from "@/components/ui/button";
@@ -12,76 +13,53 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, ShieldCheck, Loader2 } from "lucide-react";
+import { ChevronLeft, Save, ShieldCheck, Loader2, User as UserIcon } from "lucide-react";
 import Link from "next/link";
-import { DemandPriority } from "@/lib/types";
-import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
-import { signOut } from "firebase/auth";
+import { DemandPriority, UserProfile } from "@/lib/types";
+import { collection, query, orderBy } from "firebase/firestore";
 
 export default function NewDemandPage() {
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
-  const auth = useAuthInstance();
   const router = useRouter();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
-  const [autorizadoEmail, setAutorizadoEmail] = useState<string | null>(null);
-  const promptShown = useRef(false);
   
   const [formData, setFormData] = useState({
     titulo: "",
     descricao: "",
     prazo: "",
     prioridade: "MEDIA" as DemandPriority,
+    responsavelId: "",
   });
 
+  const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
+  const { data: allUsers = [] } = useCollection(usersQuery);
+
+  // Define o responsável padrão como o usuário logado quando os dados carregarem
   useEffect(() => {
-    if (authLoading) return;
-    
-    if (!user) {
-      router.push("/login");
-      return;
+    if (user && !formData.responsavelId) {
+      setFormData(prev => ({ ...prev, responsavelId: user.uid }));
     }
-
-    const savedEmail = sessionStorage.getItem('gate_auth_email');
-
-    if (savedEmail && VEREADORES_AUTORIZADOS.includes(savedEmail)) {
-      setAutorizadoEmail(savedEmail);
-    } else if (!promptShown.current) {
-      promptShown.current = true;
-      const email = prompt("Para iniciar a diligência, por favor, insira seu e-mail de vereador:");
-
-      if (email && VEREADORES_AUTORIZADOS.includes(email.trim().toLowerCase())) {
-        const emailClean = email.trim().toLowerCase();
-        sessionStorage.setItem('gate_auth_email', emailClean);
-        setAutorizadoEmail(emailClean);
-      } else {
-        alert("Erro: E-mail não autorizado ou operação cancelada.");
-        if (auth) {
-          signOut(auth).then(() => router.push("/login"));
-        } else {
-          router.push("/demandas");
-        }
-      }
-    }
-  }, [user, authLoading, router, auth]);
+  }, [user, formData.responsavelId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db || !autorizadoEmail) return;
+    if (!user || !db) return;
     setSaving(true);
 
     try {
       const demandId = await createDemand(db, user.uid, formData);
       toast({
         title: "Sucesso!",
-        description: "Demanda criada e protocolo gerado.",
+        description: "Demanda criada e atribuída com sucesso.",
       });
       router.push(`/demandas/${demandId}`);
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Erro ao criar demanda:", error);
       toast({
-        title: "Erro",
-        description: "Não foi possível criar a demanda.",
+        title: "Erro ao criar demanda",
+        description: error.message || "Verifique sua conexão e tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -89,11 +67,11 @@ export default function NewDemandPage() {
     }
   };
 
-  if (!autorizadoEmail || authLoading || !user) {
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-primary">
         <Loader2 className="animate-spin mb-4" size={40} />
-        <p className="font-medium">Aguardando autorização de diligência...</p>
+        <p className="font-medium">Iniciando ambiente de diligência...</p>
       </div>
     );
   }
@@ -110,23 +88,23 @@ export default function NewDemandPage() {
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-headline font-bold">Nova Demanda</h1>
             <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-              <ShieldCheck size={14} /> Autorizado: {autorizadoEmail}
+              <ShieldCheck size={14} /> Atendimento Iniciado
             </div>
           </div>
-          <p className="text-muted-foreground">Preencha os dados abaixo para registrar uma nova solicitação.</p>
+          <p className="text-muted-foreground">Preencha os dados abaixo para registrar a solicitação no gabinete.</p>
         </header>
 
         <Card className="max-w-2xl border-none shadow-xl">
           <form onSubmit={handleSubmit}>
             <CardHeader>
-              <CardTitle className="text-lg">Dados Básicos</CardTitle>
+              <CardTitle className="text-lg">Dados da Solicitação</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="titulo">Título da Demanda</Label>
                 <Input 
                   id="titulo" 
-                  placeholder="Ex: Reforma da Praça Central" 
+                  placeholder="Ex: Reforma da Praça ou Pedido de Iluminação" 
                   required 
                   value={formData.titulo}
                   onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
@@ -163,11 +141,34 @@ export default function NewDemandPage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="responsavel">Atribuir Responsável</Label>
+                <Select 
+                  value={formData.responsavelId} 
+                  onValueChange={(v) => setFormData({ ...formData, responsavelId: v })}
+                >
+                  <SelectTrigger id="responsavel">
+                    <div className="flex items-center gap-2">
+                      <UserIcon size={14} className="text-muted-foreground" />
+                      <SelectValue placeholder="Selecione quem cuidará disso" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allUsers.map((u: UserProfile) => (
+                      <SelectItem key={u.uid} value={u.uid}>
+                        {u.nome} {u.uid === user.uid ? "(Você)" : `(${u.perfil})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground italic">Por padrão, a demanda fica sob sua responsabilidade.</p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="descricao">Descrição Detalhada</Label>
                 <Textarea 
                   id="descricao" 
-                  placeholder="Descreva aqui todos os detalhes da demanda..." 
-                  rows={8} 
+                  placeholder="Descreva aqui o que precisa ser feito..." 
+                  rows={6} 
                   required
                   value={formData.descricao}
                   onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
@@ -177,8 +178,17 @@ export default function NewDemandPage() {
             <CardFooter className="flex justify-end gap-3 border-t pt-6 bg-muted/30">
               <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
               <Button type="submit" className="font-semibold gap-2" disabled={saving}>
-                <Save size={18} />
-                {saving ? "Registrando..." : "Registrar Demanda"}
+                {saving ? (
+                  <>
+                    <Loader2 className="animate-spin" size={18} />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save size={18} />
+                    Registrar Demanda
+                  </>
+                )}
               </Button>
             </CardFooter>
           </form>
