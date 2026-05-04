@@ -1,13 +1,20 @@
-# Implantação no Cloudflare Pages (Final)
+# Configuração de Implantação Cloudflare Pages (Definitiva)
 
-Para resolver o erro de "principal = src/index.ts", siga estas configurações no painel do Cloudflare:
+Para que o erro de implantação seja resolvido, você deve configurar o painel do Cloudflare exatamente assim:
 
-1. **GitHub**: Faça o push do código atualizado.
-2. **Cloudflare Dashboard** (Configurações de Construção):
-   - **Framework preset**: `Next.js`.
-   - **Build command**: `npm run pages:build`.
-   - **Output directory**: `.vercel/output/static` (MUITO IMPORTANTE: Não use `.next`).
-3. **Environment Variables**:
-   - `NODE_VERSION`: `20` (ou superior).
+### 1. Configurações de Compilação (Build Settings):
+- **Framework preset**: `Next.js` (ou `None` se for usar o comando customizado abaixo)
+- **Build command**: `npm run pages:build`
+- **Build output directory**: `.vercel/output/static` (MUITO IMPORTANTE: Não use `.next`)
 
-O arquivo `wrangler.toml` agora possui a linha `pages_build_output_dir`, que informa ao Cloudflare que este é um projeto Pages e não um Worker isolado. Isso corrigirá a falha que você viu nos logs.
+### 2. Variáveis de Ambiente (Environment Variables):
+- `NODE_VERSION`: `20` ou superior.
+- `NEXTJS_PAGES_OUTPUT_DIR`: `.vercel/output/static`
+
+### 3. Por que o erro ocorreu?
+O Cloudflare estava tentando implantar o projeto sem saber onde os arquivos finais estavam. O comando `npm run pages:build` usa o adaptador `@cloudflare/next-on-pages` que gera a pasta `.vercel/output/static`. O arquivo `wrangler.toml` agora aponta explicitamente para essa pasta.
+
+### 4. Como atualizar:
+1. Salve as mudanças no Firebase Studio.
+2. Faça o **Push** para o seu repositório no GitHub.
+3. O Cloudflare iniciará uma nova construção automaticamente.
