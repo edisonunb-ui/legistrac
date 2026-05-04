@@ -1,26 +1,26 @@
-# Guia Passo a Passo: Configurando o Cloudflare Pages
+# Guia Passo a Passo: Publicação Final no Cloudflare Pages
 
-Se você recebeu o erro "Missing entry-point", siga exatamente estes cliques no painel da Cloudflare:
+Seu código está pronto e compilando sem erros. Para colocar o site no ar, siga estes passos no painel da Cloudflare:
 
-### 1. Acesse o Painel
-1. Vá para o [Dashboard da Cloudflare](https://dash.cloudflare.com/).
-2. No menu lateral esquerdo, clique em **Workers & Pages**.
-3. Clique no nome do seu projeto: **legistrac**.
+### 1. Preparação no Firebase Studio
+1. Clique no ícone do GitHub na barra lateral e faça o **Commit e Push** de todas as alterações.
 
-### 2. Vá nas Configurações de Compilação
-1. No menu superior (dentro do projeto), clique na aba **Settings** (Configurações).
-2. No menu lateral esquerdo que aparecerá, clique em **Build & deployments**.
-3. Procure a seção **Configure build settings** e clique no botão **Edit** (Editar) à direita.
+### 2. Configuração no Painel Cloudflare (crucial)
+1. Acesse seu projeto em **Workers & Pages > legistrac**.
+2. Vá em **Settings** > **Build & deployments**.
+3. Clique em **Edit settings** na seção "Configure build settings".
+4. Configure os campos EXATAMENTE assim:
+   - **Framework preset**: `Next.js`
+   - **Build command**: `npm run pages:build`
+   - **Build output directory**: `.vercel/output/static`
+5. Clique em **Save**.
 
-### 3. Preencha os campos EXATAMENTE assim:
-- **Framework preset**: Selecione `None` (ou `Next.js` se ele permitir mudar os campos abaixo).
-- **Build command**: `npm run pages:build`
-- **Build output directory**: `.vercel/output/static` (MUITO IMPORTANTE: Não deixe como `.next`)
+### 3. Variáveis de Ambiente
+Ainda em **Settings**, vá em **Environment variables**:
+1. Certifique-se de que a variável `NODE_VERSION` está como `20` ou superior.
 
-### 4. Salve e Implante novamente
-1. Clique em **Save**.
-2. Vá para a aba **Deployments** no menu superior.
-3. Clique no botão azul **Retry deployment** (ou faça um novo Push no GitHub).
+### 4. Nova Implantação
+1. Vá para a aba **Deployments**.
+2. Clique no botão **Retry deployment** da última tentativa ou faça um novo Push no GitHub.
 
-### Por que isso é necessário?
-O Next.js 15 precisa de um adaptador especial para rodar na Cloudflare. O comando `npm run pages:build` aciona esse adaptador que gera a pasta `.vercel/output/static`. Se a Cloudflare procurar na pasta padrão, ela não encontrará os arquivos prontos para a rede dela.
+**Nota:** Removi o arquivo `wrangler.toml` porque ele estava forçando a Cloudflare a tratar o projeto como um "Worker" individual, o que causava o erro de entrada. Agora o sistema usará a detecção automática de site (Pages).
