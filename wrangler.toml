@@ -1,7 +1,7 @@
 
 name = "legistrac"
-compatibility_date = "2024-04-03"
+compatibility_date = "2024-11-18"
 compatibility_flags = ["nextjs_rpc"]
 
 [vars]
-# Variáveis de ambiente podem ser adicionadas aqui se necessário
+# Variáveis de ambiente aqui
