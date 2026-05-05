@@ -7,21 +7,28 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+    function isSuperAdmin() {
+      return isAuthenticated() && request.auth.token.email == "edisonunb@gmail.com";
+    }
+    
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
     
     function isAdmin() {
-      return isAuthenticated() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             (getUserData().perfil == "ADMIN" || getUserData().perfil == "SUPER_ADMIN");
+      return isSuperAdmin() || (
+        isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (getUserData().perfil == "ADMIN" || getUserData().perfil == "SUPER_ADMIN")
+      );
     }
 
     match /users/{userId} {
+      // SuperAdmin pode tudo. Outros autenticados podem ler para carregar a lista.
       allow read: if isAuthenticated();
       allow create: if isAuthenticated(); 
       allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow delete: if isAuthenticated() && isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /demandas/{demandaId} {
@@ -31,7 +38,7 @@ service cloud.firestore {
         resource.data.responsavelAtual == request.auth.uid || 
         isAdmin()
       );
-      allow delete: if false;
+      allow delete: if isSuperAdmin();
     }
 
     match /tramites/{tramiteId} {
@@ -41,7 +48,7 @@ service cloud.firestore {
     }
 
     match /notificacoes/{notificacaoId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow delete: if false;
