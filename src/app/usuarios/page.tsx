@@ -2,8 +2,8 @@
 
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useMemo } from "react";
-import { collection, query, doc, updateDoc, serverTimestamp, orderBy, addDoc } from "firebase/firestore";
+import { useState, useMemo, useEffect } from "react";
+import { collection, query, doc, updateDoc, serverTimestamp, orderBy, addDoc, setDoc } from "firebase/firestore";
 import { UserProfile, UserRole, UserPermissions } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,17 +44,18 @@ export default function UserManagementPage() {
   const profileRef = useMemo(() => user && db ? doc(db, "users", user.uid) : null, [db, user]);
   const { data: currentUserProfile, loading: profileLoading } = useDoc(profileRef);
 
-  const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("email", "asc")) : null, [db]);
+  const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("createdAt", "desc")) : null, [db]);
   const { data: allUsers = [], loading: usersLoading, error: usersError } = useCollection(usersQuery);
 
+  const isSuperAdmin = user?.email === "edisonunb@gmail.com" || user?.email === "gabinete.professoraflavia@gmail.com";
+
   const isAdmin = useMemo(() => {
-    if (!user) return false;
-    if (user.email === "edisonunb@gmail.com") return true;
+    if (isSuperAdmin) return true;
     const profile = currentUserProfile as any;
     return profile?.permissoes?.gerenciar_equipe || 
            profile?.perfil === "SUPER_ADMIN" || 
            profile?.perfil === "ADMIN";
-  }, [user, currentUserProfile]);
+  }, [isSuperAdmin, currentUserProfile]);
 
   const handleTogglePermission = (key: keyof UserPermissions) => {
     setPermissions(prev => ({ ...prev, [key]: !prev[key] }));
@@ -62,13 +63,21 @@ export default function UserManagementPage() {
 
   const handleRoleChange = (role: UserRole) => {
     setNewRole(role);
-    if (role === "ADMIN") {
+    if (role === "ADMIN" || role === "SUPER_ADMIN") {
       setPermissions({
         visualizar_todas: true,
         criar_demandas: true,
         finalizar_demandas: true,
         gerenciar_equipe: true,
         reabrir_demandas: true
+      });
+    } else if (role === "ASSESSOR") {
+      setPermissions({
+        visualizar_todas: false,
+        criar_demandas: true,
+        finalizar_demandas: false,
+        gerenciar_equipe: false,
+        reabrir_demandas: false
       });
     } else {
       setPermissions({
@@ -91,7 +100,10 @@ export default function UserManagementPage() {
       const exists = allUsers.find(u => u.email === emailLower);
       if (exists) throw new Error("Este e-mail já está cadastrado.");
 
-      await addDoc(collection(db, "users"), {
+      // Usamos o email como parte do ID para evitar duplicatas e facilitar regras
+      const newUserRef = doc(collection(db, "users"));
+      await setDoc(newUserRef, {
+        id: newUserRef.id,
         email: emailLower,
         nome: newName,
         perfil: newRole,
@@ -107,7 +119,7 @@ export default function UserManagementPage() {
       console.error("Erro ao adicionar usuário:", error);
       toast({ 
         title: "Erro", 
-        description: error.message || "Falha ao salvar usuário. Verifique sua conexão.", 
+        description: error.message || "Falha ao salvar usuário. Verifique as permissões do Firebase.", 
         variant: "destructive" 
       });
     } finally {
@@ -125,7 +137,7 @@ export default function UserManagementPage() {
     }
   };
 
-  if (authLoading || profileLoading) {
+  if (authLoading || (profileLoading && !isSuperAdmin)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="animate-spin text-primary" size={40} />
@@ -133,7 +145,7 @@ export default function UserManagementPage() {
     );
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !isSuperAdmin) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md text-center shadow-lg border-destructive/20">
@@ -190,6 +202,7 @@ export default function UserManagementPage() {
                         <SelectItem value="ESTAGIARIO">Estagiário</SelectItem>
                         <SelectItem value="ASSESSOR">Assessor</SelectItem>
                         <SelectItem value="ADMIN">Administrador</SelectItem>
+                        <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -232,7 +245,7 @@ export default function UserManagementPage() {
                 {usersError && (
                   <div className="p-4 bg-destructive/10 text-destructive rounded-lg flex items-center gap-2 text-sm mb-4">
                     <AlertCircle size={18} />
-                    Erro de conexão com o banco. Recarregue a página.
+                    Erro de permissão ou conexão. Verifique as regras do Firestore.
                   </div>
                 )}
                 
@@ -259,7 +272,7 @@ export default function UserManagementPage() {
                         <div>
                           <p className="font-bold text-sm flex items-center gap-2">
                             {u.nome}
-                            {u.perfil === "SUPER_ADMIN" && <ShieldCheck size={14} className="text-amber-500" />}
+                            {(u.perfil === "SUPER_ADMIN" || u.email === "edisonunb@gmail.com") && <ShieldCheck size={14} className="text-amber-500" />}
                           </p>
                           <p className="text-[11px] text-muted-foreground">{u.email}</p>
                           <div className="flex flex-wrap gap-1 mt-1">

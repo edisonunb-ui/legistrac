@@ -8,27 +8,28 @@ service cloud.firestore {
     }
     
     function isSuperAdmin() {
-      return isAuthenticated() && request.auth.token.email == "edisonunb@gmail.com";
-    }
-    
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return isAuthenticated() && (
+        request.auth.token.email == "edisonunb@gmail.com" || 
+        request.auth.token.email == "gabinete.professoraflavia@gmail.com"
+      );
     }
     
     function isAdmin() {
       return isSuperAdmin() || (
         isAuthenticated() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        (getUserData().perfil == "ADMIN" || getUserData().perfil == "SUPER_ADMIN")
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.perfil == "ADMIN" || 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.perfil == "SUPER_ADMIN")
       );
     }
 
     match /users/{userId} {
-      // SuperAdmin pode tudo. Outros autenticados podem ler para carregar a lista.
+      // Todos podem ler a lista de usuários para atribuir demandas
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated(); 
-      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow delete: if isAdmin();
+      // Criar usuário: Qualquer um logado (no onboarding) ou Admin
+      allow create: if isAuthenticated();
+      // Atualizar/Deletar: Apenas o próprio usuário ou Admin
+      allow update, delete: if isSuperAdmin() || isAdmin() || (isAuthenticated() && request.auth.uid == userId);
     }
 
     match /demandas/{demandaId} {
