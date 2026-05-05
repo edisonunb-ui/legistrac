@@ -3,7 +3,7 @@
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo, useEffect } from "react";
-import { collection, query, doc, updateDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { collection, query, doc, updateDoc, serverTimestamp, setDoc, orderBy } from "firebase/firestore";
 import { UserProfile, UserRole, UserPermissions } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Shield, UserMinus, CheckCircle2, Loader2, ShieldCheck, Settings2, AlertCircle } from "lucide-react";
+import { Users, UserPlus, Shield, UserMinus, CheckCircle2, Loader2, ShieldCheck, Settings2, AlertCircle, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const PERMISSION_LABELS: Record<keyof UserPermissions, string> = {
@@ -48,14 +48,14 @@ export default function UserManagementPage() {
   const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: currentUserProfile, loading: profileLoading } = useDoc(profileRef);
 
-  // Lista de usuários
-  const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
+  // Lista de usuários - ordenada por nome
+  const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db, user]);
   const { data: allUsers = [], loading: usersLoading, error: usersError } = useCollection(usersQuery);
 
   const isAdmin = useMemo(() => {
     if (isSuperAdmin) return true;
     const profile = currentUserProfile as any;
-    return profile?.permissoes?.gerenciar_equipe || profile?.perfil === "ADMIN";
+    return profile?.permissoes?.gerenciar_equipe || profile?.perfil === "ADMIN" || profile?.perfil === "SUPER_ADMIN";
   }, [isSuperAdmin, currentUserProfile]);
 
   const handleTogglePermission = (key: keyof UserPermissions) => {
@@ -102,8 +102,8 @@ export default function UserManagementPage() {
     } catch (error: any) {
       console.error("Erro ao adicionar usuário:", error);
       toast({ 
-        title: "Erro de Permissão", 
-        description: "Verifique se você é o administrador master.", 
+        title: "Falha na Gravação", 
+        description: "Erro de permissão ou conexão. Tente novamente.", 
         variant: "destructive" 
       });
     } finally {
@@ -129,7 +129,8 @@ export default function UserManagementPage() {
     );
   }
 
-  if (!isAdmin && !isSuperAdmin) {
+  // Se não for admin nem super admin, e não estiver mais carregando
+  if (!authLoading && !profileLoading && !isAdmin && !isSuperAdmin) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md text-center shadow-lg border-destructive/20">
@@ -150,60 +151,68 @@ export default function UserManagementPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
-        <header className="mb-8">
-          <h1 className="text-3xl font-headline font-bold flex items-center gap-2">
-            <Users className="text-primary" />
-            Gestão da Equipe
-          </h1>
-          <p className="text-muted-foreground">Adicione membros e configure os "quadradinhos" de permissão.</p>
+        <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-headline font-bold flex items-center gap-2">
+              <Users className="text-primary" />
+              Gestão da Equipe
+            </h1>
+            <p className="text-muted-foreground mt-1">Configure os cargos e permissões dos membros do seu gabinete.</p>
+          </div>
+          {isSuperAdmin && (
+            <Badge className="bg-amber-500 text-white gap-1 py-1 px-3 shadow-sm border-none">
+              <ShieldCheck size={14} /> MODO SUPER ADMIN ATIVO
+            </Badge>
+          )}
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <Card className="h-fit shadow-lg border-none">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <UserPlus size={18} /> Cadastrar Novo Membro
+          <Card className="h-fit shadow-xl border-none ring-1 ring-black/5">
+            <CardHeader className="bg-primary/5 rounded-t-xl">
+              <CardTitle className="text-lg flex items-center gap-2 text-primary">
+                <UserPlus size={18} /> Cadastrar Membro
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <form onSubmit={handleAddUser} className="space-y-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Nome</Label>
-                    <Input placeholder="Nome do colaborador" value={newName} onChange={e => setNewName(e.target.value)} required />
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Nome do Colaborador</Label>
+                    <Input placeholder="Ex: João Silva" value={newName} onChange={e => setNewName(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
-                    <Label>E-mail</Label>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">E-mail de Acesso</Label>
                     <Input type="email" placeholder="email@gabinete.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
-                    <Label>Cargo / Função</Label>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Cargo Principal</Label>
                     <Select value={newRole} onValueChange={(v: UserRole) => handleRoleChange(v)}>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-muted/30">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="ESTAGIARIO">Estagiário</SelectItem>
                         <SelectItem value="ASSESSOR">Assessor</SelectItem>
-                        <SelectItem value="ADMIN">Administrador</SelectItem>
+                        <SelectItem value="ADMIN">Administrador de Gabinete</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
-                <div className="space-y-3 pt-4 border-t">
-                  <Label className="text-[10px] uppercase text-muted-foreground font-bold flex items-center gap-2 tracking-widest mb-2">
-                    <Settings2 size={12} /> Configurações de Acesso
+                <div className="space-y-3 pt-6 border-t">
+                  <Label className="text-[10px] uppercase text-primary font-bold flex items-center gap-2 tracking-widest mb-3">
+                    <Settings2 size={12} /> Quadradinhos de Permissão
                   </Label>
-                  <div className="grid gap-3">
+                  <div className="grid gap-3 p-3 bg-muted/20 rounded-lg border border-dashed border-primary/20">
                     {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
-                      <div key={key} className="flex items-center space-x-2">
+                      <div key={key} className="flex items-center space-x-3 group">
                         <Checkbox 
                           id={`perm-${key}`} 
                           checked={permissions[key as keyof UserPermissions]} 
                           onCheckedChange={() => handleTogglePermission(key as keyof UserPermissions)}
+                          className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                         />
-                        <label htmlFor={`perm-${key}`} className="text-sm leading-none cursor-pointer hover:text-primary transition-colors">
+                        <label htmlFor={`perm-${key}`} className="text-sm font-medium leading-none cursor-pointer group-hover:text-primary transition-colors">
                           {label}
                         </label>
                       </div>
@@ -211,37 +220,44 @@ export default function UserManagementPage() {
                   </div>
                 </div>
 
-                <Button className="w-full font-bold" type="submit" disabled={isAdding}>
-                  {isAdding ? <Loader2 className="animate-spin mr-2" /> : "Autorizar Acesso"}
+                <Button className="w-full font-bold shadow-lg h-11" type="submit" disabled={isAdding}>
+                  {isAdding ? <Loader2 className="animate-spin mr-2" /> : "Autorizar e Salvar"}
                 </Button>
               </form>
             </CardContent>
           </Card>
 
           <div className="lg:col-span-2 space-y-4">
-            <Card className="shadow-lg border-none">
-              <CardHeader>
-                <CardTitle className="text-lg">Equipe do Gabinete</CardTitle>
-                <CardDescription>Membros autorizados e ativos.</CardDescription>
+            <Card className="shadow-xl border-none ring-1 ring-black/5">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg">Equipe Autorizada</CardTitle>
+                  <CardDescription>Visualize e gerencie quem tem acesso ao sistema.</CardDescription>
+                </div>
+                {usersError && (
+                  <Badge variant="destructive" className="animate-pulse">Erro de Sincronização</Badge>
+                )}
               </CardHeader>
               <CardContent>
-                {usersError && (
-                  <div className="p-4 bg-destructive/10 text-destructive rounded-lg flex items-center gap-2 text-sm mb-4">
-                    <AlertCircle size={18} />
-                    Sincronizando permissões do SuperAdmin...
-                  </div>
-                )}
-                
                 <div className="space-y-3">
                   {usersLoading ? (
-                    <div className="py-12 text-center text-muted-foreground">
-                      <Loader2 className="animate-spin inline mr-2" /> Carregando equipe...
+                    <div className="py-20 text-center text-muted-foreground flex flex-col items-center gap-2">
+                      <Loader2 className="animate-spin text-primary" size={32} />
+                      <p className="text-sm font-medium">Carregando membros da equipe...</p>
+                    </div>
+                  ) : allUsers.length === 0 ? (
+                    <div className="py-20 text-center border-2 border-dashed rounded-xl">
+                      <Info className="mx-auto text-muted-foreground mb-2" />
+                      <p className="text-muted-foreground">Nenhum membro cadastrado além de você.</p>
                     </div>
                   ) : allUsers.map((u: any) => (
-                    <div key={u.id} className="flex items-center justify-between p-4 rounded-xl border bg-card hover:bg-muted/30 transition-all gap-4">
+                    <div key={u.id} className={cn(
+                      "flex items-center justify-between p-4 rounded-xl border transition-all gap-4 group",
+                      u.ativo ? "bg-card hover:border-primary/50" : "bg-muted/50 grayscale"
+                    )}>
                       <div className="flex items-center gap-3">
                         <div className={cn(
-                          "w-10 h-10 rounded-full flex items-center justify-center font-bold text-white",
+                          "w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shadow-sm",
                           u.perfil === "SUPER_ADMIN" ? "bg-amber-500" : 
                           u.perfil === "ADMIN" ? "bg-primary" : "bg-slate-400"
                         )}>
@@ -250,12 +266,12 @@ export default function UserManagementPage() {
                         <div>
                           <p className="font-bold text-sm flex items-center gap-1">
                             {u.nome}
-                            {u.email === "edisonunb@gmail.com" && <ShieldCheck size={14} className="text-amber-500" />}
+                            {(u.email === "edisonunb@gmail.com" || u.perfil === "SUPER_ADMIN") && <ShieldCheck size={14} className="text-amber-500" />}
                           </p>
                           <p className="text-xs text-muted-foreground">{u.email}</p>
-                          <div className="flex gap-1 mt-1">
-                            <Badge variant="outline" className="text-[9px] uppercase">{u.perfil}</Badge>
-                            {!u.ativo && <Badge variant="destructive" className="text-[9px] uppercase">Bloqueado</Badge>}
+                          <div className="flex gap-1.5 mt-1.5">
+                            <Badge variant="outline" className="text-[9px] uppercase font-bold tracking-tight">{u.perfil}</Badge>
+                            {!u.ativo && <Badge variant="destructive" className="text-[9px] uppercase font-bold">Bloqueado</Badge>}
                           </div>
                         </div>
                       </div>
@@ -264,11 +280,14 @@ export default function UserManagementPage() {
                         {u.email !== "edisonunb@gmail.com" && u.email !== user?.email && (
                           <Button 
                             variant="ghost" 
-                            size="icon" 
-                            className={u.ativo ? "text-destructive" : "text-green-600"}
+                            size="sm" 
+                            className={cn(
+                              "font-bold text-xs h-8",
+                              u.ativo ? "text-destructive hover:bg-destructive/10" : "text-green-600 hover:bg-green-50"
+                            )}
                             onClick={() => toggleUserStatus(u.id, u.ativo)}
                           >
-                            {u.ativo ? <UserMinus size={18} /> : <CheckCircle2 size={18} />}
+                            {u.ativo ? "Bloquear" : "Ativar Acesso"}
                           </Button>
                         )}
                       </div>
