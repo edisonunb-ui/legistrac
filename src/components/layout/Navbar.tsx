@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser, useFirestore, useAuthInstance } from "@/firebase";
+import { useUser, useFirestore, useAuthInstance, useDoc, useCollection } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { Bell, LogOut, User, Home, ListTodo, PlusCircle, PieChart, Users } from "lucide-react";
 import { signOut } from "firebase/auth";
@@ -13,14 +13,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useEffect, useState, useMemo } from "react";
+import { useMemo } from "react";
 import { collection, query, where, updateDoc, doc, orderBy } from "firebase/firestore";
 import { Notification, UserProfile } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { useCollection, useDoc } from "@/firebase";
 
 export function Navbar() {
   const { user } = useUser();
@@ -29,10 +28,11 @@ export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
+  const userEmail = user?.email?.toLowerCase().trim();
   const userProfileQuery = useMemo(() => {
-    if (!db || !user) return null;
-    return doc(db, "users", user.uid);
-  }, [db, user]);
+    if (!db || !userEmail) return null;
+    return doc(db, "users", userEmail);
+  }, [db, userEmail]);
   const { data: profile } = useDoc(userProfileQuery);
 
   const notificationsQuery = useMemo(() => {
@@ -61,8 +61,10 @@ export function Navbar() {
     router.push(`/demandas/${note.demandaId}`);
   };
 
-  const hasPermission = (perm: keyof UserProfile["permissoes"]) => {
-    return (profile as any)?.permissoes?.[perm] || user?.email === 'edisonunb@gmail.com';
+  const hasPermission = (perm: keyof UserPermissions) => {
+    if (userEmail === 'edisonunb@gmail.com') return true;
+    const p = profile as any;
+    return p?.permissoes?.[perm] || p?.perfil === 'SUPER_ADMIN';
   };
 
   const navItems = [

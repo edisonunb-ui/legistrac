@@ -2,8 +2,8 @@
 
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useMemo, useEffect } from "react";
-import { collection, query, doc, updateDoc, serverTimestamp, orderBy, setDoc } from "firebase/firestore";
+import { useState, useMemo } from "react";
+import { collection, query, doc, updateDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { UserProfile, UserRole, UserPermissions } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,14 +41,16 @@ export default function UserManagementPage() {
   });
   const [isAdding, setIsAdding] = useState(false);
 
-  const profileRef = useMemo(() => (user && db) ? doc(db, "users", user.uid) : null, [db, user]);
+  // Perfil baseado no e-mail logado para evitar erros de UID
+  const userEmail = user?.email?.toLowerCase().trim();
+  const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: currentUserProfile, loading: profileLoading } = useDoc(profileRef);
 
-  // Só tenta a query se o banco e o usuário estiverem prontos para evitar erro de permissão inicial
-  const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users"), orderBy("createdAt", "desc")) : null, [db, user]);
+  // Lista simples de usuários (sem orderBy para evitar erros de indexação inicial)
+  const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
   const { data: allUsers = [], loading: usersLoading, error: usersError } = useCollection(usersQuery);
 
-  const isSuperAdmin = user?.email === "edisonunb@gmail.com" || user?.email === "gabinete.professoraflavia@gmail.com";
+  const isSuperAdmin = userEmail === "edisonunb@gmail.com" || userEmail === "gabinete.professoraflavia@gmail.com";
 
   const isAdmin = useMemo(() => {
     if (isSuperAdmin) return true;
@@ -84,9 +86,10 @@ export default function UserManagementPage() {
       const exists = allUsers.find(u => u.email === emailLower);
       if (exists) throw new Error("Este e-mail já está cadastrado.");
 
-      const newUserRef = doc(collection(db, "users"));
+      // O ID do documento agora é o e-mail para garantir consistência
+      const newUserRef = doc(db, "users", emailLower);
       await setDoc(newUserRef, {
-        id: newUserRef.id,
+        id: emailLower,
         email: emailLower,
         nome: newName,
         perfil: newRole,
@@ -110,10 +113,10 @@ export default function UserManagementPage() {
     }
   };
 
-  const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
+  const toggleUserStatus = async (userEmailKey: string, currentStatus: boolean) => {
     if (!db) return;
     try {
-      await updateDoc(doc(db, "users", userId), { ativo: !currentStatus });
+      await updateDoc(doc(db, "users", userEmailKey), { ativo: !currentStatus });
       toast({ title: "Atualizado", description: `Status alterado com sucesso.` });
     } catch (error) {
       toast({ title: "Erro", description: "Falha ao alterar status.", variant: "destructive" });
@@ -228,7 +231,7 @@ export default function UserManagementPage() {
                 {usersError && (
                   <div className="p-4 bg-destructive/10 text-destructive rounded-lg flex items-center gap-2 text-sm mb-4">
                     <AlertCircle size={18} />
-                    Erro de permissão ou conexão. Verifique as regras do Firestore.
+                    Erro de permissão ou conexão. Detalhes: {usersError.message}
                   </div>
                 )}
                 
@@ -241,7 +244,7 @@ export default function UserManagementPage() {
                     <div className="py-12 text-center text-muted-foreground border-2 border-dashed rounded-xl">
                       Nenhum outro membro cadastrado.
                     </div>
-                  ) : allUsers.map((u: UserProfile) => (
+                  ) : allUsers.map((u: any) => (
                     <div key={u.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border bg-card hover:bg-muted/30 transition-all gap-4 shadow-sm">
                       <div className="flex items-center gap-3">
                         <div className={cn(
@@ -265,15 +268,6 @@ export default function UserManagementPage() {
                         </div>
                       </div>
                       
-                      <div className="flex flex-wrap gap-1 max-w-[200px] justify-end">
-                        {u.permissoes && Object.entries(u.permissoes)
-                          .filter(([_, val]) => val)
-                          .map(([key]) => (
-                            <div key={key} className="w-2 h-2 rounded-full bg-green-500" title={PERMISSION_LABELS[key as keyof UserPermissions]} />
-                          ))
-                        }
-                      </div>
-
                       <div className="flex items-center gap-2">
                         {u.email !== "edisonunb@gmail.com" && u.email !== user?.email && (
                           <Button 

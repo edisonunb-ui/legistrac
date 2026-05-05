@@ -12,8 +12,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutDashboard, Loader2, ShieldAlert, Lock, Mail, AlertTriangle } from "lucide-react";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { LayoutDashboard, Loader2, Lock, Mail, AlertTriangle } from "lucide-react";
+import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -76,16 +76,21 @@ export default function LoginPage() {
       }
       
       if (userCredential) {
-        const userRef = doc(db, "users", userCredential.user.uid);
+        // Agora o documento do usuário é identificado pelo E-MAIL, não pelo UID
+        const userRef = doc(db, "users", emailLower);
+        const userSnap = await getDoc(userRef);
         const isMaster = emailLower === "edisonunb@gmail.com";
         
+        const existingData = userSnap.exists() ? userSnap.data() : {};
+        
         await setDoc(userRef, {
+          ...existingData,
           uid: userCredential.user.uid,
-          nome: emailLower.split('@')[0],
+          nome: existingData.nome || emailLower.split('@')[0],
           email: emailLower,
-          perfil: isMaster ? "SUPER_ADMIN" : "ASSESSOR",
+          perfil: existingData.perfil || (isMaster ? "SUPER_ADMIN" : "ASSESSOR"),
           ativo: true,
-          permissoes: {
+          permissoes: existingData.permissoes || {
             visualizar_todas: isMaster,
             criar_demandas: true,
             finalizar_demandas: isMaster,
@@ -93,7 +98,7 @@ export default function LoginPage() {
             reabrir_demandas: isMaster
           },
           updatedAt: serverTimestamp(),
-          createdAt: serverTimestamp(),
+          createdAt: existingData.createdAt || serverTimestamp(),
         }, { merge: true });
 
         sessionStorage.setItem('gate_auth_email', emailLower);

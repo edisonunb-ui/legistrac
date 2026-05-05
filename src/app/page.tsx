@@ -1,8 +1,8 @@
 "use client";
 
-import { useFirestore, useCollection, useUser, useAuthInstance, useDoc } from "@/firebase";
+import { useFirestore, useCollection, useUser, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useMemo } from "react";
 import { collection, query, orderBy, doc } from "firebase/firestore";
 import { Demand } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,72 +17,14 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
-import { signOut } from "firebase/auth";
 
 export default function Dashboard() {
   const { user, loading } = useUser();
   const db = useFirestore();
-  const auth = useAuthInstance();
-  const router = useRouter();
-  const [autorizadoEmail, setAutorizadoEmail] = useState<string | null>(null);
-  const [checkingGate, setCheckingGate] = useState(true);
-  const promptShown = useRef(false);
 
-  useEffect(() => {
-    if (loading) return;
-    
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-
-    // Tenta pegar o e-mail da sessão ou do próprio objeto de usuário autenticado
-    const savedEmail = typeof window !== 'undefined' ? sessionStorage.getItem('gate_auth_email') : null;
-    const userEmail = user.email?.toLowerCase().trim();
-    
-    // Se o e-mail do usuário logado já estiver na lista, autoriza direto sem prompt
-    if (userEmail && VEREADORES_AUTORIZADOS.includes(userEmail)) {
-      setAutorizadoEmail(userEmail);
-      if (typeof window !== 'undefined') sessionStorage.setItem('gate_auth_email', userEmail);
-      setCheckingGate(false);
-    } else if (savedEmail && VEREADORES_AUTORIZADOS.includes(savedEmail)) {
-      setAutorizadoEmail(savedEmail);
-      setCheckingGate(false);
-    } else if (!promptShown.current) {
-      promptShown.current = true;
-      const emailInserido = prompt("Para acessar o gabinete LegisTrac, por favor, insira seu e-mail de acesso:");
-      
-      if (emailInserido) {
-        const emailClean = emailInserido.toLowerCase().trim();
-        if (VEREADORES_AUTORIZADOS.includes(emailClean)) {
-          if (typeof window !== 'undefined') sessionStorage.setItem('gate_auth_email', emailClean);
-          setAutorizadoEmail(emailClean);
-          setCheckingGate(false);
-        } else {
-          alert("Erro: E-mail não possui permissão de acesso ao gabinete.");
-          if (auth) {
-            signOut(auth).then(() => {
-              if (typeof window !== 'undefined') sessionStorage.removeItem('gate_auth_email');
-              router.push("/login");
-            });
-          }
-        }
-      } else {
-        alert("O acesso foi cancelado. Você será redirecionado.");
-        if (auth) {
-          signOut(auth).then(() => {
-            if (typeof window !== 'undefined') sessionStorage.removeItem('gate_auth_email');
-            router.push("/login");
-          });
-        }
-      }
-    }
-  }, [user, loading, auth, router]);
-
-  const profileRef = useMemo(() => user && db ? doc(db, "users", user.uid) : null, [db, user]);
+  const userEmail = user?.email?.toLowerCase().trim();
+  const profileRef = useMemo(() => userEmail && db ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
   const demandsQuery = useMemo(() => db ? query(collection(db, "demandas"), orderBy("dataCriacao", "desc")) : null, [db]);
@@ -99,13 +41,11 @@ export default function Dashboard() {
     };
   }, [demands, user]);
 
-  if (loading || !user || checkingGate) {
+  if (loading || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-primary">
         <Loader2 className="h-10 w-10 animate-spin mb-4" />
-        <p className="font-medium text-center">
-          {loading ? "Iniciando sessão..." : "Verificando autorização LegisTrac..."}
-        </p>
+        <p className="font-medium text-center">Iniciando LegisTrac...</p>
       </div>
     );
   }
@@ -125,8 +65,8 @@ export default function Dashboard() {
           <div>
             <h1 className="text-3xl font-headline font-bold text-foreground">Dashboard LegisTrac</h1>
             <div className="flex items-center gap-2 mt-1">
-              <p className="text-muted-foreground text-sm">Autorizado: {autorizadoEmail}</p>
-              {(profile as any)?.perfil === 'ADMIN' || user.email === 'edisonunb@gmail.com' ? (
+              <p className="text-muted-foreground text-sm">Usuário: {user.email}</p>
+              {(profile as any)?.perfil === 'SUPER_ADMIN' || user.email === 'edisonunb@gmail.com' ? (
                 <Badge className="bg-amber-500 text-white text-[10px]">SUPER ADMIN</Badge>
               ) : null}
               <CheckCircle2 size={14} className="text-green-500" />
