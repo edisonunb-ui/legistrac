@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Shield, UserMinus, CheckCircle2, Loader2, ShieldCheck, Settings2 } from "lucide-react";
+import { Users, UserPlus, Shield, UserMinus, CheckCircle2, Loader2, ShieldCheck, Settings2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const PERMISSION_LABELS: Record<keyof UserPermissions, string> = {
@@ -25,7 +25,7 @@ const PERMISSION_LABELS: Record<keyof UserPermissions, string> = {
 };
 
 export default function UserManagementPage() {
-  const { user } = useUser();
+  const { user, loading: authLoading } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
   
@@ -42,12 +42,15 @@ export default function UserManagementPage() {
   const [isAdding, setIsAdding] = useState(false);
 
   const profileRef = useMemo(() => user && db ? doc(db, "users", user.uid) : null, [db, user]);
-  const { data: currentUserProfile } = useDoc(profileRef);
+  const { data: currentUserProfile, loading: profileLoading } = useDoc(profileRef);
 
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("email", "asc")) : null, [db]);
-  const { data: allUsers = [], loading } = useCollection(usersQuery);
+  const { data: allUsers = [], loading: usersLoading, error: usersError } = useCollection(usersQuery);
 
-  const isAdmin = (currentUserProfile as any)?.permissoes?.gerenciar_equipe || user?.email === "edisonunb@gmail.com";
+  const isAdmin = (currentUserProfile as any)?.permissoes?.gerenciar_equipe || 
+                  (currentUserProfile as any)?.perfil === "SUPER_ADMIN" || 
+                  (currentUserProfile as any)?.perfil === "ADMIN" ||
+                  user?.email === "edisonunb@gmail.com";
 
   const handleTogglePermission = (key: keyof UserPermissions) => {
     setPermissions(prev => ({ ...prev, [key]: !prev[key] }));
@@ -55,7 +58,6 @@ export default function UserManagementPage() {
 
   const handleRoleChange = (role: UserRole) => {
     setNewRole(role);
-    // Sugestão de permissões padrão baseada no cargo
     if (role === "ADMIN") {
       setPermissions({
         visualizar_todas: true,
@@ -64,15 +66,7 @@ export default function UserManagementPage() {
         gerenciar_equipe: true,
         reabrir_demandas: true
       });
-    } else if (role === "ASSESSOR") {
-      setPermissions({
-        visualizar_todas: false,
-        criar_demandas: true,
-        finalizar_demandas: false,
-        gerenciar_equipe: false,
-        reabrir_demandas: false
-      });
-    } else if (role === "ESTAGIARIO") {
+    } else {
       setPermissions({
         visualizar_todas: false,
         criar_demandas: true,
@@ -106,7 +100,7 @@ export default function UserManagementPage() {
       setNewEmail("");
       setNewName("");
     } catch (error: any) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      toast({ title: "Erro de Permissão", description: error.message || "Você não tem permissão para esta ação.", variant: "destructive" });
     } finally {
       setIsAdding(false);
     }
@@ -122,10 +116,18 @@ export default function UserManagementPage() {
     }
   };
 
-  if (!isAdmin && !loading) {
+  if (authLoading || profileLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="animate-spin text-primary" size={40} />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-md text-center">
+        <Card className="max-w-md text-center shadow-lg">
           <CardHeader>
             <Shield className="mx-auto text-destructive h-12 w-12 mb-2" />
             <CardTitle>Acesso Restrito</CardTitle>
@@ -185,8 +187,8 @@ export default function UserManagementPage() {
                 </div>
 
                 <div className="space-y-3 pt-4 border-t">
-                  <Label className="text-xs uppercase text-muted-foreground font-bold flex items-center gap-2">
-                    <Settings2 size={14} /> Permissões (Quadradinhos)
+                  <Label className="text-[10px] uppercase text-muted-foreground font-bold flex items-center gap-2 tracking-widest">
+                    <Settings2 size={12} /> Permissões (Quadradinhos)
                   </Label>
                   <div className="grid gap-3">
                     {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
@@ -196,7 +198,7 @@ export default function UserManagementPage() {
                           checked={permissions[key as keyof UserPermissions]} 
                           onCheckedChange={() => handleTogglePermission(key as keyof UserPermissions)}
                         />
-                        <label htmlFor={`perm-${key}`} className="text-sm leading-none cursor-pointer">
+                        <label htmlFor={`perm-${key}`} className="text-sm leading-none cursor-pointer hover:text-primary transition-colors">
                           {label}
                         </label>
                       </div>
@@ -204,7 +206,7 @@ export default function UserManagementPage() {
                   </div>
                 </div>
 
-                <Button className="w-full font-bold" type="submit" disabled={isAdding}>
+                <Button className="w-full font-bold shadow-md" type="submit" disabled={isAdding}>
                   {isAdding ? <Loader2 className="animate-spin mr-2" /> : "Autorizar e Salvar"}
                 </Button>
               </form>
@@ -215,13 +217,27 @@ export default function UserManagementPage() {
             <Card className="shadow-lg border-none">
               <CardHeader>
                 <CardTitle className="text-lg">Equipe Cadastrada</CardTitle>
+                <CardDescription>Lista de usuários com acesso ao sistema.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {loading ? (
-                    <div className="py-8 text-center"><Loader2 className="animate-spin inline mr-2" /> Carregando...</div>
+                {usersError && (
+                  <div className="p-4 bg-destructive/10 text-destructive rounded-lg flex items-center gap-2 text-sm">
+                    <AlertCircle size={18} />
+                    Erro ao carregar usuários: Verifique as regras de segurança.
+                  </div>
+                )}
+                
+                <div className="space-y-3 mt-4">
+                  {usersLoading ? (
+                    <div className="py-8 text-center text-muted-foreground">
+                      <Loader2 className="animate-spin inline mr-2" /> Carregando equipe...
+                    </div>
+                  ) : allUsers.length === 0 ? (
+                    <div className="py-8 text-center text-muted-foreground border-2 border-dashed rounded-xl">
+                      Nenhum usuário cadastrado além de você.
+                    </div>
                   ) : allUsers.map((u: UserProfile) => (
-                    <div key={u.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border bg-card hover:bg-muted/30 transition-all gap-4">
+                    <div key={u.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border bg-card hover:bg-muted/30 transition-all gap-4 shadow-sm">
                       <div className="flex items-center gap-3">
                         <div className={cn(
                           "w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shadow-inner",
@@ -238,7 +254,7 @@ export default function UserManagementPage() {
                           </p>
                           <p className="text-[11px] text-muted-foreground">{u.email}</p>
                           <div className="flex flex-wrap gap-1 mt-1">
-                            <Badge variant="outline" className="text-[8px] uppercase">{u.perfil}</Badge>
+                            <Badge variant="outline" className="text-[8px] uppercase font-bold">{u.perfil}</Badge>
                             {!u.ativo && <Badge variant="destructive" className="text-[8px] uppercase">Bloqueado</Badge>}
                           </div>
                         </div>
@@ -254,7 +270,7 @@ export default function UserManagementPage() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {u.email !== "edisonunb@gmail.com" && (
+                        {u.email !== "edisonunb@gmail.com" && u.email !== user?.email && (
                           <Button 
                             variant="ghost" 
                             size="icon" 

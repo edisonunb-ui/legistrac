@@ -12,12 +12,14 @@ service cloud.firestore {
     }
     
     function isAdmin() {
-      return getUserData().perfil == "ADMIN";
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             (getUserData().perfil == "ADMIN" || getUserData().perfil == "SUPER_ADMIN");
     }
 
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated(); // Permite criação no primeiro login
+      allow create: if isAuthenticated(); 
       allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow delete: if isAuthenticated() && isAdmin();
     }
