@@ -3,23 +3,25 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Função para verificar se é um dos e-mails mestres do projeto
+    // Função para verificar se é um dos e-mails mestres com poder absoluto
     function isMasterAdmin() {
       return request.auth != null && (
-        request.auth.token.email == "edisonunb@gmail.com" || 
-        request.auth.token.email == "gabinete.professoraflavia@gmail.com"
+        request.auth.token.email.lower() == "edisonunb@gmail.com" || 
+        request.auth.token.email.lower() == "gabinete.professoraflavia@gmail.com"
       );
     }
     
-    // Regra Global: Se for o Master Admin, permite TUDO em qualquer coleção
+    // REGRA DE OURO: Se for o Master Admin, permite TUDO em qualquer lugar
+    // Isso deve vir primeiro e ser absoluto para evitar o erro "insufficient permissions"
     match /{document=**} {
       allow read, write: if isMasterAdmin();
     }
 
-    // Regras de fallback para outros usuários autenticados
+    // Regras de fallback para outros usuários autenticados (Assessores/Estagiários)
     match /users/{userEmail} {
       allow read: if request.auth != null;
-      allow update: if request.auth != null && (request.auth.token.email == userEmail || isMasterAdmin());
+      // Permite que o próprio usuário atualize seu perfil básico
+      allow update: if request.auth != null && request.auth.token.email.lower() == userEmail.lower();
     }
 
     match /demandas/{demandaId} {

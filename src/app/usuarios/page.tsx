@@ -2,7 +2,7 @@
 
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { collection, query, doc, updateDoc, serverTimestamp, setDoc, orderBy } from "firebase/firestore";
 import { UserProfile, UserRole, UserPermissions } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Shield, UserMinus, CheckCircle2, Loader2, ShieldCheck, Settings2, AlertCircle, Info } from "lucide-react";
+import { Users, UserPlus, Shield, Loader2, ShieldCheck, Settings2, Info, UserX } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const PERMISSION_LABELS: Record<keyof UserPermissions, string> = {
@@ -42,7 +42,7 @@ export default function UserManagementPage() {
   const [isAdding, setIsAdding] = useState(false);
 
   const userEmail = user?.email?.toLowerCase().trim();
-  const isSuperAdmin = userEmail === "edisonunb@gmail.com" || userEmail === "gabinete.professoraflavia@gmail.com";
+  const isMasterAdmin = userEmail === "edisonunb@gmail.com" || userEmail === "gabinete.professoraflavia@gmail.com";
 
   // Perfil baseado no e-mail logado
   const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
@@ -50,13 +50,13 @@ export default function UserManagementPage() {
 
   // Lista de usuários - ordenada por nome
   const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db, user]);
-  const { data: allUsers = [], loading: usersLoading, error: usersError } = useCollection(usersQuery);
+  const { data: allUsers = [], loading: usersLoading } = useCollection(usersQuery);
 
   const isAdmin = useMemo(() => {
-    if (isSuperAdmin) return true;
+    if (isMasterAdmin) return true;
     const profile = currentUserProfile as any;
     return profile?.permissoes?.gerenciar_equipe || profile?.perfil === "ADMIN" || profile?.perfil === "SUPER_ADMIN";
-  }, [isSuperAdmin, currentUserProfile]);
+  }, [isMasterAdmin, currentUserProfile]);
 
   const handleTogglePermission = (key: keyof UserPermissions) => {
     setPermissions(prev => ({ ...prev, [key]: !prev[key] }));
@@ -81,10 +81,8 @@ export default function UserManagementPage() {
 
     try {
       const emailLower = newEmail.toLowerCase().trim();
-      const exists = allUsers.find(u => u.email === emailLower);
-      if (exists) throw new Error("Este e-mail já está cadastrado.");
-
       const newUserRef = doc(db, "users", emailLower);
+      
       await setDoc(newUserRef, {
         id: emailLower,
         email: emailLower,
@@ -94,16 +92,16 @@ export default function UserManagementPage() {
         ativo: true,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      });
+      }, { merge: true });
 
-      toast({ title: "Sucesso", description: "Membro da equipe autorizado." });
+      toast({ title: "Sucesso", description: "Colaborador autorizado no sistema." });
       setNewEmail("");
       setNewName("");
     } catch (error: any) {
       console.error("Erro ao adicionar usuário:", error);
       toast({ 
         title: "Falha na Gravação", 
-        description: "Erro de permissão ou conexão. Tente novamente.", 
+        description: "Erro de permissão no Firebase. Verifique se o login do Admin está ativo.", 
         variant: "destructive" 
       });
     } finally {
@@ -111,36 +109,41 @@ export default function UserManagementPage() {
     }
   };
 
-  const toggleUserStatus = async (userEmailKey: string, currentStatus: boolean) => {
+  const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
     if (!db) return;
     try {
-      await updateDoc(doc(db, "users", userEmailKey), { ativo: !currentStatus });
+      await updateDoc(doc(db, "users", userId), { 
+        ativo: !currentStatus,
+        updatedAt: serverTimestamp()
+      });
       toast({ title: "Sucesso", description: "Status do usuário atualizado." });
     } catch (error) {
       toast({ title: "Erro", description: "Falha ao alterar status.", variant: "destructive" });
     }
   };
 
-  if (authLoading || (profileLoading && !isSuperAdmin)) {
+  if (authLoading || (profileLoading && !isMasterAdmin)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="animate-spin text-primary" size={40} />
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="animate-spin text-primary" size={40} />
+          <p className="text-sm font-medium animate-pulse text-muted-foreground">Validando credenciais mestres...</p>
+        </div>
       </div>
     );
   }
 
-  // Se não for admin nem super admin, e não estiver mais carregando
-  if (!authLoading && !profileLoading && !isAdmin && !isSuperAdmin) {
+  if (!isAdmin && !isMasterAdmin) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md text-center shadow-lg border-destructive/20">
           <CardHeader>
             <Shield className="mx-auto text-destructive h-12 w-12 mb-2" />
             <CardTitle>Acesso Restrito</CardTitle>
-            <CardDescription>Apenas o administrador do gabinete pode gerenciar a equipe.</CardDescription>
+            <CardDescription>Apenas administradores podem gerenciar a equipe do gabinete.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => window.location.href = "/"}>Voltar ao Início</Button>
+            <Button onClick={() => window.location.href = "/"}>Voltar ao Painel</Button>
           </CardContent>
         </Card>
       </div>
@@ -157,9 +160,9 @@ export default function UserManagementPage() {
               <Users className="text-primary" />
               Gestão da Equipe
             </h1>
-            <p className="text-muted-foreground mt-1">Configure os cargos e permissões dos membros do seu gabinete.</p>
+            <p className="text-muted-foreground mt-1">Configure permissões específicas para cada membro do gabinete.</p>
           </div>
-          {isSuperAdmin && (
+          {isMasterAdmin && (
             <Badge className="bg-amber-500 text-white gap-1 py-1 px-3 shadow-sm border-none">
               <ShieldCheck size={14} /> MODO SUPER ADMIN ATIVO
             </Badge>
@@ -177,22 +180,22 @@ export default function UserManagementPage() {
               <form onSubmit={handleAddUser} className="space-y-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Nome do Colaborador</Label>
-                    <Input placeholder="Ex: João Silva" value={newName} onChange={e => setNewName(e.target.value)} required />
+                    <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Nome Completo</Label>
+                    <Input placeholder="Nome do colaborador" value={newName} onChange={e => setNewName(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">E-mail de Acesso</Label>
+                    <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">E-mail de Acesso</Label>
                     <Input type="email" placeholder="email@gabinete.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Cargo Principal</Label>
+                    <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Cargo no Gabinete</Label>
                     <Select value={newRole} onValueChange={(v: UserRole) => handleRoleChange(v)}>
                       <SelectTrigger className="bg-muted/30">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="ESTAGIARIO">Estagiário</SelectItem>
-                        <SelectItem value="ASSESSOR">Assessor</SelectItem>
+                        <SelectItem value="ASSESSOR">Assessor Parlamentar</SelectItem>
                         <SelectItem value="ADMIN">Administrador de Gabinete</SelectItem>
                       </SelectContent>
                     </Select>
@@ -203,7 +206,7 @@ export default function UserManagementPage() {
                   <Label className="text-[10px] uppercase text-primary font-bold flex items-center gap-2 tracking-widest mb-3">
                     <Settings2 size={12} /> Quadradinhos de Permissão
                   </Label>
-                  <div className="grid gap-3 p-3 bg-muted/20 rounded-lg border border-dashed border-primary/20">
+                  <div className="grid gap-3 p-4 bg-muted/20 rounded-xl border border-dashed border-primary/20">
                     {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
                       <div key={key} className="flex items-center space-x-3 group">
                         <Checkbox 
@@ -229,33 +232,28 @@ export default function UserManagementPage() {
 
           <div className="lg:col-span-2 space-y-4">
             <Card className="shadow-xl border-none ring-1 ring-black/5">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">Equipe Autorizada</CardTitle>
-                  <CardDescription>Visualize e gerencie quem tem acesso ao sistema.</CardDescription>
-                </div>
-                {usersError && (
-                  <Badge variant="destructive" className="animate-pulse">Erro de Sincronização</Badge>
-                )}
+              <CardHeader>
+                <CardTitle className="text-lg">Equipe Autorizada</CardTitle>
+                <CardDescription>Membros com acesso permitido ao sistema.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {usersLoading ? (
-                    <div className="py-20 text-center text-muted-foreground flex flex-col items-center gap-2">
+                    <div className="py-20 text-center flex flex-col items-center gap-2">
                       <Loader2 className="animate-spin text-primary" size={32} />
-                      <p className="text-sm font-medium">Carregando membros da equipe...</p>
+                      <p className="text-xs font-medium text-muted-foreground">Listando equipe...</p>
                     </div>
                   ) : allUsers.length === 0 ? (
                     <div className="py-20 text-center border-2 border-dashed rounded-xl">
-                      <Info className="mx-auto text-muted-foreground mb-2" />
-                      <p className="text-muted-foreground">Nenhum membro cadastrado além de você.</p>
+                      <Info className="mx-auto text-muted-foreground mb-2" size={32} />
+                      <p className="text-muted-foreground text-sm">Nenhum outro membro cadastrado.</p>
                     </div>
                   ) : allUsers.map((u: any) => (
                     <div key={u.id} className={cn(
                       "flex items-center justify-between p-4 rounded-xl border transition-all gap-4 group",
-                      u.ativo ? "bg-card hover:border-primary/50" : "bg-muted/50 grayscale"
+                      u.ativo ? "bg-card hover:border-primary/50" : "bg-muted/50 grayscale opacity-70"
                     )}>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-4">
                         <div className={cn(
                           "w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shadow-sm",
                           u.perfil === "SUPER_ADMIN" ? "bg-amber-500" : 
@@ -264,20 +262,20 @@ export default function UserManagementPage() {
                           {u.nome?.[0]?.toUpperCase() || "U"}
                         </div>
                         <div>
-                          <p className="font-bold text-sm flex items-center gap-1">
+                          <p className="font-bold text-sm flex items-center gap-1.5">
                             {u.nome}
-                            {(u.email === "edisonunb@gmail.com" || u.perfil === "SUPER_ADMIN") && <ShieldCheck size={14} className="text-amber-500" />}
+                            {u.perfil === "SUPER_ADMIN" && <ShieldCheck size={14} className="text-amber-500" />}
                           </p>
                           <p className="text-xs text-muted-foreground">{u.email}</p>
                           <div className="flex gap-1.5 mt-1.5">
-                            <Badge variant="outline" className="text-[9px] uppercase font-bold tracking-tight">{u.perfil}</Badge>
-                            {!u.ativo && <Badge variant="destructive" className="text-[9px] uppercase font-bold">Bloqueado</Badge>}
+                            <Badge variant="outline" className="text-[9px] uppercase font-bold">{u.perfil}</Badge>
+                            {!u.ativo && <Badge variant="destructive" className="text-[9px] uppercase font-bold">Inativo</Badge>}
                           </div>
                         </div>
                       </div>
                       
                       <div className="flex items-center gap-2">
-                        {u.email !== "edisonunb@gmail.com" && u.email !== user?.email && (
+                        {u.email !== userEmail && (
                           <Button 
                             variant="ghost" 
                             size="sm" 
@@ -287,7 +285,8 @@ export default function UserManagementPage() {
                             )}
                             onClick={() => toggleUserStatus(u.id, u.ativo)}
                           >
-                            {u.ativo ? "Bloquear" : "Ativar Acesso"}
+                            {u.ativo ? <UserX size={14} className="mr-1" /> : <ShieldCheck size={14} className="mr-1" />}
+                            {u.ativo ? "Bloquear" : "Ativar"}
                           </Button>
                         )}
                       </div>
