@@ -55,10 +55,8 @@ export default function LoginPage() {
     try {
       let userCredential;
       try {
-        // Tenta logar primeiro
         userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
       } catch (loginError: any) {
-        // Se o usuário não existir, tenta criar (auto-onboarding)
         if (
           loginError.code === 'auth/user-not-found' || 
           loginError.code === 'auth/invalid-credential' ||
@@ -85,8 +83,15 @@ export default function LoginPage() {
           uid: userCredential.user.uid,
           nome: emailLower.split('@')[0],
           email: emailLower,
-          perfil: isMaster ? "ADMIN" : "ASSESSOR",
+          perfil: isMaster ? "SUPER_ADMIN" : "ASSESSOR",
           ativo: true,
+          permissoes: {
+            visualizar_todas: isMaster,
+            criar_demandas: true,
+            finalizar_demandas: isMaster,
+            gerenciar_equipe: isMaster,
+            reabrir_demandas: isMaster
+          },
           updatedAt: serverTimestamp(),
           createdAt: serverTimestamp(),
         }, { merge: true });
@@ -138,7 +143,7 @@ export default function LoginPage() {
             <LayoutDashboard size={40} />
           </div>
           <CardTitle className="text-3xl font-bold text-primary">LegisTrac</CardTitle>
-          <CardDescription>Gestão de Gabinete (Acesso Básico)</CardDescription>
+          <CardDescription>Gestão de Gabinete Profissional</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {showConfigError && (
@@ -188,7 +193,7 @@ export default function LoginPage() {
               type="submit"
               disabled={submitting}
             >
-              {submitting ? <Loader2 className="animate-spin" /> : "Entrar"}
+              {submitting ? <Loader2 className="animate-spin" /> : "Entrar no Sistema"}
             </Button>
           </form>
         </CardContent>

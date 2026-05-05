@@ -1,14 +1,24 @@
 import { Timestamp } from "firebase/firestore";
 
-export type UserRole = "ADMIN" | "ASSESSOR";
+export type UserRole = "SUPER_ADMIN" | "ADMIN" | "ASSESSOR" | "ESTAGIARIO";
+
+export interface UserPermissions {
+  visualizar_todas: boolean;
+  criar_demandas: boolean;
+  finalizar_demandas: boolean;
+  gerenciar_equipe: boolean;
+  reabrir_demandas: boolean;
+}
 
 export interface UserProfile {
-  uid: string;
+  id: string; // Document ID
+  uid?: string; // Firebase Auth UID (populated after first login)
   nome: string;
   email: string;
   perfil: UserRole;
   ativo: boolean;
   createdAt: Timestamp;
+  permissoes: UserPermissions;
 }
 
 export type DemandStatus = "ABERTO" | "EM_ANDAMENTO" | "AGUARDANDO_VEREADORA" | "FINALIZADO";

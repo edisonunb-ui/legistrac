@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useFirestore, useAuthInstance } from "@/firebase";
@@ -62,13 +61,18 @@ export function Navbar() {
     router.push(`/demandas/${note.demandaId}`);
   };
 
-  const isAdmin = (profile as any)?.perfil === "ADMIN";
+  const hasPermission = (perm: keyof UserProfile["permissoes"]) => {
+    return (profile as any)?.permissoes?.[perm] || user?.email === 'edisonunb@gmail.com';
+  };
 
   const navItems = [
     { label: "Início", icon: Home, href: "/" },
     { label: "Demandas", icon: ListTodo, href: "/demandas" },
-    { label: "Nova Demanda", icon: PlusCircle, href: "/demandas/new" },
   ];
+
+  if (hasPermission('criar_demandas')) {
+    navItems.push({ label: "Nova Demanda", icon: PlusCircle, href: "/demandas/new" });
+  }
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -95,7 +99,7 @@ export function Navbar() {
                 {item.label}
               </Link>
             ))}
-            {isAdmin && (
+            {hasPermission('gerenciar_equipe') && (
               <Link
                 href="/usuarios"
                 className={cn(
@@ -129,7 +133,7 @@ export function Navbar() {
               <div className="max-h-[400px] overflow-y-auto">
                 {notifications.length === 0 ? (
                   <div className="p-8 text-center text-muted-foreground text-sm">
-                    Nenhuma notificação por aqui.
+                    Nenhuma notificação.
                   </div>
                 ) : (
                   notifications.map((note: Notification) => (
@@ -156,8 +160,9 @@ export function Navbar() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={(profile as any)?.photoURL || ""} alt={(profile as any)?.nome || ""} />
-                  <AvatarFallback>{(profile as any)?.nome?.[0] || <User />}</AvatarFallback>
+                  <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                    {(profile as any)?.nome?.[0] || <User />}
+                  </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
@@ -172,7 +177,7 @@ export function Navbar() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {isAdmin && (
+              {hasPermission('gerenciar_equipe') && (
                 <DropdownMenuItem onClick={() => router.push("/usuarios")}>
                   <Users className="mr-2 h-4 w-4" />
                   <span>Gerenciar Equipe</span>

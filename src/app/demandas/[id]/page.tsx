@@ -72,6 +72,10 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const profileRef = useMemo(() => user && db ? doc(db, "users", user.uid) : null, [db, user]);
   const { data: profile } = useDoc(profileRef);
 
+  const hasPermission = (perm: keyof UserProfile["permissoes"]) => {
+    return (profile as any)?.permissoes?.[perm] || user?.email === 'edisonunb@gmail.com';
+  };
+
   const handleGenerateSummary = async () => {
     if (!demand?.descricao) return;
     setSummarizing(true);
@@ -115,7 +119,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const handleFinalize = async () => {
     if (!demand || !user || !db) return;
     try {
-      await finalizeDemand(db, demand.id, user.uid, demand.criadoPor, obs || "Demanda finalizada pelo ADMIN.");
+      await finalizeDemand(db, demand.id, user.uid, demand.criadoPor, obs || "Demanda finalizada.");
       toast({ title: "Sucesso", description: "Demanda finalizada." });
       setObs("");
     } catch (e) {
@@ -126,7 +130,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const handleReopen = async () => {
     if (!demand || !user || !db) return;
     try {
-      await reopenDemand(db, demand.id, user.uid, demand.responsavelAtual, obs || "Demanda reaberta pelo ADMIN.");
+      await reopenDemand(db, demand.id, user.uid, demand.responsavelAtual, obs || "Demanda reaberta.");
       toast({ title: "Sucesso", description: "Demanda reaberta." });
       setObs("");
     } catch (e) {
@@ -137,7 +141,6 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   if (!demand) return <div className="p-8 text-center">Carregando demanda...</div>;
 
   const isResponsible = demand.responsavelAtual === user?.uid;
-  const isAdmin = (profile as any)?.perfil === "ADMIN";
 
   return (
     <div className="min-h-screen bg-background">
@@ -147,7 +150,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
           <div className="space-y-2">
             <Link href="/demandas" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors mb-2 w-fit">
               <ChevronLeft size={16} />
-              Lista de Demandas
+              Voltar para Lista
             </Link>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-headline font-bold">{demand.titulo}</h1>
@@ -161,7 +164,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                 {demand.status.replace("_", " ")}
               </Badge>
             </div>
-            <p className="text-sm text-muted-foreground font-mono">Protocolo: #{demand.id}</p>
+            <p className="text-sm text-muted-foreground font-mono">ID: #{demand.id.substring(0, 8)}</p>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -169,22 +172,22 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
               <>
                 <Dialog open={sendModalOpen} onOpenChange={setSendModalOpen}>
                   <DialogTrigger asChild>
-                    <Button className="gap-2"><Send size={18} /> Tramitar</Button>
+                    <Button className="gap-2 shadow-sm"><Send size={18} /> Tramitar</Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Enviar ou Devolver Demanda</DialogTitle>
+                      <DialogTitle>Mover Demanda</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
                         <Label>Destinatário</Label>
                         <Select onValueChange={setSelectedUser}>
                           <SelectTrigger>
-                            <SelectValue placeholder="Selecione um assessor ou admin" />
+                            <SelectValue placeholder="Selecione um colaborador" />
                           </SelectTrigger>
                           <SelectContent>
-                            {allUsers.map((u: UserProfile) => (
-                              <SelectItem key={u.uid} value={u.uid}>{u.nome} ({u.perfil})</SelectItem>
+                            {allUsers.filter(u => u.uid !== user?.uid).map((u: UserProfile) => (
+                              <SelectItem key={u.uid} value={u.uid!}>{u.nome} ({u.perfil})</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -192,7 +195,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                       <div className="space-y-2">
                         <Label>Observação</Label>
                         <Textarea 
-                          placeholder="Motivo do envio ou devolução..." 
+                          placeholder="Instruções para o colega..." 
                           value={obs} 
                           onChange={e => setObs(e.target.value)}
                         />
@@ -205,7 +208,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                   </DialogContent>
                 </Dialog>
 
-                {isAdmin && (
+                {hasPermission('finalizar_demandas') && (
                   <Button variant="outline" className="text-green-600 hover:text-green-700 hover:bg-green-50 gap-2" onClick={handleFinalize}>
                     <CheckCircle size={18} /> Finalizar
                   </Button>
@@ -213,9 +216,9 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
               </>
             )}
 
-            {isAdmin && demand.finalizada && (
+            {hasPermission('reabrir_demandas') && demand.finalizada && (
               <Button variant="outline" className="gap-2" onClick={handleReopen}>
-                <RotateCcw size={18} /> Reabrir Demanda
+                <RotateCcw size={18} /> Reabrir para Ajustes
               </Button>
             )}
           </div>
@@ -227,36 +230,36 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-xl font-headline font-bold flex items-center gap-2">
                   <Info size={20} className="text-primary" />
-                  Descrição
+                  Descrição da Demanda
                 </CardTitle>
-                <Button variant="outline" size="sm" className="gap-2 text-primary" onClick={handleGenerateSummary} disabled={summarizing}>
+                <Button variant="outline" size="sm" className="gap-2 text-primary border-primary/20 hover:bg-primary/5" onClick={handleGenerateSummary} disabled={summarizing}>
                   <Sparkles size={16} />
-                  {summarizing ? "Gerando..." : "Resumir com IA"}
+                  {summarizing ? "Processando..." : "Resumo IA"}
                 </Button>
               </CardHeader>
               <CardContent className="space-y-6">
                 {summary && (
-                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl relative group">
-                    <div className="absolute top-2 right-2 flex items-center gap-1 text-[10px] text-primary font-bold uppercase tracking-wider">
-                      <Sparkles size={12} /> Resumo IA
+                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl relative">
+                    <div className="absolute top-2 right-2 flex items-center gap-1 text-[9px] text-primary font-bold uppercase tracking-widest">
+                      <Sparkles size={10} /> Inteligência Artificial
                     </div>
-                    <p className="text-sm leading-relaxed text-primary/80 italic">"{summary}"</p>
+                    <p className="text-sm leading-relaxed text-primary/80 italic pr-12">"{summary}"</p>
                   </div>
                 )}
-                <div className="prose prose-slate max-w-none whitespace-pre-wrap text-foreground leading-relaxed">
+                <div className="prose prose-slate max-w-none whitespace-pre-wrap text-foreground/80 leading-relaxed font-body">
                   {demand.descricao}
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-headline font-bold flex items-center gap-2">
-                  <History size={20} className="text-primary" />
-                  Histórico de Trâmites
+            <Card className="border-none shadow-sm overflow-hidden">
+              <CardHeader className="bg-muted/30">
+                <CardTitle className="text-lg font-headline font-bold flex items-center gap-2">
+                  <History size={18} className="text-primary" />
+                  Linha do Tempo
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <div className="space-y-6">
                   {tramites.map((t: Tramite, idx: number) => {
                     const deUser = allUsers.find((u: UserProfile) => u.uid === t.de)?.nome || "Sistema";
@@ -268,7 +271,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                           <div className="absolute left-[1.1rem] top-8 bottom-0 w-0.5 bg-muted" />
                         )}
                         <div className={cn(
-                          "w-9 h-9 rounded-full flex items-center justify-center shrink-0 z-10",
+                          "w-9 h-9 rounded-full flex items-center justify-center shrink-0 z-10 shadow-sm",
                           t.acao === "ENVIO" && "bg-blue-100 text-blue-600",
                           t.acao === "DEVOLUCAO" && "bg-orange-100 text-orange-600",
                           t.acao === "FINALIZACAO" && "bg-green-100 text-green-600",
@@ -279,15 +282,18 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                           {t.acao === "FINALIZACAO" && <CheckCircle size={16} />}
                           {t.acao === "REABERTURA" && <RotateCcw size={16} />}
                         </div>
-                        <div className="flex-1 pb-4">
+                        <div className="flex-1 pb-2">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
                             <h4 className="font-bold text-sm">
-                              {t.acao.replace("_", " ")} - <span className="text-muted-foreground font-normal">de {deUser} para {paraUser}</span>
+                              {t.acao} <span className="text-muted-foreground font-normal">por {deUser}</span>
                             </h4>
-                            <span className="text-[10px] text-muted-foreground">{t.data?.toDate().toLocaleString()}</span>
+                            <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{t.data?.toDate().toLocaleString()}</span>
                           </div>
+                          {t.acao === "ENVIO" && deUser !== paraUser && (
+                            <p className="text-[10px] text-muted-foreground mb-2 italic">Destinado para: {paraUser}</p>
+                          )}
                           {t.observacao && (
-                            <div className="p-3 bg-muted/50 rounded-lg text-sm border-l-2 border-primary/20">
+                            <div className="p-3 bg-muted/40 rounded-lg text-xs border-l-2 border-primary/20">
                               {t.observacao}
                             </div>
                           )}
@@ -303,30 +309,30 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
           <div className="space-y-6">
             <Card className="border-none shadow-sm">
               <CardHeader>
-                <CardTitle className="text-lg">Informações Rápidas</CardTitle>
+                <CardTitle className="text-lg">Painel de Controle</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-5">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-muted rounded-lg text-primary"><Calendar size={18} /></div>
+                  <div className="p-2 bg-muted rounded-lg text-primary shadow-sm"><Calendar size={18} /></div>
                   <div>
-                    <p className="text-[10px] uppercase text-muted-foreground font-bold">Prazo</p>
-                    <p className="font-semibold">{new Date(demand.prazo).toLocaleDateString()}</p>
+                    <p className="text-[9px] uppercase text-muted-foreground font-bold tracking-wider">Prazo Fatal</p>
+                    <p className="font-bold text-sm">{new Date(demand.prazo).toLocaleDateString()}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-muted rounded-lg text-primary"><UserIcon size={18} /></div>
+                  <div className="p-2 bg-muted rounded-lg text-primary shadow-sm"><UserIcon size={18} /></div>
                   <div>
-                    <p className="text-[10px] uppercase text-muted-foreground font-bold">Responsável Atual</p>
-                    <p className="font-semibold">
-                      {allUsers.find((u: UserProfile) => u.uid === demand.responsavelAtual)?.nome || "Desconhecido"}
+                    <p className="text-[9px] uppercase text-muted-foreground font-bold tracking-wider">Responsável</p>
+                    <p className="font-bold text-sm">
+                      {allUsers.find((u: UserProfile) => u.uid === demand.responsavelAtual)?.nome || "Não Atribuído"}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-muted rounded-lg text-primary"><MessageSquare size={18} /></div>
+                  <div className="p-2 bg-muted rounded-lg text-primary shadow-sm"><MessageSquare size={18} /></div>
                   <div>
-                    <p className="text-[10px] uppercase text-muted-foreground font-bold">Prioridade</p>
-                    <Badge variant={demand.prioridade === "ALTA" ? "destructive" : demand.prioridade === "MEDIA" ? "secondary" : "outline"} className="mt-1 uppercase">
+                    <p className="text-[9px] uppercase text-muted-foreground font-bold tracking-wider">Prioridade</p>
+                    <Badge variant={demand.prioridade === "ALTA" ? "destructive" : demand.prioridade === "MEDIA" ? "secondary" : "outline"} className="mt-1 text-[10px] shadow-sm uppercase">
                       {demand.prioridade}
                     </Badge>
                   </div>
