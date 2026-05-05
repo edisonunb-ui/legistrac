@@ -43,7 +43,7 @@ export default function LoginPage() {
     if (!VEREADORES_AUTORIZADOS.includes(emailLower)) {
       toast({
         title: "Acesso Negado",
-        description: "Este e-mail não possui autorização no gabinete LegisTrac.",
+        description: "E-mail não autorizado neste gabinete.",
         variant: "destructive",
       });
       return;
@@ -57,16 +57,12 @@ export default function LoginPage() {
       try {
         userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
       } catch (loginError: any) {
-        if (
-          loginError.code === 'auth/user-not-found' || 
-          loginError.code === 'auth/invalid-credential' ||
-          loginError.code === 'auth/invalid-email'
-        ) {
+        if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential') {
           try {
             userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
           } catch (createError: any) {
             if (createError.code === 'auth/email-already-in-use') {
-              throw new Error("Senha incorreta para este usuário.");
+              throw new Error("Senha incorreta.");
             }
             throw createError;
           }
@@ -76,7 +72,6 @@ export default function LoginPage() {
       }
       
       if (userCredential) {
-        // Agora o documento do usuário é identificado pelo E-MAIL, não pelo UID
         const userRef = doc(db, "users", emailLower);
         const userSnap = await getDoc(userRef);
         const isMaster = emailLower === "edisonunb@gmail.com";
@@ -88,37 +83,36 @@ export default function LoginPage() {
           uid: userCredential.user.uid,
           nome: existingData.nome || emailLower.split('@')[0],
           email: emailLower,
-          perfil: existingData.perfil || (isMaster ? "SUPER_ADMIN" : "ASSESSOR"),
+          perfil: isMaster ? "SUPER_ADMIN" : (existingData.perfil || "ASSESSOR"),
           ativo: true,
-          permissoes: existingData.permissoes || {
-            visualizar_todas: isMaster,
+          permissoes: isMaster ? {
+            visualizar_todas: true,
             criar_demandas: true,
-            finalizar_demandas: isMaster,
-            gerenciar_equipe: isMaster,
-            reabrir_demandas: isMaster
-          },
+            finalizar_demandas: true,
+            gerenciar_equipe: true,
+            reabrir_demandas: true
+          } : (existingData.permissoes || {
+            visualizar_todas: false,
+            criar_demandas: true,
+            finalizar_demandas: false,
+            gerenciar_equipe: false,
+            reabrir_demandas: false
+          }),
           updatedAt: serverTimestamp(),
           createdAt: existingData.createdAt || serverTimestamp(),
         }, { merge: true });
 
-        sessionStorage.setItem('gate_auth_email', emailLower);
-
-        toast({
-          title: "Bem-vindo!",
-          description: isMaster ? "Acesso administrativo liberado." : "Acesso de assessor liberado.",
-        });
-
+        toast({ title: "Bem-vindo!", description: "Acesso autorizado." });
         router.push("/");
       }
     } catch (error: any) {
-      console.error("Erro de Autenticação:", error.code, error.message);
-      
+      console.error("Erro Auth:", error.code);
       if (error.code === 'auth/operation-not-allowed') {
         setShowConfigError(true);
       } else {
         toast({
-          title: "Erro de Acesso",
-          description: error.message || "Verifique suas credenciais.",
+          title: "Erro no Login",
+          description: error.message || "Credenciais inválidas.",
           variant: "destructive",
         });
       }
@@ -128,30 +122,24 @@ export default function LoginPage() {
   };
 
   if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="animate-spin text-primary" size={40} />
-      </div>
-    );
+    return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin text-primary" size={40} /></div>;
   }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
-      <Card className="w-full max-w-md shadow-2xl border-t-4 border-primary">
+      <Card className="w-full max-w-md shadow-xl border-t-4 border-primary">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4 text-primary">
-            <LayoutDashboard size={40} />
-          </div>
-          <CardTitle className="text-3xl font-bold text-primary">LegisTrac</CardTitle>
-          <CardDescription>Gestão de Gabinete Profissional</CardDescription>
+          <div className="flex justify-center mb-2 text-primary"><LayoutDashboard size={32} /></div>
+          <CardTitle className="text-2xl font-bold text-primary">LegisTrac</CardTitle>
+          <CardDescription>Gabinete Parlamentar Profissional</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {showConfigError && (
-            <Alert variant="destructive" className="bg-red-50">
+            <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Atenção Administrador</AlertTitle>
+              <AlertTitle>Erro de Configuração</AlertTitle>
               <AlertDescription className="text-xs">
-                Vá ao Console do Firebase &gt; Authentication &gt; Sign-in Method e ATIVE o provedor &quot;E-mail/Senha&quot;.
+                Ative o provedor "E-mail/Senha" no console do Firebase.
               </AlertDescription>
             </Alert>
           )}
@@ -161,47 +149,21 @@ export default function LoginPage() {
               <Label htmlFor="email">E-mail</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  id="email"
-                  type="email"
-                  placeholder="edisonunb@gmail.com"
-                  className="pl-10"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
+                <Input id="email" type="email" placeholder="seu@email.com" className="pl-10" required value={email} onChange={(e) => setEmail(e.target.value)} />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  id="password"
-                  type="password"
-                  placeholder="Sua senha master"
-                  className="pl-10"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <Input id="password" type="password" placeholder="Sua senha master" className="pl-10" required value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
             </div>
-
-            <Button 
-              className="w-full h-11 text-lg font-semibold" 
-              type="submit"
-              disabled={submitting}
-            >
-              {submitting ? <Loader2 className="animate-spin" /> : "Entrar no Sistema"}
+            <Button className="w-full h-11" type="submit" disabled={submitting}>
+              {submitting ? <Loader2 className="animate-spin" /> : "Acessar Sistema"}
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col gap-2 justify-center border-t bg-muted/30 py-4 text-center">
-          <p className="text-[11px] text-muted-foreground italic">
-            &quot;Tecnologia e Transparência no seu Gabinete.&quot;
-          </p>
-        </CardFooter>
       </Card>
     </div>
   );

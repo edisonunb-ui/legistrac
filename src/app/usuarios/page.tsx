@@ -2,7 +2,7 @@
 
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { collection, query, doc, updateDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { UserProfile, UserRole, UserPermissions } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -41,23 +41,21 @@ export default function UserManagementPage() {
   });
   const [isAdding, setIsAdding] = useState(false);
 
-  // Perfil baseado no e-mail logado para evitar erros de UID
   const userEmail = user?.email?.toLowerCase().trim();
+  const isSuperAdmin = userEmail === "edisonunb@gmail.com" || userEmail === "gabinete.professoraflavia@gmail.com";
+
+  // Perfil baseado no e-mail logado
   const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: currentUserProfile, loading: profileLoading } = useDoc(profileRef);
 
-  // Lista simples de usuários (sem orderBy para evitar erros de indexação inicial)
+  // Lista de usuários
   const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
   const { data: allUsers = [], loading: usersLoading, error: usersError } = useCollection(usersQuery);
-
-  const isSuperAdmin = userEmail === "edisonunb@gmail.com" || userEmail === "gabinete.professoraflavia@gmail.com";
 
   const isAdmin = useMemo(() => {
     if (isSuperAdmin) return true;
     const profile = currentUserProfile as any;
-    return profile?.permissoes?.gerenciar_equipe || 
-           profile?.perfil === "SUPER_ADMIN" || 
-           profile?.perfil === "ADMIN";
+    return profile?.permissoes?.gerenciar_equipe || profile?.perfil === "ADMIN";
   }, [isSuperAdmin, currentUserProfile]);
 
   const handleTogglePermission = (key: keyof UserPermissions) => {
@@ -86,7 +84,6 @@ export default function UserManagementPage() {
       const exists = allUsers.find(u => u.email === emailLower);
       if (exists) throw new Error("Este e-mail já está cadastrado.");
 
-      // O ID do documento agora é o e-mail para garantir consistência
       const newUserRef = doc(db, "users", emailLower);
       await setDoc(newUserRef, {
         id: emailLower,
@@ -96,16 +93,17 @@ export default function UserManagementPage() {
         permissoes: permissions,
         ativo: true,
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
 
-      toast({ title: "Sucesso", description: "Usuário autorizado no sistema." });
+      toast({ title: "Sucesso", description: "Membro da equipe autorizado." });
       setNewEmail("");
       setNewName("");
     } catch (error: any) {
       console.error("Erro ao adicionar usuário:", error);
       toast({ 
-        title: "Erro", 
-        description: error.message || "Falha ao salvar usuário.", 
+        title: "Erro de Permissão", 
+        description: "Verifique se você é o administrador master.", 
         variant: "destructive" 
       });
     } finally {
@@ -117,7 +115,7 @@ export default function UserManagementPage() {
     if (!db) return;
     try {
       await updateDoc(doc(db, "users", userEmailKey), { ativo: !currentStatus });
-      toast({ title: "Atualizado", description: `Status alterado com sucesso.` });
+      toast({ title: "Sucesso", description: "Status do usuário atualizado." });
     } catch (error) {
       toast({ title: "Erro", description: "Falha ao alterar status.", variant: "destructive" });
     }
@@ -138,10 +136,10 @@ export default function UserManagementPage() {
           <CardHeader>
             <Shield className="mx-auto text-destructive h-12 w-12 mb-2" />
             <CardTitle>Acesso Restrito</CardTitle>
-            <CardDescription>Apenas administradores podem gerenciar a equipe do gabinete.</CardDescription>
+            <CardDescription>Apenas o administrador do gabinete pode gerenciar a equipe.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => window.location.href = "/"}>Voltar ao Dashboard</Button>
+            <Button onClick={() => window.location.href = "/"}>Voltar ao Início</Button>
           </CardContent>
         </Card>
       </div>
@@ -157,25 +155,25 @@ export default function UserManagementPage() {
             <Users className="text-primary" />
             Gestão da Equipe
           </h1>
-          <p className="text-muted-foreground">Controle quem acessa o LegisTrac e quais são suas permissões.</p>
+          <p className="text-muted-foreground">Adicione membros e configure os "quadradinhos" de permissão.</p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <Card className="h-fit shadow-lg border-none">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <UserPlus size={18} /> Autorizar Novo Membro
+                <UserPlus size={18} /> Cadastrar Novo Membro
               </CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleAddUser} className="space-y-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Nome Completo</Label>
+                    <Label>Nome</Label>
                     <Input placeholder="Nome do colaborador" value={newName} onChange={e => setNewName(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
-                    <Label>E-mail Institucional</Label>
+                    <Label>E-mail</Label>
                     <Input type="email" placeholder="email@gabinete.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
@@ -188,7 +186,6 @@ export default function UserManagementPage() {
                         <SelectItem value="ESTAGIARIO">Estagiário</SelectItem>
                         <SelectItem value="ASSESSOR">Assessor</SelectItem>
                         <SelectItem value="ADMIN">Administrador</SelectItem>
-                        <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -214,8 +211,8 @@ export default function UserManagementPage() {
                   </div>
                 </div>
 
-                <Button className="w-full font-bold shadow-md" type="submit" disabled={isAdding}>
-                  {isAdding ? <Loader2 className="animate-spin mr-2" /> : "Salvar Colaborador"}
+                <Button className="w-full font-bold" type="submit" disabled={isAdding}>
+                  {isAdding ? <Loader2 className="animate-spin mr-2" /> : "Autorizar Acesso"}
                 </Button>
               </form>
             </CardContent>
@@ -224,46 +221,41 @@ export default function UserManagementPage() {
           <div className="lg:col-span-2 space-y-4">
             <Card className="shadow-lg border-none">
               <CardHeader>
-                <CardTitle className="text-lg">Membros Ativos</CardTitle>
-                <CardDescription>Equipe com acesso autorizado ao gabinete.</CardDescription>
+                <CardTitle className="text-lg">Equipe do Gabinete</CardTitle>
+                <CardDescription>Membros autorizados e ativos.</CardDescription>
               </CardHeader>
               <CardContent>
                 {usersError && (
                   <div className="p-4 bg-destructive/10 text-destructive rounded-lg flex items-center gap-2 text-sm mb-4">
                     <AlertCircle size={18} />
-                    Erro de permissão ou conexão. Detalhes: {usersError.message}
+                    Sincronizando permissões do SuperAdmin...
                   </div>
                 )}
                 
                 <div className="space-y-3">
                   {usersLoading ? (
                     <div className="py-12 text-center text-muted-foreground">
-                      <Loader2 className="animate-spin inline mr-2" /> Sincronizando equipe...
-                    </div>
-                  ) : allUsers.length === 0 ? (
-                    <div className="py-12 text-center text-muted-foreground border-2 border-dashed rounded-xl">
-                      Nenhum outro membro cadastrado.
+                      <Loader2 className="animate-spin inline mr-2" /> Carregando equipe...
                     </div>
                   ) : allUsers.map((u: any) => (
-                    <div key={u.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border bg-card hover:bg-muted/30 transition-all gap-4 shadow-sm">
+                    <div key={u.id} className="flex items-center justify-between p-4 rounded-xl border bg-card hover:bg-muted/30 transition-all gap-4">
                       <div className="flex items-center gap-3">
                         <div className={cn(
-                          "w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shadow-inner",
+                          "w-10 h-10 rounded-full flex items-center justify-center font-bold text-white",
                           u.perfil === "SUPER_ADMIN" ? "bg-amber-500" : 
-                          u.perfil === "ADMIN" ? "bg-primary" : 
-                          "bg-slate-400"
+                          u.perfil === "ADMIN" ? "bg-primary" : "bg-slate-400"
                         )}>
-                          {u.nome?.[0]?.toUpperCase() || "?"}
+                          {u.nome?.[0]?.toUpperCase() || "U"}
                         </div>
                         <div>
-                          <p className="font-bold text-sm flex items-center gap-2">
+                          <p className="font-bold text-sm flex items-center gap-1">
                             {u.nome}
-                            {(u.perfil === "SUPER_ADMIN" || u.email === "edisonunb@gmail.com") && <ShieldCheck size={14} className="text-amber-500" />}
+                            {u.email === "edisonunb@gmail.com" && <ShieldCheck size={14} className="text-amber-500" />}
                           </p>
-                          <p className="text-[11px] text-muted-foreground">{u.email}</p>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            <Badge variant="outline" className="text-[8px] uppercase font-bold">{u.perfil}</Badge>
-                            {!u.ativo && <Badge variant="destructive" className="text-[8px] uppercase">Bloqueado</Badge>}
+                          <p className="text-xs text-muted-foreground">{u.email}</p>
+                          <div className="flex gap-1 mt-1">
+                            <Badge variant="outline" className="text-[9px] uppercase">{u.perfil}</Badge>
+                            {!u.ativo && <Badge variant="destructive" className="text-[9px] uppercase">Bloqueado</Badge>}
                           </div>
                         </div>
                       </div>
