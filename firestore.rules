@@ -24,12 +24,11 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // Todos podem ler a lista de usuários para atribuir demandas
+      // SuperAdmin pode tudo. Outros logados podem ler para atribuir demandas.
       allow read: if isAuthenticated();
-      // Criar usuário: Qualquer um logado (no onboarding) ou Admin
-      allow create: if isAuthenticated();
-      // Atualizar/Deletar: Apenas o próprio usuário ou Admin
-      allow update, delete: if isSuperAdmin() || isAdmin() || (isAuthenticated() && request.auth.uid == userId);
+      allow write: if isSuperAdmin();
+      // O próprio usuário pode atualizar seu perfil básico
+      allow update: if isAuthenticated() && request.auth.uid == userId;
     }
 
     match /demandas/{demandaId} {

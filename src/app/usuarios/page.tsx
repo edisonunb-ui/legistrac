@@ -3,7 +3,7 @@
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo, useEffect } from "react";
-import { collection, query, doc, updateDoc, serverTimestamp, orderBy, addDoc, setDoc } from "firebase/firestore";
+import { collection, query, doc, updateDoc, serverTimestamp, orderBy, setDoc } from "firebase/firestore";
 import { UserProfile, UserRole, UserPermissions } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,10 +41,11 @@ export default function UserManagementPage() {
   });
   const [isAdding, setIsAdding] = useState(false);
 
-  const profileRef = useMemo(() => user && db ? doc(db, "users", user.uid) : null, [db, user]);
+  const profileRef = useMemo(() => (user && db) ? doc(db, "users", user.uid) : null, [db, user]);
   const { data: currentUserProfile, loading: profileLoading } = useDoc(profileRef);
 
-  const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("createdAt", "desc")) : null, [db]);
+  // Só tenta a query se o banco e o usuário estiverem prontos para evitar erro de permissão inicial
+  const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users"), orderBy("createdAt", "desc")) : null, [db, user]);
   const { data: allUsers = [], loading: usersLoading, error: usersError } = useCollection(usersQuery);
 
   const isSuperAdmin = user?.email === "edisonunb@gmail.com" || user?.email === "gabinete.professoraflavia@gmail.com";
@@ -63,31 +64,14 @@ export default function UserManagementPage() {
 
   const handleRoleChange = (role: UserRole) => {
     setNewRole(role);
-    if (role === "ADMIN" || role === "SUPER_ADMIN") {
-      setPermissions({
-        visualizar_todas: true,
-        criar_demandas: true,
-        finalizar_demandas: true,
-        gerenciar_equipe: true,
-        reabrir_demandas: true
-      });
-    } else if (role === "ASSESSOR") {
-      setPermissions({
-        visualizar_todas: false,
-        criar_demandas: true,
-        finalizar_demandas: false,
-        gerenciar_equipe: false,
-        reabrir_demandas: false
-      });
-    } else {
-      setPermissions({
-        visualizar_todas: false,
-        criar_demandas: true,
-        finalizar_demandas: false,
-        gerenciar_equipe: false,
-        reabrir_demandas: false
-      });
-    }
+    const isAdminRole = role === "ADMIN" || role === "SUPER_ADMIN";
+    setPermissions({
+      visualizar_todas: isAdminRole,
+      criar_demandas: true,
+      finalizar_demandas: isAdminRole,
+      gerenciar_equipe: isAdminRole,
+      reabrir_demandas: isAdminRole
+    });
   };
 
   const handleAddUser = async (e: React.FormEvent) => {
@@ -100,7 +84,6 @@ export default function UserManagementPage() {
       const exists = allUsers.find(u => u.email === emailLower);
       if (exists) throw new Error("Este e-mail já está cadastrado.");
 
-      // Usamos o email como parte do ID para evitar duplicatas e facilitar regras
       const newUserRef = doc(collection(db, "users"));
       await setDoc(newUserRef, {
         id: newUserRef.id,
@@ -119,7 +102,7 @@ export default function UserManagementPage() {
       console.error("Erro ao adicionar usuário:", error);
       toast({ 
         title: "Erro", 
-        description: error.message || "Falha ao salvar usuário. Verifique as permissões do Firebase.", 
+        description: error.message || "Falha ao salvar usuário.", 
         variant: "destructive" 
       });
     } finally {
