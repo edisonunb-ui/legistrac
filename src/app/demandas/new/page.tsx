@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useFirestore, useCollection } from "@/firebase";
@@ -36,7 +35,6 @@ export default function NewDemandPage() {
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
-  // Define o responsável padrão como o usuário logado quando os dados carregarem
   useEffect(() => {
     if (user && !formData.responsavelId) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
