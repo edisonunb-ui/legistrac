@@ -110,11 +110,6 @@ export default function LoginPage() {
       
       if (error.code === 'auth/operation-not-allowed') {
         setShowConfigError(true);
-        toast({
-          title: "Configuração Necessária",
-          description: "O método de E-mail/Senha está desativado no Console do Firebase.",
-          variant: "destructive",
-        });
       } else {
         toast({
           title: "Erro de Acesso",
@@ -151,7 +146,7 @@ export default function LoginPage() {
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Atenção Administrador</AlertTitle>
               <AlertDescription className="text-xs">
-                Vá ao Console do Firebase > Authentication > Sign-in Method e **ATIVE** o provedor "E-mail/Senha".
+                Vá ao Console do Firebase &gt; Authentication &gt; Sign-in Method e ATIVE o provedor &quot;E-mail/Senha&quot;.
               </AlertDescription>
             </Alert>
           )}
@@ -199,7 +194,7 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="flex flex-col gap-2 justify-center border-t bg-muted/30 py-4 text-center">
           <p className="text-[11px] text-muted-foreground italic">
-            "Tecnologia e Transparência no seu Gabinete."
+            &quot;Tecnologia e Transparência no seu Gabinete.&quot;
           </p>
         </CardFooter>
       </Card>
