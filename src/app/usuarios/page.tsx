@@ -44,11 +44,9 @@ export default function UserManagementPage() {
   const userEmail = user?.email?.toLowerCase().trim();
   const isMasterAdmin = userEmail === "edisonunb@gmail.com" || userEmail === "gabinete.professoraflavia@gmail.com";
 
-  // Perfil baseado no e-mail logado
   const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: currentUserProfile, loading: profileLoading } = useDoc(profileRef);
 
-  // Lista de usuários - ordenada por nome
   const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db, user]);
   const { data: allUsers = [], loading: usersLoading } = useCollection(usersQuery);
 
@@ -83,25 +81,30 @@ export default function UserManagementPage() {
       const emailLower = newEmail.toLowerCase().trim();
       const newUserRef = doc(db, "users", emailLower);
       
-      await setDoc(newUserRef, {
+      const userData = {
         id: emailLower,
         email: emailLower,
         nome: newName,
         perfil: newRole,
         permissoes: permissions,
         ativo: true,
-        createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+      };
+
+      // Se o usuário não existir, adicionamos a data de criação
+      await setDoc(newUserRef, {
+        ...userData,
+        createdAt: serverTimestamp(),
       }, { merge: true });
 
       toast({ title: "Sucesso", description: "Colaborador autorizado no sistema." });
       setNewEmail("");
       setNewName("");
     } catch (error: any) {
-      console.error("Erro ao adicionar usuário:", error);
+      console.error("Erro detalhado do Firebase:", error);
       toast({ 
         title: "Falha na Gravação", 
-        description: "Erro de permissão no Firebase. Verifique se o login do Admin está ativo.", 
+        description: `Erro: ${error.message || "Permissão insuficiente"}. Verifique o console.`, 
         variant: "destructive" 
       });
     } finally {
@@ -127,7 +130,7 @@ export default function UserManagementPage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="animate-spin text-primary" size={40} />
-          <p className="text-sm font-medium animate-pulse text-muted-foreground">Validando credenciais mestres...</p>
+          <p className="text-sm font-medium animate-pulse text-muted-foreground">Validando acesso mestre...</p>
         </div>
       </div>
     );
@@ -160,11 +163,11 @@ export default function UserManagementPage() {
               <Users className="text-primary" />
               Gestão da Equipe
             </h1>
-            <p className="text-muted-foreground mt-1">Configure permissões específicas para cada membro do gabinete.</p>
+            <p className="text-muted-foreground mt-1">Configure as permissões de cada membro do gabinete.</p>
           </div>
           {isMasterAdmin && (
             <Badge className="bg-amber-500 text-white gap-1 py-1 px-3 shadow-sm border-none">
-              <ShieldCheck size={14} /> MODO SUPER ADMIN ATIVO
+              <ShieldCheck size={14} /> MODO SUPER ADMIN
             </Badge>
           )}
         </header>
@@ -233,29 +236,29 @@ export default function UserManagementPage() {
           <div className="lg:col-span-2 space-y-4">
             <Card className="shadow-xl border-none ring-1 ring-black/5">
               <CardHeader>
-                <CardTitle className="text-lg">Equipe Autorizada</CardTitle>
-                <CardDescription>Membros com acesso permitido ao sistema.</CardDescription>
+                <CardTitle className="text-lg">Equipe Ativa</CardTitle>
+                <CardDescription>Membros com acesso ao sistema.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {usersLoading ? (
                     <div className="py-20 text-center flex flex-col items-center gap-2">
                       <Loader2 className="animate-spin text-primary" size={32} />
-                      <p className="text-xs font-medium text-muted-foreground">Listando equipe...</p>
+                      <p className="text-xs font-medium text-muted-foreground">Carregando...</p>
                     </div>
                   ) : allUsers.length === 0 ? (
                     <div className="py-20 text-center border-2 border-dashed rounded-xl">
                       <Info className="mx-auto text-muted-foreground mb-2" size={32} />
-                      <p className="text-muted-foreground text-sm">Nenhum outro membro cadastrado.</p>
+                      <p className="text-muted-foreground text-sm">Nenhum membro listado.</p>
                     </div>
                   ) : allUsers.map((u: any) => (
                     <div key={u.id} className={cn(
-                      "flex items-center justify-between p-4 rounded-xl border transition-all gap-4 group",
+                      "flex items-center justify-between p-4 rounded-xl border transition-all gap-4",
                       u.ativo ? "bg-card hover:border-primary/50" : "bg-muted/50 grayscale opacity-70"
                     )}>
                       <div className="flex items-center gap-4">
                         <div className={cn(
-                          "w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shadow-sm",
+                          "w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm",
                           u.perfil === "SUPER_ADMIN" ? "bg-amber-500" : 
                           u.perfil === "ADMIN" ? "bg-primary" : "bg-slate-400"
                         )}>
@@ -267,9 +270,8 @@ export default function UserManagementPage() {
                             {u.perfil === "SUPER_ADMIN" && <ShieldCheck size={14} className="text-amber-500" />}
                           </p>
                           <p className="text-xs text-muted-foreground">{u.email}</p>
-                          <div className="flex gap-1.5 mt-1.5">
+                          <div className="flex gap-1.5 mt-1">
                             <Badge variant="outline" className="text-[9px] uppercase font-bold">{u.perfil}</Badge>
-                            {!u.ativo && <Badge variant="destructive" className="text-[9px] uppercase font-bold">Inativo</Badge>}
                           </div>
                         </div>
                       </div>
@@ -285,7 +287,6 @@ export default function UserManagementPage() {
                             )}
                             onClick={() => toggleUserStatus(u.id, u.ativo)}
                           >
-                            {u.ativo ? <UserX size={14} className="mr-1" /> : <ShieldCheck size={14} className="mr-1" />}
                             {u.ativo ? "Bloquear" : "Ativar"}
                           </Button>
                         )}

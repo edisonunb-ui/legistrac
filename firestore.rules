@@ -5,23 +5,26 @@ service cloud.firestore {
     
     // Função para verificar se é um dos e-mails mestres com poder absoluto
     function isMasterAdmin() {
-      return request.auth != null && (
-        request.auth.token.email.lower() == "edisonunb@gmail.com" || 
-        request.auth.token.email.lower() == "gabinete.professoraflavia@gmail.com"
-      );
+      return request.auth != null && 
+        request.auth.token.email != null && 
+        (
+          request.auth.token.email.lower() == "edisonunb@gmail.com" || 
+          request.auth.token.email.lower() == "gabinete.professoraflavia@gmail.com"
+        );
     }
     
-    // REGRA DE OURO: Se for o Master Admin, permite TUDO em qualquer lugar
-    // Isso deve vir primeiro e ser absoluto para evitar o erro "insufficient permissions"
+    // REGRA DE OURO: Se for o Master Admin, permite TUDO em qualquer lugar do banco
     match /{document=**} {
       allow read, write: if isMasterAdmin();
     }
 
-    // Regras de fallback para outros usuários autenticados (Assessores/Estagiários)
+    // Regras de fallback para outros usuários autenticados
     match /users/{userEmail} {
       allow read: if request.auth != null;
-      // Permite que o próprio usuário atualize seu perfil básico
-      allow update: if request.auth != null && request.auth.token.email.lower() == userEmail.lower();
+      allow write: if request.auth != null && (
+        isMasterAdmin() || 
+        request.auth.token.email.lower() == userEmail.lower()
+      );
     }
 
     match /demandas/{demandaId} {
