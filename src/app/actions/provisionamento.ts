@@ -51,6 +51,41 @@ export async function provisionarMembro(data: {
 }
 
 /**
+ * Server Action para excluir permanentemente um usuário.
+ * Remove do Firebase Auth e do Firestore.
+ */
+export async function excluirUsuario(email: string) {
+  try {
+    const emailLower = email.toLowerCase().trim();
+    
+    // 1. Busca o perfil para obter o UID
+    const userRef = adminDb.collection("users").doc(emailLower);
+    const userDoc = await userRef.get();
+    
+    if (userDoc.exists) {
+      const userData = userDoc.data();
+      if (userData?.uid) {
+        // 2. Remove do Firebase Auth
+        try {
+          await adminAuth.deleteUser(userData.uid);
+        } catch (authError: any) {
+          console.warn("Usuário não encontrado no Auth, prosseguindo com exclusão do Firestore:", authError.message);
+        }
+      }
+    }
+
+    // 3. Remove do Firestore
+    await userRef.delete();
+
+    revalidatePath("/usuarios");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Erro ao excluir usuário:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Server Action para alternar o status de um usuário.
  */
 export async function alternarStatusUsuario(email: string, novoStatus: boolean) {

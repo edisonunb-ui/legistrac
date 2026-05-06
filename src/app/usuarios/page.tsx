@@ -13,9 +13,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Loader2, ShieldCheck, Settings2, AlertCircle } from "lucide-react";
+import { Users, UserPlus, Loader2, ShieldCheck, Settings2, AlertCircle, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { provisionarMembro, alternarStatusUsuario } from "@/app/actions/provisionamento";
+import { provisionarMembro, excluirUsuario } from "@/app/actions/provisionamento";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const PERMISSION_LABELS: Record<keyof UserPermissions, string> = {
   visualizar_todas: "Ver Todas as Demandas",
@@ -41,15 +52,14 @@ export default function UserManagementPage() {
     reabrir_demandas: false
   });
   const [isAdding, setIsAdding] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const userEmailNormalized = user?.email?.toLowerCase().trim();
   const isMasterAdmin = userEmailNormalized === "edisonunb@gmail.com";
 
-  // Consulta sem orderBy para evitar erro de índice
   const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
   const { data: allUsersRaw = [], loading: usersLoading } = useCollection(usersQuery);
 
-  // Ordenação manual no cliente
   const allUsers = useMemo(() => {
     return [...allUsersRaw].sort((a: any, b: any) => (a.nome || "").localeCompare(b.nome || ""));
   }, [allUsersRaw]);
@@ -104,16 +114,19 @@ export default function UserManagementPage() {
     }
   };
 
-  const toggleUserStatus = async (userEmail: string, currentStatus: boolean) => {
+  const handleDeleteUser = async (email: string) => {
+    setIsDeleting(email);
     try {
-      const result = await alternarStatusUsuario(userEmail, !currentStatus);
+      const result = await excluirUsuario(email);
       if (result.success) {
-        toast({ title: "Status Atualizado", description: "O acesso do usuário foi modificado." });
+        toast({ title: "Usuário Excluído", description: "O acesso e o perfil foram removidos permanentemente." });
       } else {
         throw new Error(result.error);
       }
     } catch (error: any) {
-      toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+    } finally {
+      setIsDeleting(null);
     }
   };
 
@@ -129,7 +142,7 @@ export default function UserManagementPage() {
               <Users className="text-primary" />
               Gestão da Equipe
             </h1>
-            <p className="text-muted-foreground mt-1">Provisionamento via Server Action (Seguro).</p>
+            <p className="text-muted-foreground mt-1">Gerencie os acessos do seu gabinete parlamentar.</p>
           </div>
           {isMasterAdmin && (
             <Badge className="bg-amber-500 text-white gap-1 py-1 px-3 shadow-md">
@@ -202,7 +215,7 @@ export default function UserManagementPage() {
             <Card className="shadow-xl border-none">
               <CardHeader className="border-b">
                 <CardTitle className="text-lg font-bold">Equipe do Gabinete</CardTitle>
-                <CardDescription>Membros ativos com acesso ao sistema.</CardDescription>
+                <CardDescription>Membros com acesso ao sistema.</CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
                 <div className="space-y-3">
@@ -215,8 +228,8 @@ export default function UserManagementPage() {
                     </div>
                   ) : allUsers.map((u: any) => (
                     <div key={u.email} className={cn(
-                      "flex items-center justify-between p-4 rounded-xl border transition-all",
-                      u.ativo ? "bg-card border-transparent shadow-sm" : "bg-muted/50 grayscale opacity-60"
+                      "flex items-center justify-between p-4 rounded-xl border transition-all bg-card border-transparent shadow-sm",
+                      !u.ativo && "grayscale opacity-60"
                     )}>
                       <div className="flex items-center gap-4">
                         <div className={cn(
@@ -236,14 +249,36 @@ export default function UserManagementPage() {
                       </div>
                       
                       {u.email !== userEmailNormalized && (
-                        <Button 
-                          variant={u.ativo ? "destructive" : "outline"}
-                          size="sm" 
-                          className="font-bold text-[10px] h-8 uppercase"
-                          onClick={() => toggleUserStatus(u.email, u.ativo)}
-                        >
-                          {u.ativo ? "Bloquear" : "Ativar"}
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="ghost"
+                              size="sm" 
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-9 w-9 p-0"
+                              disabled={isDeleting === u.email}
+                            >
+                              {isDeleting === u.email ? <Loader2 className="animate-spin h-4 w-4" /> : <Trash2 size={18} />}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Excluir Membro da Equipe?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação removerá permanentemente o acesso de <strong>{u.nome}</strong>. 
+                                Ele não poderá mais logar no sistema até que seja provisionado novamente.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDeleteUser(u.email)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Confirmar Exclusão
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       )}
                     </div>
                   ))}
