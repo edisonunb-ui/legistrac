@@ -23,6 +23,7 @@ export default function NewDemandPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [hasSetDefault, setHasSetDefault] = useState(false);
   
   const [formData, setFormData] = useState({
     titulo: "",
@@ -32,12 +33,13 @@ export default function NewDemandPage() {
     responsavelId: "",
   });
 
-  // Inicializa o responsável apenas uma vez quando o usuário carrega
+  // Inicializa o responsável de forma estável para evitar loop de renderização
   useEffect(() => {
-    if (user && !formData.responsavelId) {
+    if (user && !formData.responsavelId && !hasSetDefault) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
+      setHasSetDefault(true);
     }
-  }, [user]);
+  }, [user, formData.responsavelId, hasSetDefault]);
 
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
@@ -155,7 +157,7 @@ export default function NewDemandPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={user?.uid || "me"}>Eu mesmo</SelectItem>
-                    {allUsers.filter(u => u.uid !== user?.uid).map((u: any) => (
+                    {allUsers.filter((u: any) => u.uid && u.uid !== user?.uid).map((u: any) => (
                       <SelectItem key={u.uid} value={u.uid}>
                         {u.nome} ({u.perfil})
                       </SelectItem>

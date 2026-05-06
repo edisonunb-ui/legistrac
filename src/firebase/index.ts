@@ -21,13 +21,14 @@ let db: Firestore;
 export function initializeFirebase() {
   if (!getApps().length) {
     app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
   } else {
     app = getApp();
-    auth = getAuth(app);
-    db = getFirestore(app);
   }
+  
+  // Singleton pattern for Auth and Firestore to avoid internal assertion errors
+  if (!auth) auth = getAuth(app);
+  if (!db) db = getFirestore(app);
+  
   return { app, auth, db };
 }
 
