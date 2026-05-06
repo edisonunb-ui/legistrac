@@ -119,7 +119,7 @@ export default function LoginPage() {
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle className="text-xs font-bold">Nota do Sistema</AlertTitle>
             <AlertDescription className="text-[10px] leading-relaxed">
-              O acesso &eacute; restrito a membros cadastrados. Administradores podem gerenciar a equipe no painel interno.
+              O acesso é restrito a membros cadastrados. Administradores podem gerenciar a equipe no painel interno.
             </AlertDescription>
           </Alert>
         </CardContent>

@@ -2,7 +2,7 @@
 
 import { useUser, useFirestore, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createDemand } from "@/lib/demand-service";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,13 @@ export default function NewDemandPage() {
     responsavelId: "",
   });
 
+  // Inicializa o responsável apenas uma vez quando o usuário carrega
+  useEffect(() => {
+    if (user && !formData.responsavelId) {
+      setFormData(prev => ({ ...prev, responsavelId: user.uid }));
+    }
+  }, [user]);
+
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
@@ -41,12 +48,9 @@ export default function NewDemandPage() {
     setSaving(true);
 
     try {
-      // Se não escolheu responsável, o padrão é o próprio criador
-      const targetResponsavel = formData.responsavelId || user.uid;
-
       const demandId = await createDemand(db, user.uid, {
         ...formData,
-        responsavelId: targetResponsavel
+        responsavelId: formData.responsavelId || user.uid
       });
       
       toast({
@@ -140,7 +144,7 @@ export default function NewDemandPage() {
               <div className="space-y-2">
                 <Label htmlFor="responsavel">Atribuir Responsável</Label>
                 <Select 
-                  value={formData.responsavelId || user?.uid || ""} 
+                  value={formData.responsavelId} 
                   onValueChange={(v) => setFormData(prev => ({ ...prev, responsavelId: v }))}
                 >
                   <SelectTrigger id="responsavel">
@@ -152,7 +156,7 @@ export default function NewDemandPage() {
                   <SelectContent>
                     <SelectItem value={user?.uid || "me"}>Eu mesmo</SelectItem>
                     {allUsers.filter(u => u.uid !== user?.uid).map((u: any) => (
-                      <SelectItem key={u.uid || u.email} value={u.uid || u.email}>
+                      <SelectItem key={u.uid} value={u.uid}>
                         {u.nome} ({u.perfil})
                       </SelectItem>
                     ))}
