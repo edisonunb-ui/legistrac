@@ -2,8 +2,8 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Regra mestre: permite leitura e escrita para qualquer usuário autenticado em qualquer coleção.
-    // Isso resolve o erro de permissão da Ana e de outros assessores.
+    // Permite leitura e escrita para qualquer usuário autenticado em qualquer coleção.
+    // Essencial para o funcionamento do sistema de demandas e trâmites.
     match /{document=**} {
       allow read, write: if request.auth != null;
     }

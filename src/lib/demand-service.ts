@@ -1,4 +1,3 @@
-
 import { 
   collection, 
   doc, 
@@ -19,12 +18,14 @@ export async function createDemand(
     responsavelId?: string;
   }
 ) {
+  if (!userId) throw new Error("Usuário não identificado.");
+  
   const demandRef = doc(collection(db, "demandas"));
   const tramiteRef = doc(collection(db, "tramites"));
   const targetResponsavel = data.responsavelId || userId;
 
   const demandData = {
-    id: demandRef.id, // Armazena o ID dentro do documento também
+    id: demandRef.id,
     titulo: data.titulo,
     descricao: data.descricao,
     prazo: data.prazo,

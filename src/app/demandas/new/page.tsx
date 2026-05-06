@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, ShieldCheck, Loader2, User as UserIcon } from "lucide-react";
+import { ChevronLeft, Save, Loader2, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority, UserProfile } from "@/lib/types";
 import { collection, query } from "firebase/firestore";
@@ -33,7 +33,6 @@ export default function NewDemandPage() {
     responsavelId: "",
   });
 
-  // Inicializa o responsável padrão apenas UMA vez para evitar loop de renderização
   useEffect(() => {
     if (user?.uid && !hasInitialized) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
@@ -41,13 +40,15 @@ export default function NewDemandPage() {
     }
   }, [user?.uid, hasInitialized]);
 
-  // Consulta simplificada sem orderBy para evitar erro de índice ausente no início
   const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db) return;
+    if (!user || !db) {
+      toast({ title: "Erro", description: "Sessão inválida. Recarregue a página.", variant: "destructive" });
+      return;
+    }
     
     setSaving(true);
     try {
@@ -59,10 +60,10 @@ export default function NewDemandPage() {
       toast({ title: "Sucesso!", description: "Demanda criada com sucesso." });
       router.push(`/demandas/${demandId}`);
     } catch (error: any) {
-      console.error("Erro ao salvar:", error);
+      console.error("Erro detalhado ao salvar:", error);
       toast({
         title: "Erro de Permissão",
-        description: "Verifique se você está logado corretamente.",
+        description: "Verifique se as regras do Firestore foram publicadas no console ou se você está logado.",
         variant: "destructive",
       });
     } finally {
