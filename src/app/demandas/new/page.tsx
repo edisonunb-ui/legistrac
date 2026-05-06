@@ -24,6 +24,7 @@ export default function NewDemandPage() {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   
+  // Inicialização estável do estado para evitar loops
   const [formData, setFormData] = useState({
     titulo: "",
     descricao: "",
@@ -35,12 +36,12 @@ export default function NewDemandPage() {
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
-  // Inicializa o responsável apenas se estiver vazio e o usuário carregar
+  // Sincroniza o responsavelId apenas quando o usuário carrega e se o campo ainda estiver vazio
   useEffect(() => {
     if (user?.uid && !formData.responsavelId) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
     }
-  }, [user?.uid, formData.responsavelId]);
+  }, [user?.uid]); // Removida a dependência de formData.responsavelId para quebrar o loop
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,8 +151,8 @@ export default function NewDemandPage() {
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    {allUsers.map((u: UserProfile) => (
-                      <SelectItem key={u.id || u.email} value={u.uid || u.id || u.email}>
+                    {allUsers.map((u: any) => (
+                      <SelectItem key={u.uid || u.email} value={u.uid || u.email}>
                         {u.nome} ({u.perfil})
                       </SelectItem>
                     ))}

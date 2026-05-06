@@ -3,7 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Função para verificar se o usuário é o SuperAdmin Master
+    // Função ultra-robusta para verificar o SuperAdmin Master
     function isMasterAdmin() {
       return request.auth != null && 
              request.auth.token.email != null && 
@@ -16,26 +16,25 @@ service cloud.firestore {
       allow read, write: if isMasterAdmin();
     }
 
-    // Regras para Usuários
+    // Regras para Usuários (Coleção identificada por Email)
     match /users/{userEmail} {
       allow read: if request.auth != null;
-      // Permite escrita se for o próprio usuário ou se for admin mestre
       allow write: if request.auth != null && (
         isMasterAdmin() || 
         (request.auth.token.email != null && request.auth.token.email.lower() == userEmail.lower())
       );
     }
 
-    // Regras para Demandas, Trâmites e Notificações (Acesso para usuários autenticados)
-    match /demandas/{demandaId} {
+    // Acesso Geral para usuários autenticados nas outras coleções
+    match /demandas/{docId} {
       allow read, write: if request.auth != null;
     }
 
-    match /tramites/{tramiteId} {
+    match /tramites/{docId} {
       allow read, write: if request.auth != null;
     }
 
-    match /notificacoes/{notificacaoId} {
+    match /notificacoes/{docId} {
       allow read, write: if request.auth != null;
     }
   }

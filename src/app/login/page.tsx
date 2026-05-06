@@ -36,29 +36,19 @@ export default function LoginPage() {
     
     const emailLower = email.toLowerCase().trim();
     
-    // Verificação Básica de Autorização (Fonte de Verdade)
-    if (!VEREADORES_AUTORIZADOS.includes(emailLower)) {
-      toast({
-        title: "Acesso Negado",
-        description: "Este e-mail não possui cadastro no sistema.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setSubmitting(true);
 
     try {
-      // 1. Tenta o login normal
+      // Tenta o login normal
       const userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
       
       if (userCredential) {
-        // 2. Verifica se o perfil existe no Firestore
+        // Verifica se o perfil existe no Firestore (Provisionamento)
         const userRef = doc(db, "users", emailLower);
         const userSnap = await getDoc(userRef);
         
         if (userSnap.exists()) {
-          // Atualiza o UID se necessário (primeiro acesso)
+          // Atualiza o UID no Firestore após o primeiro login bem-sucedido
           await updateDoc(userRef, {
             uid: userCredential.user.uid,
             updatedAt: serverTimestamp(),
@@ -68,17 +58,21 @@ export default function LoginPage() {
           toast({ title: "Bem-vindo!", description: "Acesso autorizado." });
           router.push("/");
         } else {
-          // Caso raro: tem Auth mas não tem Firestore Profile
-          throw new Error("Perfil não encontrado no banco de dados.");
+          // Se não houver perfil no Firestore, o acesso é negado mesmo com senha correta no Auth
+          toast({
+            title: "Acesso Não Provisionado",
+            description: "Seu e-mail não foi encontrado na base de dados do gabinete.",
+            variant: "destructive",
+          });
+          await auth.signOut();
         }
       }
     } catch (error: any) {
-      let errorMessage = "Credenciais inválidas.";
+      console.error("Erro no login:", error);
+      let errorMessage = "E-mail ou senha incorretos.";
       
       if (error.code === 'auth/operation-not-allowed') {
         errorMessage = "O provedor de login está desativado no Firebase Console.";
-      } else if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-        errorMessage = "E-mail ou senha incorretos.";
       }
 
       toast({
@@ -128,7 +122,7 @@ export default function LoginPage() {
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle className="text-xs font-bold">Nota do Sistema</AlertTitle>
             <AlertDescription className="text-[10px] leading-relaxed">
-              Caso ainda não tenha uma conta, entre em contato com o administrador do gabinete para o seu provisionamento.
+              O acesso é restrito a membros provisionados. Se você é um vereador, certifique-se de que o método de login E-mail/Senha está ativo no Firebase.
             </AlertDescription>
           </Alert>
         </CardContent>

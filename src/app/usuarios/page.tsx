@@ -4,7 +4,7 @@ import { useUser, useFirestore, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
 import { collection, query, doc, updateDoc, serverTimestamp, setDoc, orderBy } from "firebase/firestore";
-import { UserRole, UserPermissions } from "@/lib/types";
+import { UserRole, UserPermissions, UserProfile } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +42,7 @@ export default function UserManagementPage() {
   const [isAdding, setIsAdding] = useState(false);
 
   const userEmailNormalized = user?.email?.toLowerCase().trim();
-  const isMasterAdmin = userEmailNormalized === "edisonunb@gmail.com";
+  const isMasterAdmin = userEmailNormalized === "edisonunb@gmail.com" || userEmailNormalized === "gabinete.professoraflavia@gmail.com";
 
   const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db, user]);
   const { data: allUsers = [], loading: usersLoading } = useCollection(usersQuery);
@@ -84,10 +84,14 @@ export default function UserManagementPage() {
 
       await setDoc(newUserRef, userData, { merge: true });
 
-      toast({ title: "Sucesso", description: "Perfil provisionado. O usuário deve agora criar sua senha no Firebase Auth." });
+      toast({ 
+        title: "Sucesso", 
+        description: "Perfil provisionado com sucesso." 
+      });
       setNewEmail("");
       setNewName("");
     } catch (error: any) {
+      console.error("Erro ao salvar usuário:", error);
       toast({ 
         title: "Erro de Permissão", 
         description: "Não foi possível salvar. Verifique se você é o administrador logado.", 
