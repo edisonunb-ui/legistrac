@@ -5,7 +5,7 @@ import { useUser, useFirestore, useDoc, useCollection, useStorage } from "@/fire
 import { Navbar } from "@/components/layout/Navbar";
 import { useEffect, useState, useMemo, use } from "react";
 import { doc, collection, query, where, Timestamp } from "firebase/firestore";
-import { Tramite, Attachment } from "@/lib/types";
+import { Tramite, Attachment, UserPermissions } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -99,9 +99,19 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
-  const hasPermission = (perm: string) => {
+  const hasPermission = (perm: keyof UserPermissions) => {
+    if (!profile && user?.email !== 'edisonunb@gmail.com') return false;
     return (profile as any)?.permissoes?.[perm] || user?.email === 'edisonunb@gmail.com';
   };
+
+  const allAttachments = useMemo(() => {
+    if (!demand) return [];
+    const fromDemand = demand.anexos || [];
+    const fromTramites = tramites.flatMap(t => t.anexos || []);
+    const combined = [...fromDemand, ...fromTramites];
+    // Remove duplicados por URL
+    return Array.from(new Map(combined.map(item => [item.url, item])).values());
+  }, [demand, tramites]);
 
   const uploadTramiteFiles = async (): Promise<Attachment[]> => {
     const attachments: Attachment[] = [];
@@ -129,10 +139,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
         });
       } catch (err: any) {
         console.error(`Erro ao subir arquivo ${file.name}:`, err);
-        const msg = err.code === 'storage/unauthorized' 
-          ? "Erro de CORS no Storage. Verifique a configuração no Google Cloud." 
-          : `Falha no upload: ${file.name}`;
-        throw new Error(msg);
+        throw new Error(`Falha no upload: ${file.name}`);
       }
     }
 
@@ -235,7 +242,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="animate-spin h-10 w-10 text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando demanda...</p>
+          <p className="text-muted-foreground">Carregando informações do processo...</p>
         </div>
       </div>
     );
@@ -258,13 +265,6 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
 
   const isResponsible = demand.responsavelAtual === user?.uid;
   const filteredCollaborators = allUsers.filter(u => u.email?.toLowerCase() !== user?.email?.toLowerCase());
-
-  const allAttachments = useMemo(() => {
-    const fromDemand = demand.anexos || [];
-    const fromTramites = tramites.flatMap(t => t.anexos || []);
-    const combined = [...fromDemand, ...fromTramites];
-    return Array.from(new Map(combined.map(item => [item.url, item])).values());
-  }, [demand.anexos, tramites]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -543,7 +543,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                   <div className="p-2 bg-muted rounded-lg text-primary shadow-sm"><Calendar size={18} /></div>
                   <div>
                     <p className="text-[9px] uppercase text-muted-foreground font-bold tracking-wider">Prazo Fatal</p>
-                    <p className="font-bold text-sm">{new Date(demand.prazo).toLocaleDateString()}</p>
+                    <p className="font-bold text-sm">{demand.prazo ? new Date(demand.prazo).toLocaleDateString() : 'N/A'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
