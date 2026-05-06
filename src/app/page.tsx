@@ -1,11 +1,12 @@
+
 "use client";
 
 import { useFirestore, useCollection, useUser, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useMemo } from "react";
-import { collection, query, orderBy, doc } from "firebase/firestore";
+import { collection, query, orderBy, doc, limit } from "firebase/firestore";
 import { Demand } from "@/lib/types";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   ClipboardList, 
   Clock, 
@@ -13,11 +14,14 @@ import {
   TrendingUp,
   PlusCircle,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  ChevronRight,
+  Calendar
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
   const { user, loading } = useUser();
@@ -27,19 +31,31 @@ export default function Dashboard() {
   const profileRef = useMemo(() => userEmail && db ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
-  const demandsQuery = useMemo(() => db ? query(collection(db, "demandas"), orderBy("dataCriacao", "desc")) : null, [db]);
-  const { data: demands = [] } = useCollection(demandsQuery);
+  // Consulta para estatísticas (todas as demandas)
+  const statsQuery = useMemo(() => db ? query(collection(db, "demandas"), orderBy("dataCriacao", "desc")) : null, [db]);
+  const { data: allDemands = [] } = useCollection(statsQuery);
+
+  // Consulta para a lista de demandas recentes da Ana (ou do usuário logado)
+  const recentDemandsQuery = useMemo(() => {
+    if (!db || !user) return null;
+    return query(
+      collection(db, "demandas"), 
+      orderBy("dataAtualizacao", "desc"),
+      limit(5)
+    );
+  }, [db, user]);
+  const { data: recentDemands = [], loading: loadingDemands } = useCollection(recentDemandsQuery);
 
   const stats = useMemo(() => {
-    if (!demands) return { totalAbertas: 0, atrasadas: 0, minhas: 0, aguardandoAdmin: 0 };
+    if (!allDemands) return { totalAbertas: 0, atrasadas: 0, minhas: 0, aguardandoAdmin: 0 };
     const now = new Date();
     return {
-      totalAbertas: demands.filter((d: Demand) => d.status !== "FINALIZADO").length,
-      atrasadas: demands.filter((d: Demand) => d.status !== "FINALIZADO" && d.prazo && new Date(d.prazo) < now).length,
-      minhas: demands.filter((d: Demand) => user && d.responsavelAtual === user.uid && d.status !== "FINALIZADO").length,
-      aguardandoAdmin: demands.filter((d: Demand) => d.status === "AGUARDANDO_VEREADORA").length,
+      totalAbertas: allDemands.filter((d: Demand) => d.status !== "FINALIZADO").length,
+      atrasadas: allDemands.filter((d: Demand) => d.status !== "FINALIZADO" && d.prazo && new Date(d.prazo) < now).length,
+      minhas: allDemands.filter((d: Demand) => user && d.responsavelAtual === user.uid && d.status !== "FINALIZADO").length,
+      aguardandoAdmin: allDemands.filter((d: Demand) => d.status === "AGUARDANDO_VEREADORA").length,
     };
-  }, [demands, user]);
+  }, [allDemands, user]);
 
   if (loading || !user) {
     return (
@@ -97,6 +113,54 @@ export default function Dashboard() {
             </Card>
           ))}
         </div>
+
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold font-headline">Demandas Recentes</h2>
+            <Link href="/demandas">
+              <Button variant="ghost" className="text-primary text-sm">Ver todas</Button>
+            </Link>
+          </div>
+
+          <div className="grid gap-4">
+            {loadingDemands ? (
+              <div className="flex justify-center py-8"><Loader2 className="animate-spin text-primary" /></div>
+            ) : recentDemands.length === 0 ? (
+              <div className="text-center py-10 bg-card rounded-xl border border-dashed text-muted-foreground">
+                Nenhuma demanda registrada ainda.
+              </div>
+            ) : (
+              recentDemands.map((demand: Demand) => (
+                <Link key={demand.id} href={`/demandas/${demand.id}`}>
+                  <Card className="hover:shadow-md transition-all border-none shadow-sm group">
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className={cn(
+                          "w-2 h-10 rounded-full",
+                          demand.prioridade === "ALTA" ? "bg-red-500" : demand.prioridade === "MEDIA" ? "bg-amber-500" : "bg-blue-500"
+                        )} />
+                        <div>
+                          <h4 className="font-bold text-sm group-hover:text-primary transition-colors">{demand.titulo}</h4>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="text-[10px] font-mono text-muted-foreground">#{demand.id.substring(0, 8)}</span>
+                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                              <Calendar size={10} />
+                              {new Date(demand.prazo).toLocaleDateString()}
+                            </div>
+                            <Badge variant="outline" className="text-[9px] h-4 uppercase">
+                              {demand.status.replace("_", " ")}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <ChevronRight size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))
+            )}
+          </div>
+        </section>
       </main>
     </div>
   );

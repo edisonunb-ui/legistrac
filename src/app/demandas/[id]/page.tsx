@@ -19,7 +19,8 @@ import {
   Calendar,
   User as UserIcon,
   Sparkles,
-  MessageSquare
+  MessageSquare,
+  Loader2
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -57,21 +58,21 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const [obs, setObs] = useState("");
   const [selectedUser, setSelectedUser] = useState("");
 
-  const demandRef = useMemo(() => id && db ? doc(db, "demandas", id) : null, [db, id]);
-  const { data: demand } = useDoc(demandRef);
+  const demandRef = useMemo(() => (id && db) ? doc(db, "demandas", id) : null, [db, id]);
+  const { data: demand, loading: loadingDemand } = useDoc(demandRef);
 
-  const tramitesQuery = useMemo(() => id && db && user ? query(
+  const tramitesQuery = useMemo(() => (id && db && user) ? query(
     collection(db, "tramites"), 
     where("demandaId", "==", id), 
     orderBy("data", "desc")
   ) : null, [db, id, user]);
   const { data: tramites = [] } = useCollection(tramitesQuery);
 
-  const usersQuery = useMemo(() => db && user ? query(collection(db, "users")) : null, [db, user]);
+  const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
   const userEmail = user?.email?.toLowerCase().trim();
-  const profileRef = useMemo(() => userEmail && db ? doc(db, "users", userEmail) : null, [db, userEmail]);
+  const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
   const hasPermission = (perm: string) => {
@@ -140,7 +141,31 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     }
   };
 
-  if (!demand) return <div className="p-8 text-center">Carregando demanda...</div>;
+  if (loadingDemand) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="animate-spin h-10 w-10 text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Carregando demanda...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!demand) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 py-20 text-center">
+          <h2 className="text-2xl font-bold mb-2">Demanda não encontrada</h2>
+          <p className="text-muted-foreground mb-6">O protocolo #{id.substring(0,8)} não existe no sistema.</p>
+          <Link href="/demandas">
+            <Button>Voltar para Lista</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const isResponsible = demand.responsavelAtual === user?.uid;
 
@@ -183,7 +208,6 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
                         <Label>Destinatário</Label>
-                        <span className="sr-only">Selecione o destinatário</span>
                         <Select onValueChange={setSelectedUser}>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione um colaborador" />
@@ -264,46 +288,50 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
               </CardHeader>
               <CardContent className="pt-6">
                 <div className="space-y-6">
-                  {tramites.map((t: Tramite, idx: number) => {
-                    const deUser = allUsers.find((u: UserProfile) => u.uid === t.de)?.nome || "Sistema";
-                    const paraUser = allUsers.find((u: UserProfile) => u.uid === t.para)?.nome || "Sistema";
-                    
-                    return (
-                      <div key={t.id} className="relative flex gap-4">
-                        {idx !== tramites.length - 1 && (
-                          <div className="absolute left-[1.1rem] top-8 bottom-0 w-0.5 bg-muted" />
-                        )}
-                        <div className={cn(
-                          "w-9 h-9 rounded-full flex items-center justify-center shrink-0 z-10 shadow-sm",
-                          t.acao === "ENVIO" && "bg-blue-100 text-blue-600",
-                          t.acao === "DEVOLUCAO" && "bg-orange-100 text-orange-600",
-                          t.acao === "FINALIZACAO" && "bg-green-100 text-green-600",
-                          t.acao === "REABERTURA" && "bg-purple-100 text-purple-600"
-                        )}>
-                          {t.acao === "ENVIO" && <Send size={16} />}
-                          {t.acao === "DEVOLUCAO" && <RotateCcw size={16} />}
-                          {t.acao === "FINALIZACAO" && <CheckCircle size={16} />}
-                          {t.acao === "REABERTURA" && <RotateCcw size={16} />}
-                        </div>
-                        <div className="flex-1 pb-2">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
-                            <h4 className="font-bold text-sm">
-                              {t.acao} <span className="text-muted-foreground font-normal">por {deUser}</span>
-                            </h4>
-                            <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{t.data?.toDate().toLocaleString()}</span>
+                  {tramites.length === 0 ? (
+                    <p className="text-center text-muted-foreground text-sm py-4">Nenhuma movimentação registrada.</p>
+                  ) : (
+                    tramites.map((t: Tramite, idx: number) => {
+                      const deUser = allUsers.find((u: UserProfile) => u.uid === t.de)?.nome || "Sistema";
+                      const paraUser = allUsers.find((u: UserProfile) => u.uid === t.para)?.nome || "Sistema";
+                      
+                      return (
+                        <div key={t.id} className="relative flex gap-4">
+                          {idx !== tramites.length - 1 && (
+                            <div className="absolute left-[1.1rem] top-8 bottom-0 w-0.5 bg-muted" />
+                          )}
+                          <div className={cn(
+                            "w-9 h-9 rounded-full flex items-center justify-center shrink-0 z-10 shadow-sm",
+                            t.acao === "ENVIO" && "bg-blue-100 text-blue-600",
+                            t.acao === "DEVOLUCAO" && "bg-orange-100 text-orange-600",
+                            t.acao === "FINALIZACAO" && "bg-green-100 text-green-600",
+                            t.acao === "REABERTURA" && "bg-purple-100 text-purple-600"
+                          )}>
+                            {t.acao === "ENVIO" && <Send size={16} />}
+                            {t.acao === "DEVOLUCAO" && <RotateCcw size={16} />}
+                            {t.acao === "FINALIZACAO" && <CheckCircle size={16} />}
+                            {t.acao === "REABERTURA" && <RotateCcw size={16} />}
                           </div>
-                          {t.acao === "ENVIO" && deUser !== paraUser && (
-                            <p className="text-[10px] text-muted-foreground mb-2 italic">Destinado para: {paraUser}</p>
-                          )}
-                          {t.observacao && (
-                            <div className="p-3 bg-muted/40 rounded-lg text-xs border-l-2 border-primary/20">
-                              {t.observacao}
+                          <div className="flex-1 pb-2">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
+                              <h4 className="font-bold text-sm">
+                                {t.acao} <span className="text-muted-foreground font-normal">por {deUser}</span>
+                              </h4>
+                              <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{t.data?.toDate().toLocaleString()}</span>
                             </div>
-                          )}
+                            {t.acao === "ENVIO" && deUser !== paraUser && (
+                              <p className="text-[10px] text-muted-foreground mb-2 italic">Destinado para: {paraUser}</p>
+                            )}
+                            {t.observacao && (
+                              <div className="p-3 bg-muted/40 rounded-lg text-xs border-l-2 border-primary/20">
+                                {t.observacao}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                 </div>
               </CardContent>
             </Card>
