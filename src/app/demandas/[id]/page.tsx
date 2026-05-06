@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
@@ -29,6 +30,7 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
+  DialogDescription,
   DialogFooter, 
   DialogTrigger 
 } from "@/components/ui/dialog";
@@ -61,7 +63,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const demandRef = useMemo(() => (id && db) ? doc(db, "demandas", id) : null, [db, id]);
   const { data: demand, loading: loadingDemand } = useDoc(demandRef);
 
-  // Consulta sem orderBy para evitar erro de índice
+  // Consulta simples de trâmites (ordenação client-side para evitar erro de índice)
   const tramitesQuery = useMemo(() => (id && db && user) ? query(
     collection(db, "tramites"), 
     where("demandaId", "==", id)
@@ -69,7 +71,6 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   
   const { data: tramitesRaw = [] } = useCollection(tramitesQuery);
 
-  // Ordenação manual no cliente
   const tramites = useMemo(() => {
     return [...tramitesRaw].sort((a: any, b: any) => {
       const dateA = a.data?.toMillis() || 0;
@@ -78,11 +79,10 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     });
   }, [tramitesRaw]);
 
-  // Consulta simples de usuários para evitar erros de índice
+  // Consulta simples de usuários
   const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
   const { data: allUsersRaw = [] } = useCollection(usersQuery);
 
-  // Ordena os usuários por nome no cliente
   const allUsers = useMemo(() => {
     return [...allUsersRaw].sort((a: any, b: any) => (a.nome || "").localeCompare(b.nome || ""));
   }, [allUsersRaw]);
@@ -115,7 +115,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     }
     
     setProcessing(true);
-    const targetUser = allUsers.find((u: any) => u.uid === selectedUser);
+    const targetUser = allUsers.find((u: any) => u.uid === selectedUser || u.email === selectedUser);
     
     if (!targetUser) {
       setProcessing(false);
@@ -124,7 +124,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     }
 
     try {
-      await sendDemand(db, demand.id, user.uid, selectedUser, obs, targetUser.perfil);
+      await sendDemand(db, demand.id, user.uid, targetUser.uid || targetUser.email, obs, targetUser.perfil);
       toast({ title: "Sucesso", description: "Demanda tramitada com sucesso." });
       setSendModalOpen(false);
       setObs("");
@@ -139,11 +139,9 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const handleReturn = async () => {
     if (!demand || !user || !db) return;
     
-    const targetId = selectedUser || demand.criadoPor;
-    
     setProcessing(true);
     try {
-      await returnDemand(db, demand.id, user.uid, targetId, obs || "Demanda devolvida para revisão.");
+      await returnDemand(db, demand.id, user.uid, demand.criadoPor, obs || "Demanda devolvida para revisão.");
       toast({ title: "Sucesso", description: "Demanda devolvida." });
       setSendModalOpen(false);
       setObs("");
@@ -209,6 +207,11 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   }
 
   const isResponsible = demand.responsavelAtual === user?.uid;
+  
+  // Filtra colaboradores excluindo o próprio usuário logado
+  const filteredCollaborators = allUsers.filter(u => 
+    u.email?.toLowerCase() !== user?.email?.toLowerCase()
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -245,6 +248,9 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Mover Demanda</DialogTitle>
+                      <DialogDescription>
+                        Selecione um colaborador para encaminhar o protocolo e adicione instruções.
+                      </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
@@ -254,17 +260,15 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                             <SelectValue placeholder="Selecione um colaborador" />
                           </SelectTrigger>
                           <SelectContent>
-                            {allUsers
-                              .filter(u => u.uid && u.uid !== user?.uid)
-                              .map((u: any) => (
-                                <SelectItem key={u.uid} value={u.uid}>
+                            {filteredCollaborators.length > 0 ? (
+                              filteredCollaborators.map((u: any) => (
+                                <SelectItem key={u.email} value={u.uid || u.email}>
                                   {u.nome} ({u.perfil})
                                 </SelectItem>
                               ))
-                            }
-                            {allUsers.filter(u => u.uid && u.uid !== user?.uid).length === 0 && (
+                            ) : (
                               <div className="p-2 text-xs text-center text-muted-foreground">
-                                Nenhum outro colaborador encontrado.
+                                Nenhum outro colaborador encontrado no sistema.
                               </div>
                             )}
                           </SelectContent>
@@ -311,7 +315,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
             <Card className="border-none shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-xl font-headline font-bold flex items-center gap-2">
-                  <Info size={20} className="text-primary" />
+                  <span className="p-1.5 bg-primary/10 rounded-lg"><Info size={20} className="text-primary" /></span>
                   Descrição da Demanda
                 </CardTitle>
                 <Button variant="outline" size="sm" className="gap-2 text-primary border-primary/20 hover:bg-primary/5" onClick={handleGenerateSummary} disabled={summarizing}>
@@ -321,7 +325,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
               </CardHeader>
               <CardContent className="space-y-6">
                 {summary && (
-                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl relative">
+                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl relative animate-in fade-in slide-in-from-top-2">
                     <div className="absolute top-2 right-2 flex items-center gap-1 text-[9px] text-primary font-bold uppercase tracking-widest">
                       <Sparkles size={10} /> Inteligência Artificial
                     </div>
@@ -337,7 +341,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
             <Card className="border-none shadow-sm overflow-hidden">
               <CardHeader className="bg-muted/30">
                 <CardTitle className="text-lg font-headline font-bold flex items-center gap-2">
-                  <History size={18} className="text-primary" />
+                  <span className="p-1.5 bg-primary/10 rounded-lg"><History size={18} className="text-primary" /></span>
                   Linha do Tempo
                 </CardTitle>
               </CardHeader>
@@ -347,8 +351,8 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                     <p className="text-center text-muted-foreground text-sm py-4">Nenhuma movimentação registrada.</p>
                   ) : (
                     tramites.map((t: Tramite, idx: number) => {
-                      const deUser = allUsers.find((u: any) => u.uid === t.de)?.nome || "Sistema";
-                      const paraUser = allUsers.find((u: any) => u.uid === t.para)?.nome || "Sistema";
+                      const deUser = allUsers.find((u: any) => u.uid === t.de || u.email === t.de)?.nome || "Sistema";
+                      const paraUser = allUsers.find((u: any) => u.uid === t.para || u.email === t.para)?.nome || "Sistema";
                       
                       return (
                         <div key={t.id} className="relative flex gap-4">
@@ -410,7 +414,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                   <div>
                     <p className="text-[9px] uppercase text-muted-foreground font-bold tracking-wider">Responsável</p>
                     <p className="font-bold text-sm">
-                      {allUsers.find((u: any) => u.uid === demand.responsavelAtual)?.nome || "Não Atribuído"}
+                      {allUsers.find((u: any) => u.uid === demand.responsavelAtual || u.email === demand.responsavelAtual)?.nome || "Não Atribuído"}
                     </p>
                   </div>
                 </div>

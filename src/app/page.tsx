@@ -4,7 +4,7 @@
 import { useFirestore, useCollection, useUser, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useMemo } from "react";
-import { collection, query, orderBy, doc, limit } from "firebase/firestore";
+import { collection, query, doc, limit } from "firebase/firestore";
 import { Demand } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -24,30 +24,29 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
-  const { user, loading } = useUser();
+  const { user, loading } = userEmailNormalized => useUser();
   const db = useFirestore();
 
   const userEmail = user?.email?.toLowerCase().trim();
   const profileRef = useMemo(() => userEmail && db ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
-  // Consulta para estatísticas (todas as demandas)
-  const statsQuery = useMemo(() => db ? query(collection(db, "demandas"), orderBy("dataCriacao", "desc")) : null, [db]);
-  const { data: allDemands = [] } = useCollection(statsQuery);
+  // Consulta simples sem orderBy para evitar erro de índice
+  const statsQuery = useMemo(() => db ? query(collection(db, "demandas")) : null, [db]);
+  const { data: allDemandsRaw = [] } = useCollection(statsQuery);
 
-  // Consulta para a lista de demandas recentes da Ana (ou do usuário logado)
-  const recentDemandsQuery = useMemo(() => {
-    if (!db || !user) return null;
-    return query(
-      collection(db, "demandas"), 
-      orderBy("dataAtualizacao", "desc"),
-      limit(5)
-    );
-  }, [db, user]);
-  const { data: recentDemands = [], loading: loadingDemands } = useCollection(recentDemandsQuery);
+  // Ordenação manual no cliente
+  const allDemands = useMemo(() => {
+    return [...allDemandsRaw].sort((a: any, b: any) => {
+      const dateA = a.dataCriacao?.toMillis() || 0;
+      const dateB = b.dataCriacao?.toMillis() || 0;
+      return dateB - dateA;
+    });
+  }, [allDemandsRaw]);
+
+  const recentDemands = useMemo(() => allDemands.slice(0, 5), [allDemands]);
 
   const stats = useMemo(() => {
-    if (!allDemands) return { totalAbertas: 0, atrasadas: 0, minhas: 0, aguardandoAdmin: 0 };
     const now = new Date();
     return {
       totalAbertas: allDemands.filter((d: Demand) => d.status !== "FINALIZADO").length,
@@ -82,7 +81,7 @@ export default function Dashboard() {
             <h1 className="text-3xl font-headline font-bold text-foreground">Dashboard LegisTrac</h1>
             <div className="flex items-center gap-2 mt-1">
               <p className="text-muted-foreground text-sm">Usuário: {user.email}</p>
-              {(profile as any)?.perfil === 'SUPER_ADMIN' || user.email === 'edisonunb@gmail.com' ? (
+              {user.email === 'edisonunb@gmail.com' ? (
                 <Badge className="bg-amber-500 text-white text-[10px]">SUPER ADMIN</Badge>
               ) : null}
               <CheckCircle2 size={14} className="text-green-500" />
@@ -123,9 +122,7 @@ export default function Dashboard() {
           </div>
 
           <div className="grid gap-4">
-            {loadingDemands ? (
-              <div className="flex justify-center py-8"><Loader2 className="animate-spin text-primary" /></div>
-            ) : recentDemands.length === 0 ? (
+            {recentDemands.length === 0 ? (
               <div className="text-center py-10 bg-card rounded-xl border border-dashed text-muted-foreground">
                 Nenhuma demanda registrada ainda.
               </div>
