@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
@@ -34,13 +35,14 @@ export default function DemandListPage() {
   const [filterType, setFilterType] = useState<"TODAS" | "MINHAS">("MINHAS");
   const [statusFilter, setStatusFilter] = useState("TODOS");
 
-  const profileRef = useMemo(() => user && db ? doc(db, "users", user.uid) : null, [db, user]);
+  const userEmail = user?.email?.toLowerCase().trim();
+  const profileRef = useMemo(() => userEmail && db ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
   const demandsQuery = useMemo(() => {
-    if (!db) return null;
+    if (!db || !user) return null;
     return query(collection(db, "demandas"), orderBy("dataAtualizacao", "desc"));
-  }, [db]);
+  }, [db, user]);
   const { data: allDemands = [], loading } = useCollection(demandsQuery);
 
   const filteredDemands = useMemo(() => {

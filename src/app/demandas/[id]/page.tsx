@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
@@ -59,20 +60,21 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const demandRef = useMemo(() => id && db ? doc(db, "demandas", id) : null, [db, id]);
   const { data: demand } = useDoc(demandRef);
 
-  const tramitesQuery = useMemo(() => id && db ? query(
+  const tramitesQuery = useMemo(() => id && db && user ? query(
     collection(db, "tramites"), 
     where("demandaId", "==", id), 
     orderBy("data", "desc")
-  ) : null, [db, id]);
+  ) : null, [db, id, user]);
   const { data: tramites = [] } = useCollection(tramitesQuery);
 
-  const usersQuery = useMemo(() => db ? query(collection(db, "users")) : null, [db]);
+  const usersQuery = useMemo(() => db && user ? query(collection(db, "users")) : null, [db, user]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
-  const profileRef = useMemo(() => user && db ? doc(db, "users", user.uid) : null, [db, user]);
+  const userEmail = user?.email?.toLowerCase().trim();
+  const profileRef = useMemo(() => userEmail && db ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
-  const hasPermission = (perm: keyof UserProfile["permissoes"]) => {
+  const hasPermission = (perm: string) => {
     return (profile as any)?.permissoes?.[perm] || user?.email === 'edisonunb@gmail.com';
   };
 
@@ -181,6 +183,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
                         <Label>Destinatário</Label>
+                        <span className="sr-only">Selecione o destinatário</span>
                         <Select onValueChange={setSelectedUser}>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione um colaborador" />

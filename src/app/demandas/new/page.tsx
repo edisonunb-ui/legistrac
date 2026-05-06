@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useCollection } from "@/firebase";
@@ -33,7 +34,7 @@ export default function NewDemandPage() {
     responsavelId: "",
   });
 
-  // Estabiliza o ID do responsável inicial uma única vez para evitar loop infinito
+  // Estabiliza o ID do responsável inicial uma única vez apenas quando o usuário está autenticado
   useEffect(() => {
     if (user?.uid && !hasInitialized) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
@@ -41,7 +42,8 @@ export default function NewDemandPage() {
     }
   }, [user?.uid, hasInitialized]);
 
-  const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
+  // Garante que a consulta de usuários só ocorra se o usuário estiver logado, evitando erro de permissão
+  const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db, user]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
   const handleSubmit = async (e: React.FormEvent) => {
