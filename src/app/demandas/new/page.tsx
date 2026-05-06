@@ -68,11 +68,12 @@ export default function NewDemandPage() {
       const file = files[i];
       setUploadStatus({ current: i + 1, total: files.length });
       
-      const storagePath = `demandas/${Date.now()}_${file.name}`;
+      // Sanitiza o nome do arquivo removendo espaços e caracteres especiais para evitar erros de URL
+      const sanitizedName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+      const storagePath = `demandas/${Date.now()}_${sanitizedName}`;
       const storageRef = ref(storage, storagePath);
       
       try {
-        // Usando uploadBytes que é mais direto para arquivos pequenos
         const snapshot = await uploadBytes(storageRef, file);
         const url = await getDownloadURL(snapshot.ref);
         
@@ -87,7 +88,10 @@ export default function NewDemandPage() {
         });
       } catch (err: any) {
         console.error(`Falha no upload do arquivo ${file.name}:`, err);
-        throw new Error(`Erro ao subir ${file.name}: ${err.message}`);
+        const msg = err.code === 'storage/unauthorized' 
+          ? "Erro de permissão no Storage (CORS). Verifique as instruções no painel." 
+          : `Erro ao subir ${file.name}: ${err.message}`;
+        throw new Error(msg);
       }
     }
 
@@ -117,11 +121,10 @@ export default function NewDemandPage() {
       console.error("Erro completo ao salvar:", error);
       toast({
         title: "Falha no Envio",
-        description: error.message || "Verifique se o Storage está ativo no Console do Firebase.",
+        description: error.message || "Verifique se o Storage e o CORS estão configurados corretamente.",
         variant: "destructive",
       });
-    } finally {
-      setSaving(false);
+      setSaving(false); // Garante que destrava o botão em caso de erro
       setUploadStatus(null);
     }
   };

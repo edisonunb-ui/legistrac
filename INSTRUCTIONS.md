@@ -1,3 +1,4 @@
+
 # Instruções para Ativação e Publicação
 
 ## 1. Ativar Autenticação no Firebase (Obrigatório)
@@ -10,13 +11,14 @@ O erro `auth/operation-not-allowed` acontece porque o método de login está des
 6. Escolha **E-mail/Senha** (Email/Password).
 7. Ative o interruptor **Enable** (Ativar) e clique em **Save** (Salvar).
 
-## 2. Enviar para o GitHub
-Após ativar no console, envie o código atualizado:
-```bash
-git add .
-git commit -m "Fix: Melhora tratamento de erro de provedor desativado"
-git push origin main
-```
+## 2. Liberar Upload de Arquivos (CORS)
+Se o upload de anexos ficar travado em "Enviando...", você precisa liberar o acesso no Google Cloud:
+1. Abra o [Google Cloud Console](https://console.cloud.google.com/).
+2. Ative o **Cloud Shell** (ícone no topo direito).
+3. Execute o comando para criar a configuração:
+   `echo '[{"origin": ["*"],"method": ["GET", "POST", "PUT", "DELETE", "HEAD"],"responseHeader": ["Content-Type"],"maxAgeSeconds": 3600}]' > cors.json`
+4. Aplique ao seu bucket:
+   `gsutil cors set cors.json gs://legistrac.firebasestorage.app`
 
 ## 3. Segurança e Acesso
 - O e-mail `edisonunb@gmail.com` é o **SuperAdmin**.

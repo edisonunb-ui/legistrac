@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useDoc, useCollection, useStorage } from "@/firebase";
@@ -50,7 +51,7 @@ import {
   reopenDemand 
 } from "@/lib/demand-service";
 import { generateDemandSummary } from "@/ai/flows/demand-summary-generation";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function DemandDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -110,16 +111,12 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
       const file = tramiteFiles[i];
       setUploadStatus({ current: i + 1, total: tramiteFiles.length });
       
-      const storageRef = ref(storage, `demandas/tramites/${Date.now()}_${file.name}`);
+      const sanitizedName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+      const storageRef = ref(storage, `demandas/tramites/${Date.now()}_${sanitizedName}`);
       
       try {
-        const uploadTask = uploadBytesResumable(storageRef, file);
-        const url = await new Promise<string>((resolve, reject) => {
-          uploadTask.on('state_changed', null, (err) => reject(err), async () => {
-            const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-            resolve(downloadUrl);
-          });
-        });
+        const snapshot = await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(snapshot.ref);
         
         attachments.push({
           id: Math.random().toString(36).substring(7),
@@ -130,9 +127,12 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
           data: Timestamp.now(),
           enviadoPor: user?.uid || "anonimo"
         });
-      } catch (err) {
+      } catch (err: any) {
         console.error(`Erro ao subir arquivo ${file.name}:`, err);
-        throw new Error(`Falha no upload: ${file.name}`);
+        const msg = err.code === 'storage/unauthorized' 
+          ? "Erro de CORS no Storage. Verifique a configuração no Google Cloud." 
+          : `Falha no upload: ${file.name}`;
+        throw new Error(msg);
       }
     }
 
@@ -195,7 +195,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
       setObs("");
       setTramiteFiles([]);
     } catch (e: any) {
-      toast({ title: "Erro", description: "Falha ao devolver demanda.", variant: "destructive" });
+      toast({ title: "Erro", description: e.message || "Falha ao devolver demanda.", variant: "destructive" });
     } finally {
       setProcessing(false);
       setUploadStatus(null);
