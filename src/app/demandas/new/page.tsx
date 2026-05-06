@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useFirestore, useCollection } from "@/firebase";
@@ -16,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, Save, ShieldCheck, Loader2, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority, UserProfile } from "@/lib/types";
-import { collection, query, orderBy } from "firebase/firestore";
+import { collection, query } from "firebase/firestore";
 
 export default function NewDemandPage() {
   const { user, loading: authLoading } = useUser();
@@ -34,7 +33,7 @@ export default function NewDemandPage() {
     responsavelId: "",
   });
 
-  // Estabiliza o ID do responsável inicial uma única vez apenas quando o usuário está autenticado
+  // Inicializa o responsável padrão apenas UMA vez para evitar loop de renderização
   useEffect(() => {
     if (user?.uid && !hasInitialized) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
@@ -42,16 +41,13 @@ export default function NewDemandPage() {
     }
   }, [user?.uid, hasInitialized]);
 
-  // Garante que a consulta de usuários só ocorra se o usuário estiver logado, evitando erro de permissão
-  const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db, user]);
+  // Consulta simplificada sem orderBy para evitar erro de índice ausente no início
+  const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db) {
-      toast({ title: "Erro", description: "Sessão não identificada. Recarregue a página.", variant: "destructive" });
-      return;
-    }
+    if (!user || !db) return;
     
     setSaving(true);
     try {
@@ -60,16 +56,13 @@ export default function NewDemandPage() {
         responsavelId: formData.responsavelId || user.uid
       });
       
-      toast({
-        title: "Sucesso!",
-        description: "Demanda criada com sucesso.",
-      });
+      toast({ title: "Sucesso!", description: "Demanda criada com sucesso." });
       router.push(`/demandas/${demandId}`);
     } catch (error: any) {
-      console.error("Erro ao salvar demanda:", error);
+      console.error("Erro ao salvar:", error);
       toast({
-        title: "Erro de Permissão ou Conexão",
-        description: error.message || "Acesso negado. Verifique sua conexão.",
+        title: "Erro de Permissão",
+        description: "Verifique se você está logado corretamente.",
         variant: "destructive",
       });
     } finally {
@@ -77,30 +70,17 @@ export default function NewDemandPage() {
     }
   };
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-primary">
-        <Loader2 className="animate-spin mb-4" size={40} />
-        <p className="font-medium">Carregando ambiente...</p>
-      </div>
-    );
-  }
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <header className="mb-8">
-          <Link href="/demandas" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors mb-4 w-fit">
-            <ChevronLeft size={16} />
-            Voltar para lista
+          <Link href="/demandas" className="flex items-center gap-2 text-muted-foreground hover:text-primary mb-4 w-fit">
+            <ChevronLeft size={16} /> Voltar para lista
           </Link>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-headline font-bold">Nova Demanda</h1>
-            <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-              <ShieldCheck size={14} /> Atendimento Iniciado
-            </div>
-          </div>
+          <h1 className="text-3xl font-headline font-bold">Nova Demanda</h1>
         </header>
 
         <Card className="max-w-2xl border-none shadow-xl">
@@ -110,36 +90,19 @@ export default function NewDemandPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="titulo">Título da Demanda</Label>
-                <Input 
-                  id="titulo" 
-                  placeholder="Ex: Reforma da Praça" 
-                  required 
-                  value={formData.titulo}
-                  onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))}
-                />
+                <Label htmlFor="titulo">Título</Label>
+                <Input id="titulo" required value={formData.titulo} onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))} />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="prazo">Prazo Estimado</Label>
-                  <Input 
-                    id="prazo" 
-                    type="date" 
-                    required 
-                    value={formData.prazo}
-                    onChange={(e) => setFormData(prev => ({ ...prev, prazo: e.target.value }))}
-                  />
+                  <Label htmlFor="prazo">Prazo</Label>
+                  <Input id="prazo" type="date" required value={formData.prazo} onChange={(e) => setFormData(prev => ({ ...prev, prazo: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="prioridade">Prioridade</Label>
-                  <Select 
-                    value={formData.prioridade} 
-                    onValueChange={(v: DemandPriority) => setFormData(prev => ({ ...prev, prioridade: v }))}
-                  >
-                    <SelectTrigger id="prioridade">
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
+                  <Select value={formData.prioridade} onValueChange={(v: DemandPriority) => setFormData(prev => ({ ...prev, prioridade: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="BAIXA">Baixa</SelectItem>
                       <SelectItem value="MEDIA">Média</SelectItem>
@@ -150,45 +113,29 @@ export default function NewDemandPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="responsavel">Atribuir Responsável</Label>
-                <Select 
-                  value={formData.responsavelId} 
-                  onValueChange={(v) => setFormData(prev => ({ ...prev, responsavelId: v }))}
-                >
-                  <SelectTrigger id="responsavel">
-                    <div className="flex items-center gap-2">
-                      <UserIcon size={14} className="text-muted-foreground" />
-                      <SelectValue placeholder="Selecione o responsável" />
-                    </div>
+                <Label>Responsável</Label>
+                <Select value={formData.responsavelId} onValueChange={(v) => setFormData(prev => ({ ...prev, responsavelId: v }))}>
+                  <SelectTrigger>
+                    <div className="flex items-center gap-2"><UserIcon size={14} /><SelectValue /></div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={user?.uid || "me"}>Eu mesmo</SelectItem>
+                    <SelectItem value={user?.uid || "me"}>Atribuir a mim</SelectItem>
                     {allUsers.filter((u: any) => u.uid && u.uid !== user?.uid).map((u: any) => (
-                      <SelectItem key={u.uid} value={u.uid}>
-                        {u.nome} ({u.perfil})
-                      </SelectItem>
+                      <SelectItem key={u.uid} value={u.uid}>{u.nome}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="descricao">Descrição Detalhada</Label>
-                <Textarea 
-                  id="descricao" 
-                  placeholder="Descreva aqui o que precisa ser feito..." 
-                  rows={6} 
-                  required
-                  value={formData.descricao}
-                  onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
-                />
+                <Label htmlFor="descricao">Descrição</Label>
+                <Textarea id="descricao" rows={6} required value={formData.descricao} onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))} />
               </div>
             </CardContent>
-            <CardFooter className="flex justify-end gap-3 border-t pt-6 bg-muted/30">
+            <CardFooter className="flex justify-end gap-3 bg-muted/30 pt-6">
               <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
               <Button type="submit" disabled={saving}>
-                {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
-                Registrar Demanda
+                {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />} Registrar Demanda
               </Button>
             </CardFooter>
           </form>
