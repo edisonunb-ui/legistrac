@@ -2,7 +2,7 @@
 
 import { useUser, useFirestore, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createDemand } from "@/lib/demand-service";
 import { Button } from "@/components/ui/button";
@@ -29,8 +29,15 @@ export default function NewDemandPage() {
     descricao: "",
     prazo: "",
     prioridade: "MEDIA" as DemandPriority,
-    responsavelId: user?.uid || "",
+    responsavelId: "",
   });
+
+  // Inicializa o responsável assim que o usuário carregar, apenas uma vez
+  useEffect(() => {
+    if (user?.uid && !formData.responsavelId) {
+      setFormData(prev => ({ ...prev, responsavelId: user.uid }));
+    }
+  }, [user?.uid]);
 
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
@@ -41,13 +48,11 @@ export default function NewDemandPage() {
     setSaving(true);
 
     try {
-      // Garante que o responsável seja o próprio usuário se não selecionado
-      const finalData = {
+      const demandId = await createDemand(db, user.uid, {
         ...formData,
         responsavelId: formData.responsavelId || user.uid
-      };
-
-      const demandId = await createDemand(db, user.uid, finalData);
+      });
+      
       toast({
         title: "Sucesso!",
         description: "Demanda criada com sucesso.",
@@ -150,7 +155,7 @@ export default function NewDemandPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={user?.uid || "me"}>Eu mesmo</SelectItem>
-                    {allUsers.filter(u => u.uid !== user?.uid).map((u: any) => (
+                    {allUsers.map((u: any) => (
                       <SelectItem key={u.uid || u.email} value={u.uid || u.email}>
                         {u.nome} ({u.perfil})
                       </SelectItem>

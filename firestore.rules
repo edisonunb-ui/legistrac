@@ -3,19 +3,19 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Função ultra-robusta para verificar o SuperAdmin Master
+    // Função mestre para o SuperAdmin
     function isMasterAdmin() {
       return request.auth != null && 
              request.auth.token.email != null && 
              request.auth.token.email.lower() == "edisonunb@gmail.com";
     }
 
-    // Regra Global: Master Admins têm acesso TOTAL e ABSOLUTO
+    // Regra Global: Master Admins têm acesso TOTAL
     match /{document=**} {
       allow read, write: if isMasterAdmin();
     }
 
-    // Regras para Usuários (Coleção identificada por Email)
+    // Regras para Coleções Específicas
     match /users/{userEmail} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && (
@@ -24,7 +24,6 @@ service cloud.firestore {
       );
     }
 
-    // Acesso Geral para usuários autenticados nas outras coleções
     match /demandas/{docId} {
       allow read, write: if request.auth != null;
     }
