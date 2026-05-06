@@ -3,8 +3,8 @@
 import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useEffect, useState, useMemo, use } from "react";
-import { doc, collection, query, where, orderBy } from "firebase/firestore";
-import { Demand, Tramite, UserProfile } from "@/lib/types";
+import { doc, collection, query, where } from "firebase/firestore";
+import { Tramite } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -61,12 +61,22 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const demandRef = useMemo(() => (id && db) ? doc(db, "demandas", id) : null, [db, id]);
   const { data: demand, loading: loadingDemand } = useDoc(demandRef);
 
+  // Removido orderBy para evitar erro de índice no Firestore
   const tramitesQuery = useMemo(() => (id && db && user) ? query(
     collection(db, "tramites"), 
-    where("demandaId", "==", id), 
-    orderBy("data", "desc")
+    where("demandaId", "==", id)
   ) : null, [db, id, user]);
-  const { data: tramites = [] } = useCollection(tramitesQuery);
+  
+  const { data: tramitesRaw = [] } = useCollection(tramitesQuery);
+
+  // Ordenação manual no cliente para evitar necessidade de índice composto
+  const tramites = useMemo(() => {
+    return [...tramitesRaw].sort((a: any, b: any) => {
+      const dateA = a.data?.toMillis() || 0;
+      const dateB = b.data?.toMillis() || 0;
+      return dateB - dateA;
+    });
+  }, [tramitesRaw]);
 
   const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
   const { data: allUsers = [] } = useCollection(usersQuery);
@@ -93,6 +103,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   };
 
   const handleSend = async () => {
+    console.log("Iniciando envio para:", selectedUser);
     if (!demand || !user || !selectedUser || !db) {
       toast({ title: "Atenção", description: "Selecione um destinatário.", variant: "destructive" });
       return;
@@ -102,6 +113,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     const targetUser = allUsers.find((u: any) => u.uid === selectedUser);
     
     if (!targetUser) {
+      console.error("Usuário destino não encontrado na lista local");
       setProcessing(false);
       toast({ title: "Erro", description: "Usuário destino não encontrado.", variant: "destructive" });
       return;
@@ -114,7 +126,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
       setObs("");
       setSelectedUser("");
     } catch (e: any) {
-      console.error("Erro ao tramitar:", e);
+      console.error("Erro ao tramitar demanda:", e);
       toast({ title: "Erro", description: e.message || "Falha ao tramitar demanda.", variant: "destructive" });
     } finally {
       setProcessing(false);
@@ -124,7 +136,6 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const handleReturn = async () => {
     if (!demand || !user || !db) return;
     
-    // Se não houver usuário selecionado no modal, tenta devolver para quem enviou por último (ou criador)
     const targetId = selectedUser || demand.criadoPor;
     
     setProcessing(true);
