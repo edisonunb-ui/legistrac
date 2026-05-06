@@ -118,7 +118,7 @@ export default function LoginPage() {
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle className="text-xs font-bold">Nota do Sistema</AlertTitle>
             <AlertDescription className="text-[10px] leading-relaxed">
-              O acesso é restrito a membros provisionados. Se você é um administrador, use a aba Equipe para cadastrar seus assessores.
+              O acesso &eacute; restrito a membros provisionados. Se voc&ecirc; &eacute; um administrador, use a aba Equipe para cadastrar seus assessores.
             </AlertDescription>
           </Alert>
         </CardContent>

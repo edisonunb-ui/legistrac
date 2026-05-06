@@ -2,7 +2,7 @@ import * as admin from "firebase-admin";
 
 /**
  * Inicializa o Firebase Admin SDK no servidor.
- * Utiliza variáveis de ambiente para segurança.
+ * No Firebase App Hosting, utilize o painel de variáveis de ambiente.
  */
 if (!admin.apps.length) {
   try {
