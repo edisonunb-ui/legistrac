@@ -66,6 +66,9 @@ export default function LoginPage() {
             }
             throw createError;
           }
+        } else if (error.code === 'auth/operation-not-allowed') {
+          setShowConfigError(true);
+          return;
         } else {
           throw loginError;
         }
@@ -137,9 +140,9 @@ export default function LoginPage() {
           {showConfigError && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Erro de Configuração</AlertTitle>
+              <AlertTitle>Atenção Administrador</AlertTitle>
               <AlertDescription className="text-xs">
-                Acesse o Console do Firebase &gt; Authentication &gt; Sign-in Method e ative o provedor de E-mail/Senha.
+                Vá ao Console do Firebase &gt; Authentication &gt; Sign-in Method e ative o provedor "E-mail/Senha".
               </AlertDescription>
             </Alert>
           )}
