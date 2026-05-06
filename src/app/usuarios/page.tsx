@@ -1,10 +1,10 @@
 "use client";
 
-import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
+import { useUser, useFirestore, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
 import { collection, query, doc, updateDoc, serverTimestamp, setDoc, orderBy } from "firebase/firestore";
-import { UserRole, UserPermissions, UserProfile } from "@/lib/types";
+import { UserRole, UserPermissions } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Shield, Loader2, ShieldCheck, Settings2, AlertCircle } from "lucide-react";
+import { Users, UserPlus, Loader2, ShieldCheck, Settings2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const PERMISSION_LABELS: Record<keyof UserPermissions, string> = {
@@ -42,7 +42,7 @@ export default function UserManagementPage() {
   const [isAdding, setIsAdding] = useState(false);
 
   const userEmailNormalized = user?.email?.toLowerCase().trim();
-  const isMasterAdmin = userEmailNormalized === "edisonunb@gmail.com" || userEmailNormalized === "gabinete.professoraflavia@gmail.com";
+  const isMasterAdmin = userEmailNormalized === "edisonunb@gmail.com";
 
   const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db, user]);
   const { data: allUsers = [], loading: usersLoading } = useCollection(usersQuery);
@@ -84,14 +84,13 @@ export default function UserManagementPage() {
 
       await setDoc(newUserRef, userData, { merge: true });
 
-      toast({ title: "Sucesso", description: "Colaborador autorizado com sucesso." });
+      toast({ title: "Sucesso", description: "Perfil provisionado. O usuário deve agora criar sua senha no Firebase Auth." });
       setNewEmail("");
       setNewName("");
     } catch (error: any) {
-      console.error("Erro Firestore:", error);
       toast({ 
-        title: "Falha na Gravação", 
-        description: "Sem permissão no banco de dados. Verifique se o seu e-mail de administrador está configurado corretamente.", 
+        title: "Erro de Permissão", 
+        description: "Não foi possível salvar. Verifique se você é o administrador logado.", 
         variant: "destructive" 
       });
     } finally {
@@ -106,9 +105,9 @@ export default function UserManagementPage() {
         ativo: !currentStatus,
         updatedAt: serverTimestamp()
       });
-      toast({ title: "Sucesso", description: "Status atualizado." });
+      toast({ title: "Sucesso", description: "Status alterado." });
     } catch (error) {
-      toast({ title: "Erro", description: "Falha ao alterar status.", variant: "destructive" });
+      toast({ title: "Erro", description: "Sem permissão para alterar.", variant: "destructive" });
     }
   };
 
@@ -130,11 +129,11 @@ export default function UserManagementPage() {
               <Users className="text-primary" />
               Gestão da Equipe
             </h1>
-            <p className="text-muted-foreground mt-1">Controle de acessos e cargos do gabinete.</p>
+            <p className="text-muted-foreground mt-1">Provisionamento e controle de acessos.</p>
           </div>
           {isMasterAdmin && (
             <Badge className="bg-amber-500 text-white gap-1 py-1 px-3 shadow-md">
-              <ShieldCheck size={14} /> MODO MASTER ADMIN
+              <ShieldCheck size={14} /> MODO SUPER ADMIN
             </Badge>
           )}
         </header>
@@ -143,18 +142,18 @@ export default function UserManagementPage() {
           <Card className="h-fit shadow-xl border-none">
             <CardHeader className="bg-primary/5 rounded-t-xl border-b">
               <CardTitle className="text-lg flex items-center gap-2 text-primary font-bold">
-                <UserPlus size={18} /> Cadastrar Novo Membro
+                <UserPlus size={18} /> Provisionar Membro
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
               <form onSubmit={handleAddUser} className="space-y-5">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">Nome Completo</Label>
-                    <Input placeholder="Nome do colaborador" value={newName} onChange={e => setNewName(e.target.value)} required />
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">Nome do Colaborador</Label>
+                    <Input placeholder="Nome Completo" value={newName} onChange={e => setNewName(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">E-mail</Label>
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">E-mail Oficial</Label>
                     <Input type="email" placeholder="email@gabinete.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
@@ -165,8 +164,8 @@ export default function UserManagementPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="ESTAGIARIO">Estagiário</SelectItem>
-                        <SelectItem value="ASSESSOR">Assessor Parlamentar</SelectItem>
-                        <SelectItem value="ADMIN">Administrador de Gabinete</SelectItem>
+                        <SelectItem value="ASSESSOR">Assessor</SelectItem>
+                        <SelectItem value="ADMIN">Administrador</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -174,9 +173,9 @@ export default function UserManagementPage() {
 
                 <div className="space-y-3 pt-4 border-t">
                   <Label className="text-[10px] uppercase text-primary font-extrabold flex items-center gap-2 tracking-widest">
-                    <Settings2 size={12} /> Permissões Específicas
+                    <Settings2 size={12} /> Permissões do Perfil
                   </Label>
-                  <div className="grid gap-3 p-4 bg-muted/30 rounded-lg border border-primary/10">
+                  <div className="grid gap-3 p-4 bg-muted/30 rounded-lg border">
                     {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
                       <div key={key} className="flex items-center space-x-3">
                         <Checkbox 
@@ -184,7 +183,7 @@ export default function UserManagementPage() {
                           checked={permissions[key as keyof UserPermissions]} 
                           onCheckedChange={() => handleTogglePermission(key as keyof UserPermissions)}
                         />
-                        <label htmlFor={`perm-${key}`} className="text-sm font-medium leading-none cursor-pointer hover:text-primary transition-colors">
+                        <label htmlFor={`perm-${key}`} className="text-sm font-medium leading-none cursor-pointer">
                           {label}
                         </label>
                       </div>
@@ -192,8 +191,8 @@ export default function UserManagementPage() {
                   </div>
                 </div>
 
-                <Button className="w-full font-bold shadow-lg h-11 mt-4" type="submit" disabled={isAdding}>
-                  {isAdding ? <Loader2 className="animate-spin mr-2" /> : "Autorizar Acesso"}
+                <Button className="w-full font-bold h-11 mt-4" type="submit" disabled={isAdding}>
+                  {isAdding ? <Loader2 className="animate-spin mr-2" /> : "Salvar Provisionamento"}
                 </Button>
               </form>
             </CardContent>
@@ -202,8 +201,8 @@ export default function UserManagementPage() {
           <div className="lg:col-span-2 space-y-4">
             <Card className="shadow-xl border-none">
               <CardHeader className="border-b">
-                <CardTitle className="text-lg font-bold">Membros Autorizados</CardTitle>
-                <CardDescription>Lista de e-mails com acesso ao sistema.</CardDescription>
+                <CardTitle className="text-lg font-bold">Equipe Ativa</CardTitle>
+                <CardDescription>Membros provisionados e autorizados.</CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
                 <div className="space-y-3">
@@ -212,12 +211,12 @@ export default function UserManagementPage() {
                   ) : allUsers.length === 0 ? (
                     <div className="py-10 text-center border-2 border-dashed rounded-xl">
                       <AlertCircle className="mx-auto text-muted-foreground mb-2" />
-                      <p className="text-muted-foreground text-sm font-medium">Nenhum membro cadastrado ou falha no carregamento.</p>
+                      <p className="text-muted-foreground text-sm">Nenhum membro cadastrado.</p>
                     </div>
                   ) : allUsers.map((u: any) => (
                     <div key={u.id || u.email} className={cn(
-                      "flex items-center justify-between p-4 rounded-xl border-2 transition-all hover:border-primary/20",
-                      u.ativo ? "bg-card border-transparent shadow-sm" : "bg-muted/50 grayscale opacity-60 border-transparent"
+                      "flex items-center justify-between p-4 rounded-xl border transition-all",
+                      u.ativo ? "bg-card border-transparent shadow-sm" : "bg-muted/50 grayscale opacity-60"
                     )}>
                       <div className="flex items-center gap-4">
                         <div className={cn(
@@ -233,18 +232,14 @@ export default function UserManagementPage() {
                             {u.perfil === "SUPER_ADMIN" && <Badge className="ml-2 bg-amber-500 text-[9px]">MASTER</Badge>}
                           </p>
                           <p className="text-xs text-muted-foreground font-mono">{u.email}</p>
-                          <div className="flex gap-1.5 mt-1.5">
-                            <Badge variant="secondary" className="text-[9px] uppercase">{u.perfil}</Badge>
-                            {u.permissoes?.visualizar_todas && <Badge variant="outline" className="text-[9px]">GLOBAL</Badge>}
-                          </div>
                         </div>
                       </div>
                       
-                      {u.email !== userEmailNormalized && u.perfil !== "SUPER_ADMIN" && (
+                      {u.email !== userEmailNormalized && (
                         <Button 
                           variant={u.ativo ? "destructive" : "outline"}
                           size="sm" 
-                          className="font-bold text-[10px] h-8 uppercase tracking-tighter"
+                          className="font-bold text-[10px] h-8 uppercase"
                           onClick={() => toggleUserStatus(u.id || u.email, u.ativo)}
                         >
                           {u.ativo ? "Bloquear" : "Ativar"}

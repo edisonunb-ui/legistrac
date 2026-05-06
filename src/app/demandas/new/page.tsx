@@ -35,12 +35,12 @@ export default function NewDemandPage() {
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
-  // Define o responsável padrão apenas uma vez quando o usuário logar
+  // Inicializa o responsável apenas se estiver vazio e o usuário carregar
   useEffect(() => {
-    if (user?.uid && formData.responsavelId === "") {
+    if (user?.uid && !formData.responsavelId) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
     }
-  }, [user?.uid]);
+  }, [user?.uid, formData.responsavelId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,7 +94,7 @@ export default function NewDemandPage() {
         <Card className="max-w-2xl border-none shadow-xl">
           <form onSubmit={handleSubmit}>
             <CardHeader>
-              <CardTitle className="text-lg">Dados da Solicitação</CardTitle>
+              <CardTitle className="text-lg font-bold">Dados da Solicitação</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
@@ -151,7 +151,7 @@ export default function NewDemandPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {allUsers.map((u: UserProfile) => (
-                      <SelectItem key={u.uid || u.email} value={u.uid || u.email}>
+                      <SelectItem key={u.id || u.email} value={u.uid || u.id || u.email}>
                         {u.nome} ({u.perfil})
                       </SelectItem>
                     ))}
