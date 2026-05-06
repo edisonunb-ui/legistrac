@@ -23,7 +23,6 @@ export default function NewDemandPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
-  const [hasSetDefault, setHasSetDefault] = useState(false);
   
   const [formData, setFormData] = useState({
     titulo: "",
@@ -33,13 +32,13 @@ export default function NewDemandPage() {
     responsavelId: "",
   });
 
-  // Inicializa o responsável de forma estável para evitar loop de renderização
+  // Inicializa o responsável apenas quando o usuário carrega e o campo está vazio
+  // Usamos um efeito que não depende do formData inteiro para evitar loops
   useEffect(() => {
-    if (user && !formData.responsavelId && !hasSetDefault) {
+    if (user && !formData.responsavelId) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
-      setHasSetDefault(true);
     }
-  }, [user, formData.responsavelId, hasSetDefault]);
+  }, [user]);
 
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
@@ -61,9 +60,10 @@ export default function NewDemandPage() {
       });
       router.push(`/demandas/${demandId}`);
     } catch (error: any) {
+      console.error("Erro ao salvar:", error);
       toast({
         title: "Erro ao criar demanda",
-        description: error.message || "Verifique as permissões do sistema.",
+        description: error.message || "Verifique suas permissões de acesso.",
         variant: "destructive",
       });
     } finally {
