@@ -3,14 +3,17 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // Função Senior: Obtém o email de forma segura, verificando várias fontes no token
+    function getEmail() {
+      return request.auth.token.email != null ? request.auth.token.email : 
+             (request.auth.token.firebase.identities.email != null ? request.auth.token.firebase.identities.email[0] : null);
+    }
+
     // Função para verificar se o usuário é um dos administradores mestres
     function isMasterAdmin() {
-      return request.auth != null && 
-             request.auth.token.email != null && 
-             (
-               request.auth.token.email.lower() == "edisonunb@gmail.com" || 
-               request.auth.token.email.lower() == "gabinete.professoraflavia@gmail.com"
-             );
+      let email = getEmail();
+      return request.auth != null && email != null && 
+             (email.lower() == "edisonunb@gmail.com" || email.lower() == "gabinete.professoraflavia@gmail.com");
     }
     
     // Regra Global: Master Admin tem permissão total em qualquer coleção
@@ -23,11 +26,11 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow write: if request.auth != null && (
         isMasterAdmin() || 
-        request.auth.token.email.lower() == userEmail.lower()
+        (getEmail() != null && getEmail().lower() == userEmail.lower())
       );
     }
 
-    // Regras para demandas e trâmites (acesso para equipe autenticada)
+    // Regras para demandas, trâmites e notificações (acesso para equipe autenticada)
     match /demandas/{demandaId} {
       allow read, write: if request.auth != null;
     }

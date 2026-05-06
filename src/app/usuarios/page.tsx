@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Shield, Loader2, ShieldCheck, Settings2, Info } from "lucide-react";
+import { Users, UserPlus, Shield, Loader2, ShieldCheck, Settings2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const PERMISSION_LABELS: Record<keyof UserPermissions, string> = {
@@ -102,14 +102,14 @@ export default function UserManagementPage() {
         createdAt: serverTimestamp(),
       }, { merge: true });
 
-      toast({ title: "Sucesso", description: "Colaborador autorizado no sistema." });
+      toast({ title: "Sucesso", description: "Colaborador autorizado com sucesso." });
       setNewEmail("");
       setNewName("");
     } catch (error: any) {
-      console.error("Erro ao salvar usuário:", error);
+      console.error("Erro Firestore:", error);
       toast({ 
         title: "Falha na Gravação", 
-        description: `Erro: ${error.message || "Permissão insuficiente"}. Verifique o console.`, 
+        description: "Sem permissão no banco de dados. Verifique se seu e-mail master está correto nas Security Rules.", 
         variant: "destructive" 
       });
     } finally {
@@ -124,7 +124,7 @@ export default function UserManagementPage() {
         ativo: !currentStatus,
         updatedAt: serverTimestamp()
       });
-      toast({ title: "Sucesso", description: "Status do usuário atualizado." });
+      toast({ title: "Sucesso", description: "Status atualizado." });
     } catch (error) {
       toast({ title: "Erro", description: "Falha ao alterar status.", variant: "destructive" });
     }
@@ -141,14 +141,16 @@ export default function UserManagementPage() {
   if (!isAdmin && !isMasterAdmin) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-md text-center shadow-lg">
+        <Card className="max-w-md text-center shadow-lg border-destructive">
           <CardHeader>
             <Shield className="mx-auto text-destructive h-12 w-12 mb-2" />
-            <CardTitle>Acesso Restrito</CardTitle>
-            <CardDescription>Apenas administradores podem gerenciar a equipe.</CardDescription>
+            <CardTitle>Acesso Negado</CardTitle>
+            <CardDescription>
+              Seu perfil ({userEmail}) não tem permissão para gerenciar a equipe.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => window.location.href = "/"}>Voltar ao Painel</Button>
+            <Button onClick={() => window.location.href = "/"}>Voltar ao Início</Button>
           </CardContent>
         </Card>
       </div>
@@ -165,37 +167,37 @@ export default function UserManagementPage() {
               <Users className="text-primary" />
               Gestão da Equipe
             </h1>
-            <p className="text-muted-foreground mt-1">Configure as permissões de cada membro do gabinete.</p>
+            <p className="text-muted-foreground mt-1">Controle de acessos e cargos do gabinete.</p>
           </div>
           {isMasterAdmin && (
-            <Badge className="bg-amber-500 text-white gap-1 py-1 px-3 shadow-sm">
-              <ShieldCheck size={14} /> MODO SUPER ADMIN
+            <Badge className="bg-amber-500 text-white gap-1 py-1 px-3 shadow-md">
+              <ShieldCheck size={14} /> MODO MASTER ADMIN
             </Badge>
           )}
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <Card className="h-fit shadow-xl border-none ring-1 ring-black/5">
-            <CardHeader className="bg-primary/5 rounded-t-xl">
-              <CardTitle className="text-lg flex items-center gap-2 text-primary">
-                <UserPlus size={18} /> Cadastrar Membro
+          <Card className="h-fit shadow-xl border-none">
+            <CardHeader className="bg-primary/5 rounded-t-xl border-b">
+              <CardTitle className="text-lg flex items-center gap-2 text-primary font-bold">
+                <UserPlus size={18} /> Cadastrar Novo Membro
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
-              <form onSubmit={handleAddUser} className="space-y-6">
+              <form onSubmit={handleAddUser} className="space-y-5">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Nome Completo</Label>
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">Nome Completo</Label>
                     <Input placeholder="Nome do colaborador" value={newName} onChange={e => setNewName(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">E-mail de Acesso</Label>
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">E-mail</Label>
                     <Input type="email" placeholder="email@gabinete.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Cargo no Gabinete</Label>
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">Cargo</Label>
                     <Select value={newRole} onValueChange={(v: UserRole) => handleRoleChange(v)}>
-                      <SelectTrigger className="bg-muted/30">
+                      <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -207,11 +209,11 @@ export default function UserManagementPage() {
                   </div>
                 </div>
 
-                <div className="space-y-3 pt-6 border-t">
-                  <Label className="text-[10px] uppercase text-primary font-bold flex items-center gap-2 tracking-widest mb-3">
-                    <Settings2 size={12} /> Quadradinhos de Permissão
+                <div className="space-y-3 pt-4 border-t">
+                  <Label className="text-[10px] uppercase text-primary font-extrabold flex items-center gap-2 tracking-widest">
+                    <Settings2 size={12} /> Permissões Específicas
                   </Label>
-                  <div className="grid gap-3 p-4 bg-muted/20 rounded-xl border border-dashed border-primary/20">
+                  <div className="grid gap-3 p-4 bg-muted/30 rounded-lg border border-primary/10">
                     {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
                       <div key={key} className="flex items-center space-x-3">
                         <Checkbox 
@@ -219,7 +221,7 @@ export default function UserManagementPage() {
                           checked={permissions[key as keyof UserPermissions]} 
                           onCheckedChange={() => handleTogglePermission(key as keyof UserPermissions)}
                         />
-                        <label htmlFor={`perm-${key}`} className="text-sm font-medium leading-none cursor-pointer">
+                        <label htmlFor={`perm-${key}`} className="text-sm font-medium leading-none cursor-pointer hover:text-primary transition-colors">
                           {label}
                         </label>
                       </div>
@@ -227,59 +229,59 @@ export default function UserManagementPage() {
                   </div>
                 </div>
 
-                <Button className="w-full font-bold shadow-lg h-11" type="submit" disabled={isAdding}>
-                  {isAdding ? <Loader2 className="animate-spin mr-2" /> : "Autorizar e Salvar"}
+                <Button className="w-full font-bold shadow-lg h-11 mt-4" type="submit" disabled={isAdding}>
+                  {isAdding ? <Loader2 className="animate-spin mr-2" /> : "Autorizar Acesso"}
                 </Button>
               </form>
             </CardContent>
           </Card>
 
           <div className="lg:col-span-2 space-y-4">
-            <Card className="shadow-xl border-none ring-1 ring-black/5">
-              <CardHeader>
-                <CardTitle className="text-lg">Equipe Ativa</CardTitle>
+            <Card className="shadow-xl border-none">
+              <CardHeader className="border-b">
+                <CardTitle className="text-lg font-bold">Membros Autorizados</CardTitle>
+                <CardDescription>Lista de e-mails com acesso ao sistema.</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <div className="space-y-3">
                   {usersLoading ? (
                     <div className="py-10 text-center"><Loader2 className="animate-spin mx-auto text-primary" /></div>
                   ) : allUsers.length === 0 ? (
-                    <div className="py-10 text-center border border-dashed rounded-xl">
-                      <p className="text-muted-foreground text-sm">Nenhum membro listado.</p>
+                    <div className="py-10 text-center border-2 border-dashed rounded-xl">
+                      <AlertCircle className="mx-auto text-muted-foreground mb-2" />
+                      <p className="text-muted-foreground text-sm font-medium">Nenhum membro cadastrado.</p>
                     </div>
                   ) : allUsers.map((u: any) => (
                     <div key={u.id} className={cn(
-                      "flex items-center justify-between p-4 rounded-xl border transition-all gap-4",
-                      u.ativo ? "bg-card" : "bg-muted/50 grayscale opacity-70"
+                      "flex items-center justify-between p-4 rounded-xl border-2 transition-all hover:border-primary/20",
+                      u.ativo ? "bg-card border-transparent shadow-sm" : "bg-muted/50 grayscale opacity-60 border-transparent"
                     )}>
                       <div className="flex items-center gap-4">
                         <div className={cn(
-                          "w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm",
+                          "w-10 h-10 rounded-full flex items-center justify-center font-bold text-white",
                           u.perfil === "SUPER_ADMIN" ? "bg-amber-500" : 
                           u.perfil === "ADMIN" ? "bg-primary" : "bg-slate-400"
                         )}>
                           {u.nome?.[0]?.toUpperCase() || "U"}
                         </div>
                         <div>
-                          <p className="font-bold text-sm flex items-center gap-1.5">
+                          <p className="font-bold text-sm">
                             {u.nome}
-                            {u.perfil === "SUPER_ADMIN" && <ShieldCheck size={14} className="text-amber-500" />}
+                            {u.perfil === "SUPER_ADMIN" && <Badge className="ml-2 bg-amber-500 text-[9px]">MASTER</Badge>}
                           </p>
-                          <p className="text-xs text-muted-foreground">{u.email}</p>
-                          <div className="flex gap-1.5 mt-1">
-                            <Badge variant="outline" className="text-[9px] uppercase font-bold">{u.perfil}</Badge>
+                          <p className="text-xs text-muted-foreground font-mono">{u.email}</p>
+                          <div className="flex gap-1.5 mt-1.5">
+                            <Badge variant="secondary" className="text-[9px] uppercase">{u.perfil}</Badge>
+                            {u.permissoes?.visualizar_todas && <Badge variant="outline" className="text-[9px]">GLOBAL</Badge>}
                           </div>
                         </div>
                       </div>
                       
-                      {u.email !== userEmail && (
+                      {u.email !== userEmail && u.perfil !== "SUPER_ADMIN" && (
                         <Button 
-                          variant="ghost" 
+                          variant={u.ativo ? "destructive" : "outline"}
                           size="sm" 
-                          className={cn(
-                            "font-bold text-xs h-8",
-                            u.ativo ? "text-destructive" : "text-green-600"
-                          )}
+                          className="font-bold text-[10px] h-8 uppercase tracking-tighter"
                           onClick={() => toggleUserStatus(u.id, u.ativo)}
                         >
                           {u.ativo ? "Bloquear" : "Ativar"}
