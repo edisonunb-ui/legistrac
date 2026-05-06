@@ -41,8 +41,8 @@ export default function Dashboard() {
   const usersQuery = useMemo(() => db ? query(collection(db, "users")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
-  // Ordenação manual no cliente
-  const allDemands = useMemo(() => {
+  // Ordenação manual no cliente para demandas recentes
+  const allDemandsSorted = useMemo(() => {
     return [...allDemandsRaw].sort((a: any, b: any) => {
       const dateA = a.dataCriacao?.toMillis() || 0;
       const dateB = b.dataCriacao?.toMillis() || 0;
@@ -50,42 +50,22 @@ export default function Dashboard() {
     });
   }, [allDemandsRaw]);
 
-  const recentDemands = useMemo(() => allDemands.slice(0, 5), [allDemands]);
+  // Filtro para Carga de Trabalho (apenas ativas)
+  const activeDemands = useMemo(() => {
+    return allDemandsSorted.filter((d: Demand) => d.status !== "FINALIZADO");
+  }, [allDemandsSorted]);
+
+  const recentDemands = useMemo(() => allDemandsSorted.slice(0, 5), [allDemandsSorted]);
 
   const stats = useMemo(() => {
     const now = new Date();
     return {
-      totalAbertas: allDemands.filter((d: Demand) => d.status !== "FINALIZADO").length,
-      atrasadas: allDemands.filter((d: Demand) => d.status !== "FINALIZADO" && d.prazo && new Date(d.prazo) < now).length,
-      minhas: allDemands.filter((d: Demand) => user && d.responsavelAtual === user.uid && d.status !== "FINALIZADO").length,
-      aguardandoAdmin: allDemands.filter((d: Demand) => d.status === "AGUARDANDO_VEREADORA").length,
+      totalAbertas: allDemandsRaw.filter((d: Demand) => d.status !== "FINALIZADO").length,
+      atrasadas: allDemandsRaw.filter((d: Demand) => d.status !== "FINALIZADO" && d.prazo && new Date(d.prazo) < now).length,
+      minhas: allDemandsRaw.filter((d: Demand) => user && d.responsavelAtual === user.uid && d.status !== "FINALIZADO").length,
+      aguardandoAdmin: allDemandsRaw.filter((d: Demand) => d.status === "AGUARDANDO_VEREADORA").length,
     };
-  }, [allDemands, user]);
-
-  // Cálculo da distribuição por pessoa (apenas demandas não finalizadas)
-  const teamDistribution = useMemo(() => {
-    const counts: Record<string, { nome: string, count: number, email: string }> = {};
-    
-    // Inicializa com todos os usuários conhecidos
-    allUsers.forEach((u: any) => {
-      counts[u.uid || u.email] = { 
-        nome: u.nome || u.email, 
-        count: 0,
-        email: u.email 
-      };
-    });
-
-    // Conta demandas por responsável
-    allDemands.forEach((d: Demand) => {
-      if (d.status !== "FINALIZADO" && d.responsavelAtual) {
-        if (counts[d.responsavelAtual]) {
-          counts[d.responsavelAtual].count++;
-        }
-      }
-    });
-
-    return Object.values(counts).sort((a, b) => b.count - a.count);
-  }, [allDemands, allUsers]);
+  }, [allDemandsRaw, user]);
 
   if (loading) {
     return (
@@ -197,7 +177,7 @@ export default function Dashboard() {
             </div>
           </section>
 
-          {/* Coluna de Distribuição da Equipe */}
+          {/* Coluna de Carga de Trabalho (Agora com o mesmo formato das recentes) */}
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold font-headline flex items-center gap-2">
@@ -206,42 +186,58 @@ export default function Dashboard() {
               </h2>
             </div>
             
-            <Card className="border-none shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Demandas Ativas por Pessoa</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {teamDistribution.length === 0 ? (
-                  <p className="text-sm text-center text-muted-foreground py-4">Nenhum membro cadastrado.</p>
-                ) : (
-                  teamDistribution.map((item) => (
-                    <div key={item.email} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                          <UserIcon size={14} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold leading-none">{item.nome}</p>
-                          <p className="text-[10px] text-muted-foreground mt-1">{item.email}</p>
-                        </div>
-                      </div>
-                      <Badge className={cn(
-                        "rounded-md px-2 py-1",
-                        item.count > 5 ? "bg-orange-100 text-orange-700 hover:bg-orange-100" : 
-                        item.count > 0 ? "bg-blue-100 text-blue-700 hover:bg-blue-100" : 
-                        "bg-muted text-muted-foreground hover:bg-muted"
-                      )}>
-                        {item.count} {item.count === 1 ? 'demanda' : 'demandas'}
-                      </Badge>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
+            <div className="grid gap-3">
+              {activeDemands.length === 0 ? (
+                <div className="text-center py-10 bg-card rounded-xl border border-dashed text-muted-foreground text-sm">
+                  Nenhum processo ativo na equipe.
+                </div>
+              ) : (
+                activeDemands.map((demand: Demand) => {
+                  const responsible = allUsers.find((u: any) => u.uid === demand.responsavelAtual || u.email === demand.responsavelAtual);
+                  return (
+                    <Link key={demand.id} href={`/demandas/${demand.id}`}>
+                      <Card className="hover:shadow-md transition-all border-none shadow-sm group">
+                        <CardContent className="p-4 flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            {/* Barra lateral indicando prioridade da demanda */}
+                            <div className={cn(
+                              "w-1.5 h-10 rounded-full",
+                              demand.prioridade === "ALTA" ? "bg-red-500" : demand.prioridade === "MEDIA" ? "bg-amber-500" : "bg-blue-500"
+                            )} />
+                            <div>
+                              {/* Nome da Pessoa em destaque */}
+                              <h4 className="font-bold text-sm group-hover:text-primary transition-colors">
+                                {responsible?.nome || "Responsável não identificado"}
+                              </h4>
+                              {/* Nome da Demanda logo abaixo, formatado conforme solicitado */}
+                              <div className="flex flex-wrap items-center gap-2 mt-1">
+                                <span className="text-[10px] font-mono text-muted-foreground">#{demand.id.substring(0, 8)}</span>
+                                <Badge variant="outline" className="text-[9px] font-bold h-4 uppercase bg-primary/5 text-primary border-primary/20 max-w-[140px] truncate">
+                                  {demand.titulo}
+                                </Badge>
+                                <Badge className={cn(
+                                  "text-[8px] h-3 px-1 uppercase",
+                                  demand.status === "ABERTO" && "bg-blue-500",
+                                  demand.status === "EM_ANDAMENTO" && "bg-purple-500",
+                                  demand.status === "AGUARDANDO_VEREADORA" && "bg-orange-500"
+                                )}>
+                                  {demand.status.replace("_", " ")}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                          <ChevronRight size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  )
+                })
+              )}
+            </div>
 
-            <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
+            <div className="p-4 bg-primary/5 rounded-xl border border-primary/10 mt-4">
               <p className="text-[11px] text-primary/70 leading-relaxed italic">
-                <strong>Dica:</strong> A carga de trabalho considera apenas demandas que não foram finalizadas.
+                <strong>Nota:</strong> Esta lista exibe todas as demandas que estão aguardando ação de cada membro da equipe.
               </p>
             </div>
           </section>
