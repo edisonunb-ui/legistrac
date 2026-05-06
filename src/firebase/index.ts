@@ -1,3 +1,4 @@
+
 'use client';
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
@@ -53,6 +54,6 @@ export { useDoc } from './firestore/use-doc';
 export { useUser } from './auth/use-user';
 
 export const useStorage = () => {
-  const { app } = initializeFirebase();
-  return getStorage(app);
+  const { storage } = initializeFirebase();
+  return storage;
 };

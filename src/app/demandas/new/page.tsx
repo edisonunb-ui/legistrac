@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useCollection, useStorage } from "@/firebase";
@@ -16,7 +17,7 @@ import { ChevronLeft, Save, Loader2, User as UserIcon, Paperclip, X, FileText } 
 import Link from "next/link";
 import { DemandPriority, Attachment } from "@/lib/types";
 import { collection, query, Timestamp } from "firebase/firestore";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function NewDemandPage() {
   const { user, loading: authLoading } = useUser();
@@ -70,25 +71,10 @@ export default function NewDemandPage() {
       const storagePath = `demandas/${Date.now()}_${file.name}`;
       const storageRef = ref(storage, storagePath);
       
-      console.log(`Iniciando upload de: ${file.name}`);
-
       try {
-        const uploadTask = uploadBytesResumable(storageRef, file);
-        
-        const url = await new Promise<string>((resolve, reject) => {
-          uploadTask.on(
-            'state_changed',
-            null,
-            (error) => {
-              console.error("Erro no upload task:", error);
-              reject(error);
-            },
-            async () => {
-              const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-              resolve(downloadUrl);
-            }
-          );
-        });
+        // Usando uploadBytes que é mais direto para arquivos pequenos
+        const snapshot = await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(snapshot.ref);
         
         attachments.push({
           id: Math.random().toString(36).substring(7),
@@ -99,10 +85,9 @@ export default function NewDemandPage() {
           data: Timestamp.now(),
           enviadoPor: user?.uid || "anonimo"
         });
-        console.log(`Upload concluído: ${file.name}`);
       } catch (err: any) {
-        console.error(`Falha fatal no arquivo ${file.name}:`, err);
-        throw new Error(`O Storage do Firebase pode estar desativado ou sem permissão. Erro: ${err.message}`);
+        console.error(`Falha no upload do arquivo ${file.name}:`, err);
+        throw new Error(`Erro ao subir ${file.name}: ${err.message}`);
       }
     }
 
@@ -111,7 +96,10 @@ export default function NewDemandPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db) return;
+    if (!user || !db || !storage) {
+      toast({ title: "Erro", description: "Serviços não carregados.", variant: "destructive" });
+      return;
+    }
     
     setSaving(true);
     try {
@@ -123,13 +111,13 @@ export default function NewDemandPage() {
         anexos: attachments
       });
       
-      toast({ title: "Sucesso!", description: "Demanda e anexos registrados." });
+      toast({ title: "Sucesso!", description: "Demanda registrada com sucesso." });
       router.push(`/demandas/${demandId}`);
     } catch (error: any) {
       console.error("Erro completo ao salvar:", error);
       toast({
         title: "Falha no Envio",
-        description: error.message || "Verifique se o Storage está ativo no Firebase Console.",
+        description: error.message || "Verifique se o Storage está ativo no Console do Firebase.",
         variant: "destructive",
       });
     } finally {
@@ -241,7 +229,7 @@ export default function NewDemandPage() {
                   <>
                     <Loader2 className="animate-spin mr-2" />
                     {uploadStatus 
-                      ? `Enviando ${uploadStatus.current} de ${uploadStatus.total}...` 
+                      ? `Enviando ${uploadStatus.current}/${uploadStatus.total}...` 
                       : "Salvando..."}
                   </>
                 ) : (
