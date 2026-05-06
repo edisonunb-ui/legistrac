@@ -3,31 +3,30 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Função para obter o e-mail do token de forma segura (normalizado para minúsculas)
-    function getEmail() {
-      return request.auth != null && request.auth.token.email != null ? request.auth.token.email.lower() : null;
-    }
-
-    // Função Master: Verifica se o usuário é um dos administradores principais
+    // Função para verificar se o usuário logado é um Master Admin
     function isMasterAdmin() {
-      let email = getEmail();
-      return email != null && (
-        email == "edisonunb@gmail.com" || 
-        email == "gabinete.professoraflavia@gmail.com"
+      return request.auth != null && (
+        request.auth.token.email == "edisonunb@gmail.com" || 
+        request.auth.token.email == "gabinete.professoraflavia@gmail.com"
       );
     }
-    
-    // Regra de Ouro: O Master Admin tem acesso TOTAL e IRRESTRITO a tudo
+
+    // Regra Global: Master Admins podem TUDO
     match /{document=**} {
       allow read, write: if isMasterAdmin();
     }
 
-    // Regras específicas para coleções (Garante redundância e clareza)
+    // Regras Específicas para Usuários
     match /users/{userEmail} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && (isMasterAdmin() || getEmail() == userEmail.lower());
+      // Permite escrita se for o próprio usuário ou se for admin
+      allow write: if request.auth != null && (
+        isMasterAdmin() || 
+        (request.auth.token.email != null && request.auth.token.email.lower() == userEmail.lower())
+      );
     }
 
+    // Regras para Demandas e Trâmites
     match /demandas/{demandaId} {
       allow read, write: if request.auth != null;
     }

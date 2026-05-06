@@ -35,12 +35,15 @@ export default function NewDemandPage() {
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
-  // Define o responsável padrão de forma estável
+  // Define o responsável padrão de forma estável para evitar loop infinito
   useEffect(() => {
     if (user?.uid && !formData.responsavelId) {
-      setFormData(prev => ({ ...prev, responsavelId: user.uid }));
+      setFormData(prev => {
+        if (prev.responsavelId === user.uid) return prev;
+        return { ...prev, responsavelId: user.uid };
+      });
     }
-  }, [user?.uid]);
+  }, [user?.uid, formData.responsavelId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

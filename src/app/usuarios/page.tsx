@@ -79,12 +79,10 @@ export default function UserManagementPage() {
         permissoes: { ...permissions },
         ativo: true,
         updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
       };
 
-      await setDoc(newUserRef, {
-        ...userData,
-        createdAt: serverTimestamp(),
-      }, { merge: true });
+      await setDoc(newUserRef, userData, { merge: true });
 
       toast({ title: "Sucesso", description: "Colaborador autorizado com sucesso." });
       setNewEmail("");
