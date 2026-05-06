@@ -4,7 +4,7 @@
 import { useFirestore, useCollection, useUser, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useMemo } from "react";
-import { collection, query, doc, limit } from "firebase/firestore";
+import { collection, query, doc } from "firebase/firestore";
 import { Demand } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
-  const { user, loading } = userEmailNormalized => useUser();
+  const { user, loading } = useUser();
   const db = useFirestore();
 
   const userEmail = user?.email?.toLowerCase().trim();
@@ -56,13 +56,17 @@ export default function Dashboard() {
     };
   }, [allDemands, user]);
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-primary">
         <Loader2 className="h-10 w-10 animate-spin mb-4" />
         <p className="font-medium text-center">Iniciando LegisTrac...</p>
       </div>
     );
+  }
+
+  if (!user) {
+    return null; // O middleware ou o login lidam com isso, mas evita flash de conteúdo
   }
 
   const statCards = [
