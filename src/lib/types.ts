@@ -10,6 +10,16 @@ export interface UserPermissions {
   reabrir_demandas: boolean;
 }
 
+export interface Attachment {
+  id: string;
+  nome: string;
+  url: string;
+  tipo: string;
+  tamanho: number;
+  data: Timestamp;
+  enviadoPor: string;
+}
+
 export interface UserProfile {
   id: string; // Document ID
   uid?: string; // Firebase Auth UID (populated after first login)
@@ -36,6 +46,7 @@ export interface Demand {
   dataAtualizacao: Timestamp;
   finalizada: boolean;
   prioridade: DemandPriority;
+  anexos?: Attachment[];
 }
 
 export type TramiteAction = "ENVIO" | "DEVOLUCAO" | "FINALIZACAO" | "REABERTURA";
@@ -48,6 +59,7 @@ export interface Tramite {
   acao: TramiteAction;
   observacao: string;
   data: Timestamp;
+  anexos?: Attachment[];
 }
 
 export interface Notification {

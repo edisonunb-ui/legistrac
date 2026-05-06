@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useEffect, useState, useMemo, use } from "react";
-import { doc, collection, query, where } from "firebase/firestore";
-import { Tramite } from "@/lib/types";
+import { doc, collection, query, where, Timestamp } from "firebase/firestore";
+import { Tramite, Attachment } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +19,12 @@ import {
   User as UserIcon,
   Sparkles,
   MessageSquare,
-  Loader2
+  Loader2,
+  FileText,
+  Download,
+  ExternalLink,
+  Paperclip,
+  X
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -37,6 +41,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { 
   sendDemand, 
@@ -45,6 +50,7 @@ import {
   reopenDemand 
 } from "@/lib/demand-service";
 import { generateDemandSummary } from "@/ai/flows/demand-summary-generation";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function DemandDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -59,11 +65,11 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const [processing, setProcessing] = useState(false);
   const [obs, setObs] = useState("");
   const [selectedUser, setSelectedUser] = useState("");
+  const [tramiteFiles, setTramiteFiles] = useState<File[]>([]);
 
   const demandRef = useMemo(() => (id && db) ? doc(db, "demandas", id) : null, [db, id]);
   const { data: demand, loading: loadingDemand } = useDoc(demandRef);
 
-  // Consulta simples de trâmites (ordenação client-side para evitar erro de índice)
   const tramitesQuery = useMemo(() => (id && db && user) ? query(
     collection(db, "tramites"), 
     where("demandaId", "==", id)
@@ -79,7 +85,6 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     });
   }, [tramitesRaw]);
 
-  // Consulta simples de usuários
   const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
   const { data: allUsersRaw = [] } = useCollection(usersQuery);
 
@@ -93,6 +98,29 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
 
   const hasPermission = (perm: string) => {
     return (profile as any)?.permissoes?.[perm] || user?.email === 'edisonunb@gmail.com';
+  };
+
+  const uploadTramiteFiles = async (): Promise<Attachment[]> => {
+    const storage = getStorage();
+    const attachments: Attachment[] = [];
+
+    for (const file of tramiteFiles) {
+      const storageRef = ref(storage, `demandas/tramites/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      
+      attachments.push({
+        id: Math.random().toString(36).substring(7),
+        nome: file.name,
+        url: url,
+        tipo: file.type,
+        tamanho: file.size,
+        data: Timestamp.now(),
+        enviadoPor: user?.uid || "anonimo"
+      });
+    }
+
+    return attachments;
   };
 
   const handleGenerateSummary = async () => {
@@ -124,11 +152,13 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     }
 
     try {
-      await sendDemand(db, demand.id, user.uid, targetUser.uid || targetUser.email, obs, targetUser.perfil);
+      const newAttachments = await uploadTramiteFiles();
+      await sendDemand(db, demand.id, user.uid, targetUser.uid || targetUser.email, obs, targetUser.perfil, newAttachments);
       toast({ title: "Sucesso", description: "Demanda tramitada com sucesso." });
       setSendModalOpen(false);
       setObs("");
       setSelectedUser("");
+      setTramiteFiles([]);
     } catch (e: any) {
       toast({ title: "Erro", description: e.message || "Falha ao tramitar demanda.", variant: "destructive" });
     } finally {
@@ -141,10 +171,12 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     
     setProcessing(true);
     try {
-      await returnDemand(db, demand.id, user.uid, demand.criadoPor, obs || "Demanda devolvida para revisão.");
+      const newAttachments = await uploadTramiteFiles();
+      await returnDemand(db, demand.id, user.uid, demand.criadoPor, obs || "Demanda devolvida para revisão.", newAttachments);
       toast({ title: "Sucesso", description: "Demanda devolvida." });
       setSendModalOpen(false);
       setObs("");
+      setTramiteFiles([]);
     } catch (e: any) {
       toast({ title: "Erro", description: "Falha ao devolver demanda.", variant: "destructive" });
     } finally {
@@ -207,11 +239,16 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   }
 
   const isResponsible = demand.responsavelAtual === user?.uid;
-  
-  // Filtra colaboradores excluindo o próprio usuário logado
-  const filteredCollaborators = allUsers.filter(u => 
-    u.email?.toLowerCase() !== user?.email?.toLowerCase()
-  );
+  const filteredCollaborators = allUsers.filter(u => u.email?.toLowerCase() !== user?.email?.toLowerCase());
+
+  // Coleta todos os anexos de todos os trâmites para a Pasta Digital
+  const allAttachments = useMemo(() => {
+    const fromDemand = demand.anexos || [];
+    const fromTramites = tramites.flatMap(t => t.anexos || []);
+    const combined = [...fromDemand, ...fromTramites];
+    // Remove duplicatas se houver (baseado na URL)
+    return Array.from(new Map(combined.map(item => [item.url, item])).values());
+  }, [demand.anexos, tramites]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -245,11 +282,11 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                   <DialogTrigger asChild>
                     <Button className="gap-2 shadow-sm"><Send size={18} /> Tramitar</Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-md">
                     <DialogHeader>
                       <DialogTitle>Mover Demanda</DialogTitle>
                       <DialogDescription>
-                        Selecione um colaborador para encaminhar o protocolo e adicione instruções.
+                        Envie este protocolo para outro colaborador e anexe documentos se necessário.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
@@ -268,7 +305,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                               ))
                             ) : (
                               <div className="p-2 text-xs text-center text-muted-foreground">
-                                Nenhum outro colaborador encontrado no sistema.
+                                Nenhum outro colaborador encontrado.
                               </div>
                             )}
                           </SelectContent>
@@ -277,10 +314,26 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                       <div className="space-y-2">
                         <Label>Observação</Label>
                         <Textarea 
-                          placeholder="Instruções ou resumo da tramitação..." 
+                          placeholder="Instruções para o próximo responsável..." 
                           value={obs} 
                           onChange={e => setObs(e.target.value)}
                         />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
+                          <Paperclip size={14} /> Adicionar Documentos ao Despacho
+                        </Label>
+                        <Input 
+                          type="file" 
+                          multiple 
+                          className="h-9 text-xs" 
+                          onChange={(e) => e.target.files && setTramiteFiles(Array.from(e.target.files))}
+                        />
+                        {tramiteFiles.length > 0 && (
+                          <div className="text-[10px] text-primary font-medium mt-1">
+                            {tramiteFiles.length} arquivo(s) selecionado(s)
+                          </div>
+                        )}
                       </div>
                     </div>
                     <DialogFooter className="gap-2">
@@ -288,7 +341,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                         <RotateCcw size={16} /> Devolver
                       </Button>
                       <Button onClick={handleSend} disabled={processing || !selectedUser} className="gap-2">
-                        {processing ? <Loader2 className="animate-spin h-4 w-4" /> : <Send size={16} />} Enviar
+                        {processing ? <Loader2 className="animate-spin h-4 w-4" /> : <Send size={16} />} Enviar Despacho
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -342,7 +395,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
               <CardHeader className="bg-muted/30">
                 <CardTitle className="text-lg font-headline font-bold flex items-center gap-2">
                   <span className="p-1.5 bg-primary/10 rounded-lg"><History size={18} className="text-primary" /></span>
-                  Linha do Tempo
+                  Linha do Tempo (Despachos)
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-6">
@@ -371,7 +424,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                             {t.acao === "FINALIZACAO" && <CheckCircle size={16} />}
                             {t.acao === "REABERTURA" && <RotateCcw size={16} />}
                           </div>
-                          <div className="flex-1 pb-2">
+                          <div className="flex-1 pb-4">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
                               <h4 className="font-bold text-sm">
                                 {t.acao} <span className="text-muted-foreground font-normal">por {deUser}</span>
@@ -382,8 +435,25 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                               <p className="text-[10px] text-muted-foreground mb-2 italic">Destinado para: {paraUser}</p>
                             )}
                             {t.observacao && (
-                              <div className="p-3 bg-muted/40 rounded-lg text-xs border-l-2 border-primary/20">
+                              <div className="p-3 bg-muted/40 rounded-lg text-xs border-l-2 border-primary/20 mb-2">
                                 {t.observacao}
+                              </div>
+                            )}
+                            
+                            {t.anexos && t.anexos.length > 0 && (
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {t.anexos.map((anexo, aidx) => (
+                                  <a 
+                                    key={aidx} 
+                                    href={anexo.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 p-2 bg-primary/5 rounded border border-primary/10 hover:bg-primary/10 transition-colors text-[10px] font-medium text-primary"
+                                  >
+                                    <FileText size={12} />
+                                    <span className="max-w-[150px] truncate">{anexo.nome}</span>
+                                  </a>
+                                ))}
                               </div>
                             )}
                           </div>
@@ -398,8 +468,50 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
 
           <div className="space-y-6">
             <Card className="border-none shadow-sm">
+              <CardHeader className="pb-3 border-b mb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <FileText className="text-primary" size={20} />
+                  Pasta Digital
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {allAttachments.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground space-y-2">
+                    <Paperclip className="mx-auto opacity-20" size={32} />
+                    <p className="text-xs">Nenhum documento anexado a este processo.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {allAttachments.map((anexo, idx) => (
+                      <div key={idx} className="group p-3 rounded-lg border bg-card hover:border-primary transition-all flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="p-2 bg-muted rounded group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                            <FileText size={16} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold truncate pr-4">{anexo.nome}</p>
+                            <p className="text-[9px] text-muted-foreground uppercase font-medium tracking-tight">
+                              {(anexo.tamanho / 1024).toFixed(1)} KB • {anexo.data?.toDate().toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" asChild>
+                            <a href={anexo.url} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink size={14} />
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-none shadow-sm">
               <CardHeader>
-                <CardTitle className="text-lg">Painel de Controle</CardTitle>
+                <CardTitle className="text-lg">Informações Gerais</CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
                 <div className="flex items-center gap-3">
@@ -412,7 +524,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-muted rounded-lg text-primary shadow-sm"><UserIcon size={18} /></div>
                   <div>
-                    <p className="text-[9px] uppercase text-muted-foreground font-bold tracking-wider">Responsável</p>
+                    <p className="text-[9px] uppercase text-muted-foreground font-bold tracking-wider">Responsável Atual</p>
                     <p className="font-bold text-sm">
                       {allUsers.find((u: any) => u.uid === demand.responsavelAtual || u.email === demand.responsavelAtual)?.nome || "Não Atribuído"}
                     </p>

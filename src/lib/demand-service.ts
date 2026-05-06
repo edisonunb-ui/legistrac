@@ -5,7 +5,7 @@ import {
   runTransaction,
   Firestore
 } from "firebase/firestore";
-import { DemandPriority, DemandStatus, UserRole } from "./types";
+import { DemandPriority, DemandStatus, UserRole, Attachment } from "./types";
 
 /**
  * Cria uma nova demanda e registra o trâmite inicial.
@@ -19,6 +19,7 @@ export async function createDemand(
     prazo: string; 
     prioridade: DemandPriority;
     responsavelId?: string;
+    anexos?: Attachment[];
   }
 ) {
   if (!userId) throw new Error("Usuário não identificado.");
@@ -39,6 +40,7 @@ export async function createDemand(
     dataCriacao: serverTimestamp(),
     dataAtualizacao: serverTimestamp(),
     finalizada: false,
+    anexos: data.anexos || []
   };
 
   await runTransaction(db, async (transaction) => {
@@ -50,6 +52,7 @@ export async function createDemand(
       acao: "ENVIO",
       observacao: "Demanda inicial registrada no sistema.",
       data: serverTimestamp(),
+      anexos: data.anexos || []
     });
   });
 
@@ -65,9 +68,9 @@ export async function sendDemand(
   de: string,
   para: string,
   observacao: string,
-  paraRole: UserRole
+  paraRole: UserRole,
+  anexos: Attachment[] = []
 ) {
-  // Se for enviado para ADMIN ou SUPER_ADMIN, o status muda para AGUARDANDO_VEREADORA
   const isAdmin = paraRole === "ADMIN" || paraRole === "SUPER_ADMIN";
   const status: DemandStatus = isAdmin ? "AGUARDANDO_VEREADORA" : "EM_ANDAMENTO";
   
@@ -76,10 +79,14 @@ export async function sendDemand(
   const notificationRef = doc(collection(db, "notificacoes"));
 
   await runTransaction(db, async (transaction) => {
+    const demandDoc = await transaction.get(demandRef);
+    const existingAnexos = demandDoc.data()?.anexos || [];
+
     transaction.update(demandRef, {
       responsavelAtual: para,
       status: status,
       dataAtualizacao: serverTimestamp(),
+      anexos: [...existingAnexos, ...anexos]
     });
 
     transaction.set(tramiteRef, {
@@ -89,6 +96,7 @@ export async function sendDemand(
       acao: "ENVIO",
       observacao: observacao || "Demanda encaminhada.",
       data: serverTimestamp(),
+      anexos: anexos
     });
 
     transaction.set(notificationRef, {
@@ -109,17 +117,22 @@ export async function returnDemand(
   demandaId: string,
   de: string,
   para: string,
-  observacao: string
+  observacao: string,
+  anexos: Attachment[] = []
 ) {
   const demandRef = doc(db, "demandas", demandaId);
   const tramiteRef = doc(collection(db, "tramites"));
   const notificationRef = doc(collection(db, "notificacoes"));
 
   await runTransaction(db, async (transaction) => {
+    const demandDoc = await transaction.get(demandRef);
+    const existingAnexos = demandDoc.data()?.anexos || [];
+
     transaction.update(demandRef, {
       responsavelAtual: para,
       status: "EM_ANDAMENTO",
       dataAtualizacao: serverTimestamp(),
+      anexos: [...existingAnexos, ...anexos]
     });
 
     transaction.set(tramiteRef, {
@@ -129,6 +142,7 @@ export async function returnDemand(
       acao: "DEVOLUCAO",
       observacao: observacao || "Demanda devolvida para ajustes.",
       data: serverTimestamp(),
+      anexos: anexos
     });
 
     transaction.set(notificationRef, {
@@ -171,7 +185,6 @@ export async function finalizeDemand(
       data: serverTimestamp(),
     });
 
-    // Notifica o criador original
     transaction.set(notificationRef, {
       userId: criadorId,
       mensagem: `Sua demanda foi finalizada com sucesso.`,

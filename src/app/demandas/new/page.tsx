@@ -12,10 +12,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, Loader2, User as UserIcon } from "lucide-react";
+import { ChevronLeft, Save, Loader2, User as UserIcon, Paperclip, X, FileText } from "lucide-react";
 import Link from "next/link";
-import { DemandPriority } from "@/lib/types";
-import { collection, query } from "firebase/firestore";
+import { DemandPriority, Attachment } from "@/lib/types";
+import { collection, query, Timestamp } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function NewDemandPage() {
   const { user, loading: authLoading } = useUser();
@@ -33,7 +34,9 @@ export default function NewDemandPage() {
     responsavelId: "",
   });
 
-  // Inicializa o responsável apenas uma vez para evitar loops infinitos
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState(false);
+
   useEffect(() => {
     if (user?.uid && !hasInitialized.current) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
@@ -44,28 +47,67 @@ export default function NewDemandPage() {
   const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const selectedFiles = Array.from(e.target.files);
+      setFiles(prev => [...prev, ...selectedFiles]);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadFiles = async (): Promise<Attachment[]> => {
+    const storage = getStorage();
+    const attachments: Attachment[] = [];
+
+    for (const file of files) {
+      const storageRef = ref(storage, `demandas/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      
+      attachments.push({
+        id: Math.random().toString(36).substring(7),
+        nome: file.name,
+        url: url,
+        tipo: file.type,
+        tamanho: file.size,
+        data: Timestamp.now(),
+        enviadoPor: user?.uid || "anonimo"
+      });
+    }
+
+    return attachments;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !db) return;
     
     setSaving(true);
+    setUploadProgress(true);
     try {
+      const attachments = await uploadFiles();
+      
       const demandId = await createDemand(db, user.uid, {
         ...formData,
-        responsavelId: formData.responsavelId || user.uid
+        responsavelId: formData.responsavelId || user.uid,
+        anexos: attachments
       });
       
-      toast({ title: "Sucesso!", description: "Demanda criada com sucesso." });
+      toast({ title: "Sucesso!", description: "Demanda e anexos registrados." });
       router.push(`/demandas/${demandId}`);
     } catch (error: any) {
       console.error("Erro ao salvar:", error);
       toast({
         title: "Erro ao Salvar",
-        description: "Verifique se as Regras foram publicadas no Console do Firebase.",
+        description: error.message || "Falha no registro.",
         variant: "destructive",
       });
     } finally {
       setSaving(false);
+      setUploadProgress(false);
     }
   };
 
@@ -82,7 +124,7 @@ export default function NewDemandPage() {
           <h1 className="text-3xl font-headline font-bold">Nova Demanda</h1>
         </header>
 
-        <Card className="max-w-2xl border-none shadow-xl">
+        <Card className="max-w-3xl border-none shadow-xl">
           <form onSubmit={handleSubmit}>
             <CardHeader>
               <CardTitle className="text-lg font-bold">Dados da Solicitação</CardTitle>
@@ -128,13 +170,56 @@ export default function NewDemandPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="descricao">Descrição Detalhada</Label>
-                <Textarea id="descricao" rows={6} required value={formData.descricao} onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))} />
+                <Textarea id="descricao" rows={4} required value={formData.descricao} onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))} />
+              </div>
+
+              <div className="space-y-3 p-4 bg-muted/20 rounded-xl border-2 border-dashed border-muted">
+                <Label className="flex items-center gap-2 text-primary">
+                  <Paperclip size={16} /> Anexos (Fotos e Documentos)
+                </Label>
+                <Input 
+                  type="file" 
+                  multiple 
+                  className="bg-background cursor-pointer" 
+                  onChange={handleFileChange}
+                />
+                
+                {files.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+                    {files.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 bg-background rounded-lg border text-xs">
+                        <div className="flex items-center gap-2 truncate">
+                          <FileText size={14} className="text-muted-foreground" />
+                          <span className="truncate">{file.name}</span>
+                        </div>
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 w-6 p-0 text-destructive"
+                          onClick={() => removeFile(idx)}
+                        >
+                          <X size={14} />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
             <CardFooter className="flex justify-end gap-3 bg-muted/30 pt-6">
               <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
               <Button type="submit" disabled={saving}>
-                {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />} Registrar Demanda
+                {saving ? (
+                  <>
+                    <Loader2 className="animate-spin mr-2" />
+                    {uploadProgress ? "Enviando Arquivos..." : "Salvando..."}
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2" /> Registrar Demanda
+                  </>
+                )}
               </Button>
             </CardFooter>
           </form>

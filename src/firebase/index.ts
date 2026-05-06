@@ -3,6 +3,7 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBh9hcARIT6NNLM0T583mn9Ts5RqC2AgfI",
@@ -17,6 +18,7 @@ const firebaseConfig = {
 let appInstance: FirebaseApp;
 let authInstance: Auth;
 let dbInstance: Firestore;
+let storageInstance: FirebaseStorage;
 
 export function initializeFirebase() {
   if (!getApps().length) {
@@ -27,8 +29,9 @@ export function initializeFirebase() {
   
   if (!authInstance) authInstance = getAuth(appInstance);
   if (!dbInstance) dbInstance = getFirestore(appInstance);
+  if (!storageInstance) storageInstance = getStorage(appInstance);
   
-  return { app: appInstance, auth: authInstance, db: dbInstance };
+  return { app: appInstance, auth: authInstance, db: dbInstance, storage: storageInstance };
 }
 
 export { 
