@@ -23,7 +23,7 @@ export async function provisionarMembro(data: {
       displayName: data.nome,
     });
 
-    // 2. Cria o perfil detalhado no Firestore
+    // 2. Cria o perfil detalhado no Firestore usando o email como chave
     const userProfile = {
       uid: userRecord.uid,
       nome: data.nome,
@@ -55,7 +55,7 @@ export async function provisionarMembro(data: {
  */
 export async function alternarStatusUsuario(email: string, novoStatus: boolean) {
   try {
-    await adminDb.collection("users").doc(email).update({
+    await adminDb.collection("users").doc(email.toLowerCase()).update({
       ativo: novoStatus,
       updatedAt: new Date().toISOString(),
     });

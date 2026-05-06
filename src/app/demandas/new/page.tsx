@@ -32,15 +32,12 @@ export default function NewDemandPage() {
     responsavelId: "",
   });
 
-  // Inicializa o responsável de forma estável para evitar loop infinito
+  // Inicializa o responsável uma única vez quando o usuário carrega
   useEffect(() => {
     if (user?.uid && !formData.responsavelId) {
-      setFormData(prev => {
-        if (prev.responsavelId === user.uid) return prev;
-        return { ...prev, responsavelId: user.uid };
-      });
+      setFormData(prev => ({ ...prev, responsavelId: user.uid }));
     }
-  }, [user?.uid, formData.responsavelId]);
+  }, [user?.uid]);
 
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
