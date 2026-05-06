@@ -64,9 +64,13 @@ export default function LoginPage() {
             if (createError.code === 'auth/email-already-in-use') {
               throw new Error("Senha incorreta.");
             }
+            if (createError.code === 'auth/operation-not-allowed') {
+              setShowConfigError(true);
+              return;
+            }
             throw createError;
           }
-        } else if (error.code === 'auth/operation-not-allowed') {
+        } else if (loginError.code === 'auth/operation-not-allowed') {
           setShowConfigError(true);
           return;
         } else {
@@ -109,7 +113,6 @@ export default function LoginPage() {
         router.push("/");
       }
     } catch (error: any) {
-      console.error("Erro Auth:", error.code);
       if (error.code === 'auth/operation-not-allowed') {
         setShowConfigError(true);
       } else {

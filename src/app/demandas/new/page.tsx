@@ -23,6 +23,7 @@ export default function NewDemandPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [initialSet, setInitialSet] = useState(false);
   
   const [formData, setFormData] = useState({
     titulo: "",
@@ -35,12 +36,13 @@ export default function NewDemandPage() {
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
-  // Sincroniza o responsável inicial apenas uma vez quando o usuário carrega
+  // Sincroniza o responsável padrão apenas UMA vez para evitar loop infinito
   useEffect(() => {
-    if (user?.uid && !formData.responsavelId) {
+    if (user?.uid && !initialSet && !formData.responsavelId) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
+      setInitialSet(true);
     }
-  }, [user?.uid]);
+  }, [user?.uid, initialSet, formData.responsavelId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +57,6 @@ export default function NewDemandPage() {
       });
       router.push(`/demandas/${demandId}`);
     } catch (error: any) {
-      console.error("Erro ao criar demanda:", error);
       toast({
         title: "Erro ao criar demanda",
         description: error.message || "Verifique sua conexão e tente novamente.",
