@@ -3,15 +3,15 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Função para verificar se o usuário logado é um Master Admin
+    // Função ultra-segura para verificar se o usuário logado é um Master Admin
     function isMasterAdmin() {
-      return request.auth != null && (
-        request.auth.token.email == "edisonunb@gmail.com" || 
-        request.auth.token.email == "gabinete.professoraflavia@gmail.com"
-      );
+      return request.auth != null && 
+             request.auth.token.email != null && 
+             (request.auth.token.email.lower() == "edisonunb@gmail.com" || 
+              request.auth.token.email.lower() == "gabinete.professoraflavia@gmail.com");
     }
 
-    // Regra Global: Master Admins podem TUDO
+    // Regra Global: Master Admins têm acesso ABSOLUTO e IRRESTRITO
     match /{document=**} {
       allow read, write: if isMasterAdmin();
     }
@@ -19,14 +19,14 @@ service cloud.firestore {
     // Regras Específicas para Usuários
     match /users/{userEmail} {
       allow read: if request.auth != null;
-      // Permite escrita se for o próprio usuário ou se for admin
+      // Permite escrita se for o próprio usuário ou se for admin mestre
       allow write: if request.auth != null && (
         isMasterAdmin() || 
         (request.auth.token.email != null && request.auth.token.email.lower() == userEmail.lower())
       );
     }
 
-    // Regras para Demandas e Trâmites
+    // Regras para Demandas, Trâmites e Notificações (Protegidas por Auth)
     match /demandas/{demandaId} {
       allow read, write: if request.auth != null;
     }

@@ -35,15 +35,12 @@ export default function NewDemandPage() {
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
-  // Define o responsável padrão de forma estável para evitar loop infinito
+  // Define o responsável padrão apenas uma vez quando o usuário logar
   useEffect(() => {
-    if (user?.uid && !formData.responsavelId) {
-      setFormData(prev => {
-        if (prev.responsavelId === user.uid) return prev;
-        return { ...prev, responsavelId: user.uid };
-      });
+    if (user?.uid && formData.responsavelId === "") {
+      setFormData(prev => ({ ...prev, responsavelId: user.uid }));
     }
-  }, [user?.uid, formData.responsavelId]);
+  }, [user?.uid]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,7 +151,7 @@ export default function NewDemandPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {allUsers.map((u: UserProfile) => (
-                      <SelectItem key={u.id || u.uid} value={u.uid || u.email}>
+                      <SelectItem key={u.uid || u.email} value={u.uid || u.email}>
                         {u.nome} ({u.perfil})
                       </SelectItem>
                     ))}
