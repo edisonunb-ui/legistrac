@@ -25,7 +25,7 @@ export function initializeFirebase() {
     app = getApp();
   }
   
-  // Singleton pattern for Auth and Firestore to avoid internal assertion errors
+  // Singleton estrito para evitar "Unexpected state"
   if (!auth) auth = getAuth(app);
   if (!db) db = getFirestore(app);
   

@@ -32,13 +32,12 @@ export default function NewDemandPage() {
     responsavelId: "",
   });
 
-  // Inicializa o responsável apenas quando o usuário carrega e o campo está vazio
-  // Usamos um efeito que não depende do formData inteiro para evitar loops
+  // Define o responsável padrão uma única vez quando o usuário carrega
   useEffect(() => {
     if (user && !formData.responsavelId) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
     }
-  }, [user]);
+  }, [user?.uid]);
 
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
@@ -49,9 +48,12 @@ export default function NewDemandPage() {
     setSaving(true);
 
     try {
+      // Garante que temos um ID de responsável
+      const finalResponsavelId = formData.responsavelId || user.uid;
+      
       const demandId = await createDemand(db, user.uid, {
         ...formData,
-        responsavelId: formData.responsavelId || user.uid
+        responsavelId: finalResponsavelId
       });
       
       toast({
@@ -63,7 +65,7 @@ export default function NewDemandPage() {
       console.error("Erro ao salvar:", error);
       toast({
         title: "Erro ao criar demanda",
-        description: error.message || "Verifique suas permissões de acesso.",
+        description: "Verifique sua conexão ou permissões de acesso.",
         variant: "destructive",
       });
     } finally {

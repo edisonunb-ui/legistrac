@@ -2,34 +2,25 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Verifica se o usuário está autenticado
+    // Função básica de autenticação
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Verifica se é o administrador mestre
+    // Master Admin com acesso total (edisonunb@gmail.com)
     function isMasterAdmin() {
       return isSignedIn() && 
              request.auth.token.email != null && 
              request.auth.token.email.lower() == "edisonunb@gmail.com";
     }
 
-    // Acesso total para o SuperAdmin em qualquer documento
-    match /{document=**} {
-      allow read, write: if isMasterAdmin();
-    }
-
     // Regras para perfis de usuários
     match /users/{userEmail} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() && (
-        isMasterAdmin() || 
-        (request.auth.token.email != null && request.auth.token.email.lower() == userEmail.lower())
-      );
+      allow write: if isMasterAdmin() || (isSignedIn() && request.auth.token.email.lower() == userEmail.lower());
     }
 
-    // Regras para demandas, trâmites e notificações
-    // Permitimos leitura e escrita para qualquer usuário logado do gabinete
+    // Coleções operacionais: Acesso permitido para qualquer membro autenticado do gabinete
     match /demandas/{docId} {
       allow read, write: if isSignedIn();
     }

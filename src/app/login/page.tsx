@@ -69,7 +69,7 @@ export default function LoginPage() {
       let errorMessage = "E-mail ou senha incorretos.";
       
       if (error.code === 'auth/operation-not-allowed') {
-        errorMessage = "O provedor de login está desativado no Firebase.";
+        errorMessage = "O provedor de login está desativado no Firebase console.";
       }
 
       toast({
