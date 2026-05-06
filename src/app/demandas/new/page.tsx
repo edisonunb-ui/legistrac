@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, Save, Loader2, User as UserIcon } from "lucide-react";
 import Link from "next/link";
-import { DemandPriority, UserProfile } from "@/lib/types";
+import { DemandPriority } from "@/lib/types";
 import { collection, query } from "firebase/firestore";
 
 export default function NewDemandPage() {
@@ -23,7 +23,6 @@ export default function NewDemandPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
-  const [hasInitialized, setHasInitialized] = useState(false);
   
   const [formData, setFormData] = useState({
     titulo: "",
@@ -33,22 +32,19 @@ export default function NewDemandPage() {
     responsavelId: "",
   });
 
+  // Inicializa o responsável apenas uma vez quando o usuário carrega
   useEffect(() => {
-    if (user?.uid && !hasInitialized) {
+    if (user?.uid && !formData.responsavelId) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
-      setHasInitialized(true);
     }
-  }, [user?.uid, hasInitialized]);
+  }, [user?.uid, formData.responsavelId]);
 
   const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db) {
-      toast({ title: "Erro", description: "Sessão inválida. Recarregue a página.", variant: "destructive" });
-      return;
-    }
+    if (!user || !db) return;
     
     setSaving(true);
     try {
@@ -60,10 +56,10 @@ export default function NewDemandPage() {
       toast({ title: "Sucesso!", description: "Demanda criada com sucesso." });
       router.push(`/demandas/${demandId}`);
     } catch (error: any) {
-      console.error("Erro detalhado ao salvar:", error);
+      console.error("Erro ao salvar demanda:", error);
       toast({
-        title: "Erro de Permissão",
-        description: "Verifique se as regras do Firestore foram publicadas no console ou se você está logado.",
+        title: "Erro ao Salvar",
+        description: "Verifique se você publicou as regras de segurança no Console do Firebase.",
         variant: "destructive",
       });
     } finally {
@@ -114,7 +110,7 @@ export default function NewDemandPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Responsável</Label>
+                <Label>Responsável Atual</Label>
                 <Select value={formData.responsavelId} onValueChange={(v) => setFormData(prev => ({ ...prev, responsavelId: v }))}>
                   <SelectTrigger>
                     <div className="flex items-center gap-2"><UserIcon size={14} /><SelectValue /></div>
@@ -129,7 +125,7 @@ export default function NewDemandPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="descricao">Descrição</Label>
+                <Label htmlFor="descricao">Descrição Detalhada</Label>
                 <Textarea id="descricao" rows={6} required value={formData.descricao} onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))} />
               </div>
             </CardContent>

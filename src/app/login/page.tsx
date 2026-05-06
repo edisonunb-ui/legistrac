@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutDashboard, Loader2, Lock, Mail, AlertTriangle } from "lucide-react";
+import { LayoutDashboard, Loader2, AlertTriangle } from "lucide-react";
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -54,12 +54,13 @@ export default function LoginPage() {
         } else if (emailLower === "edisonunb@gmail.com") {
           router.push("/");
         } else {
-          toast({ title: "Acesso Restrito", description: "E-mail não provisionado.", variant: "destructive" });
+          toast({ title: "Acesso Restrito", description: "E-mail não provisionado no sistema.", variant: "destructive" });
           await auth.signOut();
         }
       }
     } catch (error: any) {
-      toast({ title: "Erro", description: "E-mail ou senha incorretos.", variant: "destructive" });
+      console.error("Erro no login:", error);
+      toast({ title: "Erro de Acesso", description: "E-mail ou senha incorretos.", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -79,7 +80,7 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
-              <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+              <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
@@ -91,9 +92,9 @@ export default function LoginPage() {
           </form>
           <Alert className="mt-4 bg-muted/50 border-none">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle className="text-xs font-bold">Nota do Sistema</AlertTitle>
+            <AlertTitle className="text-xs font-bold">Acesso Restrito</AlertTitle>
             <AlertDescription className="text-[10px]">
-              O acesso é restrito a membros cadastrados.
+              O acesso é exclusivo para membros do gabinete previamente autorizados.
             </AlertDescription>
           </Alert>
         </CardContent>
