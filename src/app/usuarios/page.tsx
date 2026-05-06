@@ -3,7 +3,7 @@
 import { useUser, useFirestore, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
-import { collection, query, orderBy } from "firebase/firestore";
+import { collection, query } from "firebase/firestore";
 import { UserRole, UserPermissions } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,8 +45,14 @@ export default function UserManagementPage() {
   const userEmailNormalized = user?.email?.toLowerCase().trim();
   const isMasterAdmin = userEmailNormalized === "edisonunb@gmail.com";
 
-  const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db, user]);
-  const { data: allUsers = [], loading: usersLoading } = useCollection(usersQuery);
+  // Consulta sem orderBy para evitar erro de índice
+  const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
+  const { data: allUsersRaw = [], loading: usersLoading } = useCollection(usersQuery);
+
+  // Ordenação manual no cliente
+  const allUsers = useMemo(() => {
+    return [...allUsersRaw].sort((a: any, b: any) => (a.nome || "").localeCompare(b.nome || ""));
+  }, [allUsersRaw]);
 
   const handleTogglePermission = (key: keyof UserPermissions) => {
     setPermissions(prev => ({ ...prev, [key]: !prev[key] }));

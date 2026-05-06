@@ -61,7 +61,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const demandRef = useMemo(() => (id && db) ? doc(db, "demandas", id) : null, [db, id]);
   const { data: demand, loading: loadingDemand } = useDoc(demandRef);
 
-  // Removido orderBy para evitar erro de índice no Firestore
+  // Consulta sem orderBy para evitar erro de índice
   const tramitesQuery = useMemo(() => (id && db && user) ? query(
     collection(db, "tramites"), 
     where("demandaId", "==", id)
@@ -69,7 +69,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   
   const { data: tramitesRaw = [] } = useCollection(tramitesQuery);
 
-  // Ordenação manual no cliente para evitar necessidade de índice composto
+  // Ordenação manual no cliente
   const tramites = useMemo(() => {
     return [...tramitesRaw].sort((a: any, b: any) => {
       const dateA = a.data?.toMillis() || 0;
@@ -78,8 +78,14 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     });
   }, [tramitesRaw]);
 
+  // Consulta simples de usuários para evitar erros de índice
   const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
-  const { data: allUsers = [] } = useCollection(usersQuery);
+  const { data: allUsersRaw = [] } = useCollection(usersQuery);
+
+  // Ordena os usuários por nome no cliente
+  const allUsers = useMemo(() => {
+    return [...allUsersRaw].sort((a: any, b: any) => (a.nome || "").localeCompare(b.nome || ""));
+  }, [allUsersRaw]);
 
   const userEmail = user?.email?.toLowerCase().trim();
   const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
@@ -103,7 +109,6 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   };
 
   const handleSend = async () => {
-    console.log("Iniciando envio para:", selectedUser);
     if (!demand || !user || !selectedUser || !db) {
       toast({ title: "Atenção", description: "Selecione um destinatário.", variant: "destructive" });
       return;
@@ -113,7 +118,6 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     const targetUser = allUsers.find((u: any) => u.uid === selectedUser);
     
     if (!targetUser) {
-      console.error("Usuário destino não encontrado na lista local");
       setProcessing(false);
       toast({ title: "Erro", description: "Usuário destino não encontrado.", variant: "destructive" });
       return;
@@ -126,7 +130,6 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
       setObs("");
       setSelectedUser("");
     } catch (e: any) {
-      console.error("Erro ao tramitar demanda:", e);
       toast({ title: "Erro", description: e.message || "Falha ao tramitar demanda.", variant: "destructive" });
     } finally {
       setProcessing(false);
@@ -145,7 +148,6 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
       setSendModalOpen(false);
       setObs("");
     } catch (e: any) {
-      console.error("Erro ao devolver:", e);
       toast({ title: "Erro", description: "Falha ao devolver demanda.", variant: "destructive" });
     } finally {
       setProcessing(false);
@@ -252,9 +254,19 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                             <SelectValue placeholder="Selecione um colaborador" />
                           </SelectTrigger>
                           <SelectContent>
-                            {allUsers.filter(u => u.uid && u.uid !== user?.uid).map((u: any) => (
-                              <SelectItem key={u.uid} value={u.uid}>{u.nome} ({u.perfil})</SelectItem>
-                            ))}
+                            {allUsers
+                              .filter(u => u.uid && u.uid !== user?.uid)
+                              .map((u: any) => (
+                                <SelectItem key={u.uid} value={u.uid}>
+                                  {u.nome} ({u.perfil})
+                                </SelectItem>
+                              ))
+                            }
+                            {allUsers.filter(u => u.uid && u.uid !== user?.uid).length === 0 && (
+                              <div className="p-2 text-xs text-center text-muted-foreground">
+                                Nenhum outro colaborador encontrado.
+                              </div>
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
