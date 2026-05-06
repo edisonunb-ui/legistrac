@@ -13,7 +13,8 @@ import {
   ChevronRight, 
   Calendar, 
   AlertCircle,
-  Clock
+  Clock,
+  ChevronLeft
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -79,11 +80,17 @@ export default function DemandListPage() {
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <header className="mb-8 space-y-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-headline font-bold text-foreground">Demandas</h1>
-            <Link href="/demandas/new">
-              <Button size="sm" className="shadow-sm">Nova Demanda</Button>
+          <div className="flex flex-col gap-2">
+            <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors w-fit text-sm font-medium">
+              <ChevronLeft size={16} />
+              Voltar ao Dashboard
             </Link>
+            <div className="flex items-center justify-between mt-2">
+              <h1 className="text-3xl font-headline font-bold text-foreground">Demandas</h1>
+              <Link href="/demandas/new">
+                <Button size="sm" className="shadow-sm">Nova Demanda</Button>
+              </Link>
+            </div>
           </div>
 
           <div className="flex flex-col lg:flex-row gap-4 p-4 bg-card rounded-xl border shadow-sm">
@@ -106,7 +113,9 @@ export default function DemandListPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="MINHAS">Minhas Demandas</SelectItem>
-                    {(profile as any)?.perfil === "ADMIN" && <SelectItem value="TODAS">Todas (Geral)</SelectItem>}
+                    {(profile as any)?.perfil === "ADMIN" || (profile as any)?.perfil === "SUPER_ADMIN" ? (
+                      <SelectItem value="TODAS">Todas (Geral)</SelectItem>
+                    ) : null}
                   </SelectContent>
                 </Select>
               </div>

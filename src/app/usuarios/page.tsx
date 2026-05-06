@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useCollection } from "@/firebase";
@@ -13,9 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Loader2, ShieldCheck, Settings2, AlertCircle, Trash2 } from "lucide-react";
+import { Users, UserPlus, Loader2, ShieldCheck, Settings2, AlertCircle, Trash2, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { provisionarMembro, excluirUsuario } from "@/app/actions/provisionamento";
+import Link from "next/link";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -136,19 +138,25 @@ export default function UserManagementPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
-        <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-headline font-bold flex items-center gap-2">
-              <Users className="text-primary" />
-              Gestão da Equipe
-            </h1>
-            <p className="text-muted-foreground mt-1">Gerencie os acessos do seu gabinete parlamentar.</p>
+        <header className="mb-8 flex flex-col gap-4">
+          <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors w-fit text-sm font-medium">
+            <ChevronLeft size={16} />
+            Voltar ao Dashboard
+          </Link>
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-headline font-bold flex items-center gap-2">
+                <Users className="text-primary" />
+                Gestão da Equipe
+              </h1>
+              <p className="text-muted-foreground mt-1">Gerencie os acessos do seu gabinete parlamentar.</p>
+            </div>
+            {isMasterAdmin && (
+              <Badge className="bg-amber-500 text-white gap-1 py-1 px-3 shadow-md">
+                <ShieldCheck size={14} /> MODO SUPER ADMIN
+              </Badge>
+            )}
           </div>
-          {isMasterAdmin && (
-            <Badge className="bg-amber-500 text-white gap-1 py-1 px-3 shadow-md">
-              <ShieldCheck size={14} /> MODO SUPER ADMIN
-            </Badge>
-          )}
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
