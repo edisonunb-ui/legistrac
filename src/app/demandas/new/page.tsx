@@ -35,7 +35,7 @@ export default function NewDemandPage() {
   });
 
   const [files, setFiles] = useState<File[]>([]);
-  const [uploadProgress, setUploadProgress] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<{ current: number, total: number } | null>(null);
 
   useEffect(() => {
     if (user?.uid && !hasInitialized.current) {
@@ -62,20 +62,30 @@ export default function NewDemandPage() {
     const storage = getStorage();
     const attachments: Attachment[] = [];
 
-    for (const file of files) {
-      const storageRef = ref(storage, `demandas/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
+    if (files.length === 0) return [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      setUploadStatus({ current: i + 1, total: files.length });
       
-      attachments.push({
-        id: Math.random().toString(36).substring(7),
-        nome: file.name,
-        url: url,
-        tipo: file.type,
-        tamanho: file.size,
-        data: Timestamp.now(),
-        enviadoPor: user?.uid || "anonimo"
-      });
+      try {
+        const storageRef = ref(storage, `demandas/${Date.now()}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(storageRef);
+        
+        attachments.push({
+          id: Math.random().toString(36).substring(7),
+          nome: file.name,
+          url: url,
+          tipo: file.type,
+          tamanho: file.size,
+          data: Timestamp.now(),
+          enviadoPor: user?.uid || "anonimo"
+        });
+      } catch (err) {
+        console.error(`Erro ao subir arquivo ${file.name}:`, err);
+        throw new Error(`Falha no upload do arquivo: ${file.name}`);
+      }
     }
 
     return attachments;
@@ -86,7 +96,6 @@ export default function NewDemandPage() {
     if (!user || !db) return;
     
     setSaving(true);
-    setUploadProgress(true);
     try {
       const attachments = await uploadFiles();
       
@@ -107,7 +116,7 @@ export default function NewDemandPage() {
       });
     } finally {
       setSaving(false);
-      setUploadProgress(false);
+      setUploadStatus(null);
     }
   };
 
@@ -174,7 +183,7 @@ export default function NewDemandPage() {
               </div>
 
               <div className="space-y-3 p-4 bg-muted/20 rounded-xl border-2 border-dashed border-muted">
-                <Label className="flex items-center gap-2 text-primary">
+                <Label className="flex items-center gap-2 text-primary font-bold">
                   <Paperclip size={16} /> Anexos (Fotos e Documentos)
                 </Label>
                 <Input 
@@ -190,13 +199,13 @@ export default function NewDemandPage() {
                       <div key={idx} className="flex items-center justify-between p-2 bg-background rounded-lg border text-xs">
                         <div className="flex items-center gap-2 truncate">
                           <FileText size={14} className="text-muted-foreground" />
-                          <span className="truncate">{file.name}</span>
+                          <span className="truncate font-medium">{file.name}</span>
                         </div>
                         <Button 
                           type="button" 
                           variant="ghost" 
                           size="sm" 
-                          className="h-6 w-6 p-0 text-destructive"
+                          className="h-6 w-6 p-0 text-destructive hover:bg-destructive/10"
                           onClick={() => removeFile(idx)}
                         >
                           <X size={14} />
@@ -208,12 +217,14 @@ export default function NewDemandPage() {
               </div>
             </CardContent>
             <CardFooter className="flex justify-end gap-3 bg-muted/30 pt-6">
-              <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
+              <Button type="button" variant="outline" onClick={() => router.back()} disabled={saving}>Cancelar</Button>
               <Button type="submit" disabled={saving}>
                 {saving ? (
                   <>
                     <Loader2 className="animate-spin mr-2" />
-                    {uploadProgress ? "Enviando Arquivos..." : "Salvando..."}
+                    {uploadStatus 
+                      ? `Enviando ${uploadStatus.current} de ${uploadStatus.total}...` 
+                      : "Salvando..."}
                   </>
                 ) : (
                   <>

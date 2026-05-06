@@ -66,6 +66,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const [obs, setObs] = useState("");
   const [selectedUser, setSelectedUser] = useState("");
   const [tramiteFiles, setTramiteFiles] = useState<File[]>([]);
+  const [uploadStatus, setUploadStatus] = useState<{ current: number, total: number } | null>(null);
 
   const demandRef = useMemo(() => (id && db) ? doc(db, "demandas", id) : null, [db, id]);
   const { data: demand, loading: loadingDemand } = useDoc(demandRef);
@@ -104,20 +105,30 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     const storage = getStorage();
     const attachments: Attachment[] = [];
 
-    for (const file of tramiteFiles) {
-      const storageRef = ref(storage, `demandas/tramites/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
+    if (tramiteFiles.length === 0) return [];
+
+    for (let i = 0; i < tramiteFiles.length; i++) {
+      const file = tramiteFiles[i];
+      setUploadStatus({ current: i + 1, total: tramiteFiles.length });
       
-      attachments.push({
-        id: Math.random().toString(36).substring(7),
-        nome: file.name,
-        url: url,
-        tipo: file.type,
-        tamanho: file.size,
-        data: Timestamp.now(),
-        enviadoPor: user?.uid || "anonimo"
-      });
+      try {
+        const storageRef = ref(storage, `demandas/tramites/${Date.now()}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(storageRef);
+        
+        attachments.push({
+          id: Math.random().toString(36).substring(7),
+          nome: file.name,
+          url: url,
+          tipo: file.type,
+          tamanho: file.size,
+          data: Timestamp.now(),
+          enviadoPor: user?.uid || "anonimo"
+        });
+      } catch (err) {
+        console.error(`Erro ao subir arquivo ${file.name}:`, err);
+        throw new Error(`Falha no upload do arquivo: ${file.name}`);
+      }
     }
 
     return attachments;
@@ -163,6 +174,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
       toast({ title: "Erro", description: e.message || "Falha ao tramitar demanda.", variant: "destructive" });
     } finally {
       setProcessing(false);
+      setUploadStatus(null);
     }
   };
 
@@ -181,6 +193,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
       toast({ title: "Erro", description: "Falha ao devolver demanda.", variant: "destructive" });
     } finally {
       setProcessing(false);
+      setUploadStatus(null);
     }
   };
 
@@ -241,12 +254,10 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const isResponsible = demand.responsavelAtual === user?.uid;
   const filteredCollaborators = allUsers.filter(u => u.email?.toLowerCase() !== user?.email?.toLowerCase());
 
-  // Coleta todos os anexos de todos os trâmites para a Pasta Digital
   const allAttachments = useMemo(() => {
     const fromDemand = demand.anexos || [];
     const fromTramites = tramites.flatMap(t => t.anexos || []);
     const combined = [...fromDemand, ...fromTramites];
-    // Remove duplicatas se houver (baseado na URL)
     return Array.from(new Map(combined.map(item => [item.url, item])).values());
   }, [demand.anexos, tramites]);
 
@@ -341,7 +352,16 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                         <RotateCcw size={16} /> Devolver
                       </Button>
                       <Button onClick={handleSend} disabled={processing || !selectedUser} className="gap-2">
-                        {processing ? <Loader2 className="animate-spin h-4 w-4" /> : <Send size={16} />} Enviar Despacho
+                        {processing ? (
+                          <>
+                            <Loader2 className="animate-spin h-4 w-4" />
+                            {uploadStatus ? `Subindo ${uploadStatus.current}/${uploadStatus.total}` : "Tramitando..."}
+                          </>
+                        ) : (
+                          <>
+                            <Send size={16} /> Enviar Despacho
+                          </>
+                        )}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
