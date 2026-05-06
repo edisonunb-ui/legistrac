@@ -35,11 +35,15 @@ export default function NewDemandPage() {
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
+  // Sincroniza o responsável inicial com segurança para evitar loops infinitos
   useEffect(() => {
-    if (user && !formData.responsavelId) {
-      setFormData(prev => ({ ...prev, responsavelId: user.uid }));
+    if (user?.uid && formData.responsavelId === "") {
+      setFormData(prev => {
+        if (prev.responsavelId === user.uid) return prev;
+        return { ...prev, responsavelId: user.uid };
+      });
     }
-  }, [user, formData.responsavelId]);
+  }, [user?.uid, formData.responsavelId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,7 +108,7 @@ export default function NewDemandPage() {
                   placeholder="Ex: Reforma da Praça" 
                   required 
                   value={formData.titulo}
-                  onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
+                  onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))}
                 />
               </div>
 
@@ -116,14 +120,14 @@ export default function NewDemandPage() {
                     type="date" 
                     required 
                     value={formData.prazo}
-                    onChange={(e) => setFormData({ ...formData, prazo: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, prazo: e.target.value }))}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="prioridade">Prioridade</Label>
                   <Select 
                     value={formData.prioridade} 
-                    onValueChange={(v: any) => setFormData({ ...formData, prioridade: v })}
+                    onValueChange={(v: DemandPriority) => setFormData(prev => ({ ...prev, prioridade: v }))}
                   >
                     <SelectTrigger id="prioridade">
                       <SelectValue placeholder="Selecione" />
@@ -141,7 +145,7 @@ export default function NewDemandPage() {
                 <Label htmlFor="responsavel">Atribuir Responsável</Label>
                 <Select 
                   value={formData.responsavelId} 
-                  onValueChange={(v) => setFormData({ ...formData, responsavelId: v })}
+                  onValueChange={(v) => setFormData(prev => ({ ...prev, responsavelId: v }))}
                 >
                   <SelectTrigger id="responsavel">
                     <div className="flex items-center gap-2">
@@ -151,7 +155,7 @@ export default function NewDemandPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {allUsers.map((u: UserProfile) => (
-                      <SelectItem key={u.uid} value={u.uid!}>
+                      <SelectItem key={u.id} value={u.uid || u.email}>
                         {u.nome} ({u.perfil})
                       </SelectItem>
                     ))}
@@ -167,7 +171,7 @@ export default function NewDemandPage() {
                   rows={6} 
                   required
                   value={formData.descricao}
-                  onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                  onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
                 />
               </div>
             </CardContent>

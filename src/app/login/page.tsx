@@ -139,7 +139,7 @@ export default function LoginPage() {
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Erro de Configuração</AlertTitle>
               <AlertDescription className="text-xs">
-                Ative o provedor "E-mail/Senha" no console do Firebase.
+                Acesse o Console do Firebase &gt; Authentication &gt; Sign-in Method e ative o provedor de E-mail/Senha.
               </AlertDescription>
             </Alert>
           )}
