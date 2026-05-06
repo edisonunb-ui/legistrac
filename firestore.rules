@@ -3,22 +3,22 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Função mestre para acesso total baseado nos e-mails autorizados como admin
+    // Função para verificar se o usuário é um dos administradores mestres
     function isMasterAdmin() {
       return request.auth != null && 
-        request.auth.token.email != null && 
-        (
-          request.auth.token.email.lower() == "edisonunb@gmail.com" || 
-          request.auth.token.email.lower() == "gabinete.professoraflavia@gmail.com"
-        );
+             request.auth.token.email != null && 
+             (
+               request.auth.token.email.lower() == "edisonunb@gmail.com" || 
+               request.auth.token.email.lower() == "gabinete.professoraflavia@gmail.com"
+             );
     }
     
-    // Regra Global: Master Admin pode TUDO
+    // Regra Global: Master Admin tem permissão total em qualquer coleção
     match /{document=**} {
       allow read, write: if isMasterAdmin();
     }
 
-    // Regras específicas para usuários autenticados
+    // Regras específicas para a coleção de usuários
     match /users/{userEmail} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && (
@@ -27,12 +27,13 @@ service cloud.firestore {
       );
     }
 
+    // Regras para demandas e trâmites (acesso para equipe autenticada)
     match /demandas/{demandaId} {
       allow read, write: if request.auth != null;
     }
 
     match /tramites/{tramiteId} {
-      allow read, create: if request.auth != null;
+      allow read, write: if request.auth != null;
     }
 
     match /notificacoes/{notificacaoId} {

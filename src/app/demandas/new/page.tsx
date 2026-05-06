@@ -69,7 +69,7 @@ export default function NewDemandPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-primary">
         <Loader2 className="animate-spin mb-4" size={40} />
-        <p className="font-medium">Iniciando ambiente de diligência...</p>
+        <p className="font-medium">Carregando ambiente...</p>
       </div>
     );
   }
@@ -89,7 +89,6 @@ export default function NewDemandPage() {
               <ShieldCheck size={14} /> Atendimento Iniciado
             </div>
           </div>
-          <p className="text-muted-foreground">Preencha os dados abaixo para registrar a solicitação no gabinete.</p>
         </header>
 
         <Card className="max-w-2xl border-none shadow-xl">
@@ -102,7 +101,7 @@ export default function NewDemandPage() {
                 <Label htmlFor="titulo">Título da Demanda</Label>
                 <Input 
                   id="titulo" 
-                  placeholder="Ex: Reforma da Praça ou Pedido de Iluminação" 
+                  placeholder="Ex: Reforma da Praça" 
                   required 
                   value={formData.titulo}
                   onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
@@ -147,18 +146,17 @@ export default function NewDemandPage() {
                   <SelectTrigger id="responsavel">
                     <div className="flex items-center gap-2">
                       <UserIcon size={14} className="text-muted-foreground" />
-                      <SelectValue placeholder="Selecione quem cuidará disso" />
+                      <SelectValue placeholder="Selecione o responsável" />
                     </div>
                   </SelectTrigger>
                   <SelectContent>
                     {allUsers.map((u: UserProfile) => (
-                      <SelectItem key={u.uid} value={u.uid}>
-                        {u.nome} {u.uid === user.uid ? "(Você)" : `(${u.perfil})`}
+                      <SelectItem key={u.uid} value={u.uid!}>
+                        {u.nome} ({u.perfil})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-[10px] text-muted-foreground italic">Por padrão, a demanda fica sob sua responsabilidade.</p>
               </div>
 
               <div className="space-y-2">
@@ -175,18 +173,9 @@ export default function NewDemandPage() {
             </CardContent>
             <CardFooter className="flex justify-end gap-3 border-t pt-6 bg-muted/30">
               <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
-              <Button type="submit" className="font-semibold gap-2" disabled={saving}>
-                {saving ? (
-                  <>
-                    <Loader2 className="animate-spin" size={18} />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save size={18} />
-                    Registrar Demanda
-                  </>
-                )}
+              <Button type="submit" disabled={saving}>
+                {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
+                Registrar Demanda
               </Button>
             </CardFooter>
           </form>

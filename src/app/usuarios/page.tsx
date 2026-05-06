@@ -4,7 +4,7 @@ import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
 import { collection, query, doc, updateDoc, serverTimestamp, setDoc, orderBy } from "firebase/firestore";
-import { UserProfile, UserRole, UserPermissions } from "@/lib/types";
+import { UserRole, UserPermissions } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Shield, Loader2, ShieldCheck, Settings2, Info, UserX } from "lucide-react";
+import { Users, UserPlus, Shield, Loader2, ShieldCheck, Settings2, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const PERMISSION_LABELS: Record<keyof UserPermissions, string> = {
@@ -86,12 +86,17 @@ export default function UserManagementPage() {
         email: emailLower,
         nome: newName,
         perfil: newRole,
-        permissoes: permissions,
+        permissoes: {
+          visualizar_todas: !!permissions.visualizar_todas,
+          criar_demandas: !!permissions.criar_demandas,
+          finalizar_demandas: !!permissions.finalizar_demandas,
+          gerenciar_equipe: !!permissions.gerenciar_equipe,
+          reabrir_demandas: !!permissions.reabrir_demandas
+        },
         ativo: true,
         updatedAt: serverTimestamp(),
       };
 
-      // Se o usuário não existir, adicionamos a data de criação
       await setDoc(newUserRef, {
         ...userData,
         createdAt: serverTimestamp(),
@@ -101,7 +106,7 @@ export default function UserManagementPage() {
       setNewEmail("");
       setNewName("");
     } catch (error: any) {
-      console.error("Erro detalhado do Firebase:", error);
+      console.error("Erro ao salvar usuário:", error);
       toast({ 
         title: "Falha na Gravação", 
         description: `Erro: ${error.message || "Permissão insuficiente"}. Verifique o console.`, 
@@ -128,10 +133,7 @@ export default function UserManagementPage() {
   if (authLoading || (profileLoading && !isMasterAdmin)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="animate-spin text-primary" size={40} />
-          <p className="text-sm font-medium animate-pulse text-muted-foreground">Validando acesso mestre...</p>
-        </div>
+        <Loader2 className="animate-spin text-primary" size={40} />
       </div>
     );
   }
@@ -139,11 +141,11 @@ export default function UserManagementPage() {
   if (!isAdmin && !isMasterAdmin) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-md text-center shadow-lg border-destructive/20">
+        <Card className="max-w-md text-center shadow-lg">
           <CardHeader>
             <Shield className="mx-auto text-destructive h-12 w-12 mb-2" />
             <CardTitle>Acesso Restrito</CardTitle>
-            <CardDescription>Apenas administradores podem gerenciar a equipe do gabinete.</CardDescription>
+            <CardDescription>Apenas administradores podem gerenciar a equipe.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => window.location.href = "/"}>Voltar ao Painel</Button>
@@ -166,7 +168,7 @@ export default function UserManagementPage() {
             <p className="text-muted-foreground mt-1">Configure as permissões de cada membro do gabinete.</p>
           </div>
           {isMasterAdmin && (
-            <Badge className="bg-amber-500 text-white gap-1 py-1 px-3 shadow-sm border-none">
+            <Badge className="bg-amber-500 text-white gap-1 py-1 px-3 shadow-sm">
               <ShieldCheck size={14} /> MODO SUPER ADMIN
             </Badge>
           )}
@@ -211,14 +213,13 @@ export default function UserManagementPage() {
                   </Label>
                   <div className="grid gap-3 p-4 bg-muted/20 rounded-xl border border-dashed border-primary/20">
                     {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
-                      <div key={key} className="flex items-center space-x-3 group">
+                      <div key={key} className="flex items-center space-x-3">
                         <Checkbox 
                           id={`perm-${key}`} 
                           checked={permissions[key as keyof UserPermissions]} 
                           onCheckedChange={() => handleTogglePermission(key as keyof UserPermissions)}
-                          className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                         />
-                        <label htmlFor={`perm-${key}`} className="text-sm font-medium leading-none cursor-pointer group-hover:text-primary transition-colors">
+                        <label htmlFor={`perm-${key}`} className="text-sm font-medium leading-none cursor-pointer">
                           {label}
                         </label>
                       </div>
@@ -237,24 +238,19 @@ export default function UserManagementPage() {
             <Card className="shadow-xl border-none ring-1 ring-black/5">
               <CardHeader>
                 <CardTitle className="text-lg">Equipe Ativa</CardTitle>
-                <CardDescription>Membros com acesso ao sistema.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {usersLoading ? (
-                    <div className="py-20 text-center flex flex-col items-center gap-2">
-                      <Loader2 className="animate-spin text-primary" size={32} />
-                      <p className="text-xs font-medium text-muted-foreground">Carregando...</p>
-                    </div>
+                    <div className="py-10 text-center"><Loader2 className="animate-spin mx-auto text-primary" /></div>
                   ) : allUsers.length === 0 ? (
-                    <div className="py-20 text-center border-2 border-dashed rounded-xl">
-                      <Info className="mx-auto text-muted-foreground mb-2" size={32} />
+                    <div className="py-10 text-center border border-dashed rounded-xl">
                       <p className="text-muted-foreground text-sm">Nenhum membro listado.</p>
                     </div>
                   ) : allUsers.map((u: any) => (
                     <div key={u.id} className={cn(
                       "flex items-center justify-between p-4 rounded-xl border transition-all gap-4",
-                      u.ativo ? "bg-card hover:border-primary/50" : "bg-muted/50 grayscale opacity-70"
+                      u.ativo ? "bg-card" : "bg-muted/50 grayscale opacity-70"
                     )}>
                       <div className="flex items-center gap-4">
                         <div className={cn(
@@ -276,21 +272,19 @@ export default function UserManagementPage() {
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-2">
-                        {u.email !== userEmail && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className={cn(
-                              "font-bold text-xs h-8",
-                              u.ativo ? "text-destructive hover:bg-destructive/10" : "text-green-600 hover:bg-green-50"
-                            )}
-                            onClick={() => toggleUserStatus(u.id, u.ativo)}
-                          >
-                            {u.ativo ? "Bloquear" : "Ativar"}
-                          </Button>
-                        )}
-                      </div>
+                      {u.email !== userEmail && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className={cn(
+                            "font-bold text-xs h-8",
+                            u.ativo ? "text-destructive" : "text-green-600"
+                          )}
+                          onClick={() => toggleUserStatus(u.id, u.ativo)}
+                        >
+                          {u.ativo ? "Bloquear" : "Ativar"}
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>
