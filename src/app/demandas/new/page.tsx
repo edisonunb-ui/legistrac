@@ -2,7 +2,7 @@
 
 import { useUser, useFirestore, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createDemand } from "@/lib/demand-service";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ export default function NewDemandPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const initializedRef = useRef(false);
   
   const [formData, setFormData] = useState({
     titulo: "",
@@ -33,24 +34,32 @@ export default function NewDemandPage() {
   });
 
   // Inicializa o responsável apenas uma vez quando o usuário carrega
+  // Usamos useRef para evitar loops infinitos de renderização
   useEffect(() => {
-    if (user?.uid && !formData.responsavelId) {
+    if (user?.uid && !initializedRef.current) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
+      initializedRef.current = true;
     }
-  }, [user?.uid, formData.responsavelId]);
+  }, [user?.uid]);
 
   const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db) return;
+    if (!user || !db) {
+      toast({ title: "Erro", description: "Usuário não autenticado.", variant: "destructive" });
+      return;
+    }
     
     setSaving(true);
     try {
+      // Garante que temos um responsável definido
+      const finalResponsavelId = formData.responsavelId || user.uid;
+      
       const demandId = await createDemand(db, user.uid, {
         ...formData,
-        responsavelId: formData.responsavelId || user.uid
+        responsavelId: finalResponsavelId
       });
       
       toast({ title: "Sucesso!", description: "Demanda criada com sucesso." });
@@ -59,7 +68,7 @@ export default function NewDemandPage() {
       console.error("Erro ao salvar demanda:", error);
       toast({
         title: "Erro ao Salvar",
-        description: "Verifique se você publicou as regras de segurança no Console do Firebase.",
+        description: "Verifique se as Regras de Segurança no Console do Firebase foram publicadas.",
         variant: "destructive",
       });
     } finally {
