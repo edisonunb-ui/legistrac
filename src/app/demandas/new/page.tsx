@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, Save, ShieldCheck, Loader2, User as UserIcon } from "lucide-react";
 import Link from "next/link";
-import { DemandPriority } from "@/lib/types";
+import { DemandPriority, UserProfile } from "@/lib/types";
 import { collection, query, orderBy } from "firebase/firestore";
 
 export default function NewDemandPage() {
@@ -23,6 +23,7 @@ export default function NewDemandPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
   
   const [formData, setFormData] = useState({
     titulo: "",
@@ -32,19 +33,23 @@ export default function NewDemandPage() {
     responsavelId: "",
   });
 
-  // Estabiliza o ID do responsável inicial sem causar loop de renderização
+  // Estabiliza o ID do responsável inicial uma única vez para evitar loop infinito
   useEffect(() => {
-    if (user?.uid && !formData.responsavelId) {
+    if (user?.uid && !hasInitialized) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
+      setHasInitialized(true);
     }
-  }, [user?.uid, formData.responsavelId]);
+  }, [user?.uid, hasInitialized]);
 
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db) return;
+    if (!user || !db) {
+      toast({ title: "Erro", description: "Sessão não identificada. Recarregue a página.", variant: "destructive" });
+      return;
+    }
     
     setSaving(true);
     try {
@@ -62,7 +67,7 @@ export default function NewDemandPage() {
       console.error("Erro ao salvar demanda:", error);
       toast({
         title: "Erro de Permissão ou Conexão",
-        description: error.message || "Não foi possível registrar a demanda. Verifique seu acesso.",
+        description: error.message || "Acesso negado. Verifique sua conexão.",
         variant: "destructive",
       });
     } finally {

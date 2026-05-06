@@ -14,22 +14,21 @@ const firebaseConfig = {
   measurementId: "G-Z4LT5NN6B0"
 };
 
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
+let appInstance: FirebaseApp;
+let authInstance: Auth;
+let dbInstance: Firestore;
 
 export function initializeFirebase() {
   if (!getApps().length) {
-    app = initializeApp(firebaseConfig);
+    appInstance = initializeApp(firebaseConfig);
   } else {
-    app = getApp();
+    appInstance = getApp();
   }
   
-  // Singleton garantido para evitar erros de estado inesperado
-  if (!auth) auth = getAuth(app);
-  if (!db) db = getFirestore(app);
+  if (!authInstance) authInstance = getAuth(appInstance);
+  if (!dbInstance) dbInstance = getFirestore(appInstance);
   
-  return { app, auth, db };
+  return { app: appInstance, auth: authInstance, db: dbInstance };
 }
 
 export { 

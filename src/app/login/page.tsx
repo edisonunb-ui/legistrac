@@ -40,6 +40,7 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
       
       if (userCredential) {
+        // Busca perfil no Firestore
         const userRef = doc(db, "users", emailLower);
         const userSnap = await getDoc(userRef);
         
