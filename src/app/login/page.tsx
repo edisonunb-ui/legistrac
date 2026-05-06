@@ -53,13 +53,12 @@ export default function LoginPage() {
           toast({ title: "Bem-vindo!", description: "Acesso autorizado ao LegisTrac." });
           router.push("/");
         } else if (emailLower === "edisonunb@gmail.com") {
-          // Permite acesso direto ao SuperAdmin mesmo sem perfil inicial (ele cria o perfil depois)
           toast({ title: "SuperAdmin Conectado", description: "Configurando ambiente mestre." });
           router.push("/");
         } else {
           toast({
             title: "Acesso Restrito",
-            description: "Seu e-mail não foi provisionado pelo administrador.",
+            description: "Seu e-mail não foi provisionado no sistema.",
             variant: "destructive",
           });
           await auth.signOut();
@@ -71,8 +70,6 @@ export default function LoginPage() {
       
       if (error.code === 'auth/operation-not-allowed') {
         errorMessage = "O provedor de login está desativado no Firebase.";
-      } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        errorMessage = "Credenciais inválidas. Verifique os dados.";
       }
 
       toast({
@@ -110,7 +107,7 @@ export default function LoginPage() {
               <Label htmlFor="password">Senha</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input id="password" type="password" placeholder="Sua senha de acesso" className="pl-10" required value={password} onChange={(e) => setPassword(e.target.value)} />
+                <Input id="password" type="password" placeholder="Sua senha" className="pl-10" required value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
             </div>
             <Button className="w-full h-11 font-bold" type="submit" disabled={submitting}>
@@ -122,7 +119,7 @@ export default function LoginPage() {
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle className="text-xs font-bold">Nota do Sistema</AlertTitle>
             <AlertDescription className="text-[10px] leading-relaxed">
-              O acesso &eacute; restrito a membros provisionados. Se voc&ecirc; &eacute; um administrador, use a aba Equipe para cadastrar seus assessores.
+              O acesso &eacute; restrito a membros cadastrados. Administradores podem gerenciar a equipe no painel interno.
             </AlertDescription>
           </Alert>
         </CardContent>

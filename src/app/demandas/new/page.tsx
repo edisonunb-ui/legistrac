@@ -2,7 +2,7 @@
 
 import { useUser, useFirestore, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createDemand } from "@/lib/demand-service";
 import { Button } from "@/components/ui/button";
@@ -32,16 +32,6 @@ export default function NewDemandPage() {
     responsavelId: "",
   });
 
-  // Inicializa o responsável de forma estável para evitar loops de renderização
-  useEffect(() => {
-    if (user?.uid && !formData.responsavelId) {
-      setFormData(prev => {
-        if (prev.responsavelId === user.uid) return prev;
-        return { ...prev, responsavelId: user.uid };
-      });
-    }
-  }, [user?.uid, formData.responsavelId]);
-
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
@@ -51,9 +41,12 @@ export default function NewDemandPage() {
     setSaving(true);
 
     try {
+      // Se não escolheu responsável, o padrão é o próprio criador
+      const targetResponsavel = formData.responsavelId || user.uid;
+
       const demandId = await createDemand(db, user.uid, {
         ...formData,
-        responsavelId: formData.responsavelId || user.uid
+        responsavelId: targetResponsavel
       });
       
       toast({
