@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
@@ -55,6 +54,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const [summary, setSummary] = useState<string | null>(null);
   const [summarizing, setSummarizing] = useState(false);
   const [sendModalOpen, setSendModalOpen] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [obs, setObs] = useState("");
   const [selectedUser, setSelectedUser] = useState("");
 
@@ -93,51 +93,79 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   };
 
   const handleSend = async () => {
-    if (!demand || !user || !selectedUser || !db) return;
-    const targetUser = allUsers.find((u: UserProfile) => u.uid === selectedUser);
-    if (!targetUser) return;
+    if (!demand || !user || !selectedUser || !db) {
+      toast({ title: "Atenção", description: "Selecione um destinatário.", variant: "destructive" });
+      return;
+    }
+    
+    setProcessing(true);
+    const targetUser = allUsers.find((u: any) => u.uid === selectedUser);
+    
+    if (!targetUser) {
+      setProcessing(false);
+      toast({ title: "Erro", description: "Usuário destino não encontrado.", variant: "destructive" });
+      return;
+    }
 
     try {
       await sendDemand(db, demand.id, user.uid, selectedUser, obs, targetUser.perfil);
-      toast({ title: "Sucesso", description: "Demanda enviada." });
+      toast({ title: "Sucesso", description: "Demanda tramitada com sucesso." });
       setSendModalOpen(false);
       setObs("");
-    } catch (e) {
-      toast({ title: "Erro", description: "Falha ao enviar.", variant: "destructive" });
+      setSelectedUser("");
+    } catch (e: any) {
+      console.error("Erro ao tramitar:", e);
+      toast({ title: "Erro", description: e.message || "Falha ao tramitar demanda.", variant: "destructive" });
+    } finally {
+      setProcessing(false);
     }
   };
 
   const handleReturn = async () => {
-    if (!demand || !user || !selectedUser || !db) return;
+    if (!demand || !user || !db) return;
+    
+    // Se não houver usuário selecionado no modal, tenta devolver para quem enviou por último (ou criador)
+    const targetId = selectedUser || demand.criadoPor;
+    
+    setProcessing(true);
     try {
-      await returnDemand(db, demand.id, user.uid, selectedUser, obs);
+      await returnDemand(db, demand.id, user.uid, targetId, obs || "Demanda devolvida para revisão.");
       toast({ title: "Sucesso", description: "Demanda devolvida." });
       setSendModalOpen(false);
       setObs("");
-    } catch (e) {
-      toast({ title: "Erro", description: "Falha ao devolver.", variant: "destructive" });
+    } catch (e: any) {
+      console.error("Erro ao devolver:", e);
+      toast({ title: "Erro", description: "Falha ao devolver demanda.", variant: "destructive" });
+    } finally {
+      setProcessing(false);
     }
   };
 
   const handleFinalize = async () => {
     if (!demand || !user || !db) return;
+    setProcessing(true);
     try {
-      await finalizeDemand(db, demand.id, user.uid, demand.criadoPor, obs || "Demanda finalizada.");
+      await finalizeDemand(db, demand.id, user.uid, demand.criadoPor, obs || "Demanda finalizada com sucesso.");
       toast({ title: "Sucesso", description: "Demanda finalizada." });
       setObs("");
     } catch (e) {
       toast({ title: "Erro", description: "Falha ao finalizar.", variant: "destructive" });
+    } finally {
+      setProcessing(false);
     }
   };
 
   const handleReopen = async () => {
     if (!demand || !user || !db) return;
+    setProcessing(true);
     try {
       await reopenDemand(db, demand.id, user.uid, demand.responsavelAtual, obs || "Demanda reaberta.");
       toast({ title: "Sucesso", description: "Demanda reaberta." });
       setObs("");
     } catch (e) {
       toast({ title: "Erro", description: "Falha ao reabrir.", variant: "destructive" });
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -208,13 +236,13 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
                         <Label>Destinatário</Label>
-                        <Select onValueChange={setSelectedUser}>
+                        <Select onValueChange={setSelectedUser} value={selectedUser}>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione um colaborador" />
                           </SelectTrigger>
                           <SelectContent>
-                            {allUsers.filter(u => u.uid !== user?.uid).map((u: UserProfile) => (
-                              <SelectItem key={u.uid} value={u.uid!}>{u.nome} ({u.perfil})</SelectItem>
+                            {allUsers.filter(u => u.uid && u.uid !== user?.uid).map((u: any) => (
+                              <SelectItem key={u.uid} value={u.uid}>{u.nome} ({u.perfil})</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -222,21 +250,25 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                       <div className="space-y-2">
                         <Label>Observação</Label>
                         <Textarea 
-                          placeholder="Instruções para o colega..." 
+                          placeholder="Instruções ou resumo da tramitação..." 
                           value={obs} 
                           onChange={e => setObs(e.target.value)}
                         />
                       </div>
                     </div>
                     <DialogFooter className="gap-2">
-                      <Button variant="outline" onClick={handleReturn} className="gap-2"><RotateCcw size={16} /> Devolver</Button>
-                      <Button onClick={handleSend} className="gap-2"><Send size={16} /> Enviar</Button>
+                      <Button variant="outline" onClick={handleReturn} disabled={processing} className="gap-2">
+                        <RotateCcw size={16} /> Devolver
+                      </Button>
+                      <Button onClick={handleSend} disabled={processing || !selectedUser} className="gap-2">
+                        {processing ? <Loader2 className="animate-spin h-4 w-4" /> : <Send size={16} />} Enviar
+                      </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
 
                 {hasPermission('finalizar_demandas') && (
-                  <Button variant="outline" className="text-green-600 hover:text-green-700 hover:bg-green-50 gap-2" onClick={handleFinalize}>
+                  <Button variant="outline" className="text-green-600 hover:text-green-700 hover:bg-green-50 gap-2" onClick={handleFinalize} disabled={processing}>
                     <CheckCircle size={18} /> Finalizar
                   </Button>
                 )}
@@ -244,7 +276,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
             )}
 
             {hasPermission('reabrir_demandas') && demand.finalizada && (
-              <Button variant="outline" className="gap-2" onClick={handleReopen}>
+              <Button variant="outline" className="gap-2" onClick={handleReopen} disabled={processing}>
                 <RotateCcw size={18} /> Reabrir para Ajustes
               </Button>
             )}
@@ -292,8 +324,8 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                     <p className="text-center text-muted-foreground text-sm py-4">Nenhuma movimentação registrada.</p>
                   ) : (
                     tramites.map((t: Tramite, idx: number) => {
-                      const deUser = allUsers.find((u: UserProfile) => u.uid === t.de)?.nome || "Sistema";
-                      const paraUser = allUsers.find((u: UserProfile) => u.uid === t.para)?.nome || "Sistema";
+                      const deUser = allUsers.find((u: any) => u.uid === t.de)?.nome || "Sistema";
+                      const paraUser = allUsers.find((u: any) => u.uid === t.para)?.nome || "Sistema";
                       
                       return (
                         <div key={t.id} className="relative flex gap-4">
@@ -355,7 +387,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                   <div>
                     <p className="text-[9px] uppercase text-muted-foreground font-bold tracking-wider">Responsável</p>
                     <p className="font-bold text-sm">
-                      {allUsers.find((u: UserProfile) => u.uid === demand.responsavelAtual)?.nome || "Não Atribuído"}
+                      {allUsers.find((u: any) => u.uid === demand.responsavelAtual)?.nome || "Não Atribuído"}
                     </p>
                   </div>
                 </div>

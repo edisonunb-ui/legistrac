@@ -7,6 +7,9 @@ import {
 } from "firebase/firestore";
 import { DemandPriority, DemandStatus, UserRole } from "./types";
 
+/**
+ * Cria uma nova demanda e registra o trâmite inicial.
+ */
 export async function createDemand(
   db: Firestore,
   userId: string,
@@ -53,6 +56,9 @@ export async function createDemand(
   return demandRef.id;
 }
 
+/**
+ * Tramita uma demanda para outro colaborador.
+ */
 export async function sendDemand(
   db: Firestore,
   demandaId: string,
@@ -61,7 +67,10 @@ export async function sendDemand(
   observacao: string,
   paraRole: UserRole
 ) {
-  const status: DemandStatus = paraRole === "ADMIN" ? "AGUARDANDO_VEREADORA" : "EM_ANDAMENTO";
+  // Se for enviado para ADMIN ou SUPER_ADMIN, o status muda para AGUARDANDO_VEREADORA
+  const isAdmin = paraRole === "ADMIN" || paraRole === "SUPER_ADMIN";
+  const status: DemandStatus = isAdmin ? "AGUARDANDO_VEREADORA" : "EM_ANDAMENTO";
+  
   const demandRef = doc(db, "demandas", demandaId);
   const tramiteRef = doc(collection(db, "tramites"));
   const notificationRef = doc(collection(db, "notificacoes"));
@@ -78,13 +87,13 @@ export async function sendDemand(
       de,
       para,
       acao: "ENVIO",
-      observacao,
+      observacao: observacao || "Demanda encaminhada.",
       data: serverTimestamp(),
     });
 
     transaction.set(notificationRef, {
       userId: para,
-      mensagem: `Você recebeu uma nova demanda: ${demandaId}`,
+      mensagem: `Você recebeu uma nova demanda para análise.`,
       demandaId,
       lida: false,
       data: serverTimestamp(),
@@ -92,6 +101,9 @@ export async function sendDemand(
   });
 }
 
+/**
+ * Devolve uma demanda para o remetente original.
+ */
 export async function returnDemand(
   db: Firestore,
   demandaId: string,
@@ -115,13 +127,13 @@ export async function returnDemand(
       de,
       para,
       acao: "DEVOLUCAO",
-      observacao,
+      observacao: observacao || "Demanda devolvida para ajustes.",
       data: serverTimestamp(),
     });
 
     transaction.set(notificationRef, {
       userId: para,
-      mensagem: `Uma demanda foi devolvida para você: ${demandaId}`,
+      mensagem: `Uma demanda foi devolvida para você.`,
       demandaId,
       lida: false,
       data: serverTimestamp(),
@@ -129,6 +141,9 @@ export async function returnDemand(
   });
 }
 
+/**
+ * Finaliza permanentemente uma demanda.
+ */
 export async function finalizeDemand(
   db: Firestore,
   demandaId: string,
@@ -156,9 +171,10 @@ export async function finalizeDemand(
       data: serverTimestamp(),
     });
 
+    // Notifica o criador original
     transaction.set(notificationRef, {
       userId: criadorId,
-      mensagem: `Sua demanda foi finalizada: ${demandaId}`,
+      mensagem: `Sua demanda foi finalizada com sucesso.`,
       demandaId,
       lida: false,
       data: serverTimestamp(),
@@ -166,6 +182,9 @@ export async function finalizeDemand(
   });
 }
 
+/**
+ * Reabre uma demanda finalizada.
+ */
 export async function reopenDemand(
   db: Firestore,
   demandaId: string,
@@ -195,7 +214,7 @@ export async function reopenDemand(
 
     transaction.set(notificationRef, {
       userId: responsavelId,
-      mensagem: `Uma demanda foi reaberta e está sob sua responsabilidade: ${demandaId}`,
+      mensagem: `Uma demanda foi reaberta para novos ajustes.`,
       demandaId,
       lida: false,
       data: serverTimestamp(),
