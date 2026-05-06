@@ -31,7 +31,12 @@ export function initializeFirebase() {
   if (!dbInstance) dbInstance = getFirestore(appInstance);
   if (!storageInstance) storageInstance = getStorage(appInstance);
   
-  return { app: appInstance, auth: authInstance, db: dbInstance, storage: storageInstance };
+  return { 
+    app: appInstance, 
+    auth: authInstance, 
+    db: dbInstance, 
+    storage: storageInstance 
+  };
 }
 
 export { 
@@ -46,3 +51,8 @@ export { FirebaseClientProvider } from './client-provider';
 export { useCollection } from './firestore/use-collection';
 export { useDoc } from './firestore/use-doc';
 export { useUser } from './auth/use-user';
+
+export const useStorage = () => {
+  const { app } = initializeFirebase();
+  return getStorage(app);
+};

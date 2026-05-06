@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
+import { useUser, useFirestore, useDoc, useCollection, useStorage } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useEffect, useState, useMemo, use } from "react";
 import { doc, collection, query, where, Timestamp } from "firebase/firestore";
@@ -50,12 +50,13 @@ import {
   reopenDemand 
 } from "@/lib/demand-service";
 import { generateDemandSummary } from "@/ai/flows/demand-summary-generation";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
 export default function DemandDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user } = useUser();
   const db = useFirestore();
+  const storage = useStorage();
   const router = useRouter();
   const { toast } = useToast();
   
@@ -102,19 +103,23 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   };
 
   const uploadTramiteFiles = async (): Promise<Attachment[]> => {
-    const storage = getStorage();
     const attachments: Attachment[] = [];
-
     if (tramiteFiles.length === 0) return [];
 
     for (let i = 0; i < tramiteFiles.length; i++) {
       const file = tramiteFiles[i];
       setUploadStatus({ current: i + 1, total: tramiteFiles.length });
       
+      const storageRef = ref(storage, `demandas/tramites/${Date.now()}_${file.name}`);
+      
       try {
-        const storageRef = ref(storage, `demandas/tramites/${Date.now()}_${file.name}`);
-        await uploadBytes(storageRef, file);
-        const url = await getDownloadURL(storageRef);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+        const url = await new Promise<string>((resolve, reject) => {
+          uploadTask.on('state_changed', null, (err) => reject(err), async () => {
+            const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+            resolve(downloadUrl);
+          });
+        });
         
         attachments.push({
           id: Math.random().toString(36).substring(7),
@@ -127,7 +132,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
         });
       } catch (err) {
         console.error(`Erro ao subir arquivo ${file.name}:`, err);
-        throw new Error(`Falha no upload do arquivo: ${file.name}`);
+        throw new Error(`Falha no upload: ${file.name}`);
       }
     }
 
@@ -267,7 +272,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
       <main className="container mx-auto px-4 py-8">
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-2">
-            <Link href="/demandas" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors mb-2 w-fit">
+            <Link href="/demandas" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors mb-2 w-fit text-sm">
               <ChevronLeft size={16} />
               Voltar para Lista
             </Link>
@@ -351,7 +356,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                       <Button variant="outline" onClick={handleReturn} disabled={processing} className="gap-2">
                         <RotateCcw size={16} /> Devolver
                       </Button>
-                      <Button onClick={handleSend} disabled={processing || !selectedUser} className="gap-2">
+                      <Button onClick={handleSend} disabled={processing || !selectedUser} className="gap-2 min-w-[120px]">
                         {processing ? (
                           <>
                             <Loader2 className="animate-spin h-4 w-4" />
@@ -428,7 +433,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                       const paraUser = allUsers.find((u: any) => u.uid === t.para || u.email === t.para)?.nome || "Sistema";
                       
                       return (
-                        <div key={t.id} className="relative flex gap-4">
+                        <div key={t.id} className="relative flex gap-4 animate-in fade-in slide-in-from-left-2">
                           {idx !== tramites.length - 1 && (
                             <div className="absolute left-[1.1rem] top-8 bottom-0 w-0.5 bg-muted" />
                           )}

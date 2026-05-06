@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser, useFirestore, useCollection } from "@/firebase";
+import { useUser, useFirestore, useCollection, useStorage } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -16,11 +16,12 @@ import { ChevronLeft, Save, Loader2, User as UserIcon, Paperclip, X, FileText } 
 import Link from "next/link";
 import { DemandPriority, Attachment } from "@/lib/types";
 import { collection, query, Timestamp } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
 export default function NewDemandPage() {
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
+  const storage = useStorage();
   const router = useRouter();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
@@ -59,19 +60,35 @@ export default function NewDemandPage() {
   };
 
   const uploadFiles = async (): Promise<Attachment[]> => {
-    const storage = getStorage();
     const attachments: Attachment[] = [];
-
     if (files.length === 0) return [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       setUploadStatus({ current: i + 1, total: files.length });
       
+      const storagePath = `demandas/${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, storagePath);
+      
+      console.log(`Iniciando upload de: ${file.name}`);
+
       try {
-        const storageRef = ref(storage, `demandas/${Date.now()}_${file.name}`);
-        await uploadBytes(storageRef, file);
-        const url = await getDownloadURL(storageRef);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+        
+        const url = await new Promise<string>((resolve, reject) => {
+          uploadTask.on(
+            'state_changed',
+            null,
+            (error) => {
+              console.error("Erro no upload task:", error);
+              reject(error);
+            },
+            async () => {
+              const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(downloadUrl);
+            }
+          );
+        });
         
         attachments.push({
           id: Math.random().toString(36).substring(7),
@@ -82,9 +99,10 @@ export default function NewDemandPage() {
           data: Timestamp.now(),
           enviadoPor: user?.uid || "anonimo"
         });
-      } catch (err) {
-        console.error(`Erro ao subir arquivo ${file.name}:`, err);
-        throw new Error(`Falha no upload do arquivo: ${file.name}`);
+        console.log(`Upload concluído: ${file.name}`);
+      } catch (err: any) {
+        console.error(`Falha fatal no arquivo ${file.name}:`, err);
+        throw new Error(`O Storage do Firebase pode estar desativado ou sem permissão. Erro: ${err.message}`);
       }
     }
 
@@ -108,10 +126,10 @@ export default function NewDemandPage() {
       toast({ title: "Sucesso!", description: "Demanda e anexos registrados." });
       router.push(`/demandas/${demandId}`);
     } catch (error: any) {
-      console.error("Erro ao salvar:", error);
+      console.error("Erro completo ao salvar:", error);
       toast({
-        title: "Erro ao Salvar",
-        description: error.message || "Falha no registro.",
+        title: "Falha no Envio",
+        description: error.message || "Verifique se o Storage está ativo no Firebase Console.",
         variant: "destructive",
       });
     } finally {
@@ -127,7 +145,7 @@ export default function NewDemandPage() {
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <header className="mb-8">
-          <Link href="/demandas" className="flex items-center gap-2 text-muted-foreground hover:text-primary mb-4 w-fit">
+          <Link href="/demandas" className="flex items-center gap-2 text-muted-foreground hover:text-primary mb-4 w-fit text-sm font-medium">
             <ChevronLeft size={16} /> Voltar para lista
           </Link>
           <h1 className="text-3xl font-headline font-bold">Nova Demanda</h1>
@@ -146,7 +164,7 @@ export default function NewDemandPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="prazo">Prazo</Label>
+                  <Label htmlFor="prazo">Prazo Fatal</Label>
                   <Input id="prazo" type="date" required value={formData.prazo} onChange={(e) => setFormData(prev => ({ ...prev, prazo: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
@@ -196,7 +214,7 @@ export default function NewDemandPage() {
                 {files.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
                     {files.map((file, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-2 bg-background rounded-lg border text-xs">
+                      <div key={idx} className="flex items-center justify-between p-2 bg-background rounded-lg border text-xs animate-in fade-in zoom-in-95">
                         <div className="flex items-center gap-2 truncate">
                           <FileText size={14} className="text-muted-foreground" />
                           <span className="truncate font-medium">{file.name}</span>
@@ -218,7 +236,7 @@ export default function NewDemandPage() {
             </CardContent>
             <CardFooter className="flex justify-end gap-3 bg-muted/30 pt-6">
               <Button type="button" variant="outline" onClick={() => router.back()} disabled={saving}>Cancelar</Button>
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={saving} className="min-w-[140px]">
                 {saving ? (
                   <>
                     <Loader2 className="animate-spin mr-2" />
