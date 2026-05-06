@@ -25,7 +25,7 @@ export function initializeFirebase() {
     app = getApp();
   }
   
-  // Singleton estrito para evitar "Unexpected state"
+  // Singleton garantido para evitar erros de estado inesperado
   if (!auth) auth = getAuth(app);
   if (!db) db = getFirestore(app);
   

@@ -32,12 +32,12 @@ export default function NewDemandPage() {
     responsavelId: "",
   });
 
-  // Define o responsável padrão uma única vez quando o usuário carrega
+  // Estabiliza o ID do responsável inicial sem causar loop de renderização
   useEffect(() => {
-    if (user && !formData.responsavelId) {
+    if (user?.uid && !formData.responsavelId) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
     }
-  }, [user?.uid]);
+  }, [user?.uid, formData.responsavelId]);
 
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
@@ -45,15 +45,12 @@ export default function NewDemandPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !db) return;
+    
     setSaving(true);
-
     try {
-      // Garante que temos um ID de responsável
-      const finalResponsavelId = formData.responsavelId || user.uid;
-      
       const demandId = await createDemand(db, user.uid, {
         ...formData,
-        responsavelId: finalResponsavelId
+        responsavelId: formData.responsavelId || user.uid
       });
       
       toast({
@@ -62,10 +59,10 @@ export default function NewDemandPage() {
       });
       router.push(`/demandas/${demandId}`);
     } catch (error: any) {
-      console.error("Erro ao salvar:", error);
+      console.error("Erro ao salvar demanda:", error);
       toast({
-        title: "Erro ao criar demanda",
-        description: "Verifique sua conexão ou permissões de acesso.",
+        title: "Erro de Permissão ou Conexão",
+        description: error.message || "Não foi possível registrar a demanda. Verifique seu acesso.",
         variant: "destructive",
       });
     } finally {

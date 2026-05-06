@@ -7,20 +7,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Master Admin com acesso total (edisonunb@gmail.com)
-    function isMasterAdmin() {
-      return isSignedIn() && 
-             request.auth.token.email != null && 
-             request.auth.token.email.lower() == "edisonunb@gmail.com";
-    }
-
     // Regras para perfis de usuários
     match /users/{userEmail} {
-      allow read: if isSignedIn();
-      allow write: if isMasterAdmin() || (isSignedIn() && request.auth.token.email.lower() == userEmail.lower());
+      allow read, write: if isSignedIn();
     }
 
-    // Coleções operacionais: Acesso permitido para qualquer membro autenticado do gabinete
+    // Coleções operacionais: Acesso permitido para qualquer membro autenticado
     match /demandas/{docId} {
       allow read, write: if isSignedIn();
     }
