@@ -4,7 +4,7 @@ import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
 import { collection, query, doc, updateDoc, serverTimestamp, setDoc, orderBy } from "firebase/firestore";
-import { UserRole, UserPermissions } from "@/lib/types";
+import { UserRole, UserPermissions, UserProfile } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,20 +41,11 @@ export default function UserManagementPage() {
   });
   const [isAdding, setIsAdding] = useState(false);
 
-  const userEmail = user?.email?.toLowerCase().trim();
-  const isMasterAdmin = userEmail === "edisonunb@gmail.com" || userEmail === "gabinete.professoraflavia@gmail.com";
-
-  const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
-  const { data: currentUserProfile, loading: profileLoading } = useDoc(profileRef);
+  const userEmailNormalized = user?.email?.toLowerCase().trim();
+  const isMasterAdmin = userEmailNormalized === "edisonunb@gmail.com" || userEmailNormalized === "gabinete.professoraflavia@gmail.com";
 
   const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db, user]);
   const { data: allUsers = [], loading: usersLoading } = useCollection(usersQuery);
-
-  const isAdmin = useMemo(() => {
-    if (isMasterAdmin) return true;
-    const profile = currentUserProfile as any;
-    return profile?.permissoes?.gerenciar_equipe || profile?.perfil === "ADMIN" || profile?.perfil === "SUPER_ADMIN";
-  }, [isMasterAdmin, currentUserProfile]);
 
   const handleTogglePermission = (key: keyof UserPermissions) => {
     setPermissions(prev => ({ ...prev, [key]: !prev[key] }));
@@ -82,17 +73,10 @@ export default function UserManagementPage() {
       const newUserRef = doc(db, "users", emailLower);
       
       const userData = {
-        id: emailLower,
         email: emailLower,
         nome: newName,
         perfil: newRole,
-        permissoes: {
-          visualizar_todas: !!permissions.visualizar_todas,
-          criar_demandas: !!permissions.criar_demandas,
-          finalizar_demandas: !!permissions.finalizar_demandas,
-          gerenciar_equipe: !!permissions.gerenciar_equipe,
-          reabrir_demandas: !!permissions.reabrir_demandas
-        },
+        permissoes: { ...permissions },
         ativo: true,
         updatedAt: serverTimestamp(),
       };
@@ -109,7 +93,7 @@ export default function UserManagementPage() {
       console.error("Erro Firestore:", error);
       toast({ 
         title: "Falha na Gravação", 
-        description: "Sem permissão no banco de dados. Verifique se seu e-mail master está correto nas Security Rules.", 
+        description: "Sem permissão no banco de dados. Verifique se o seu e-mail de administrador está configurado corretamente.", 
         variant: "destructive" 
       });
     } finally {
@@ -130,29 +114,10 @@ export default function UserManagementPage() {
     }
   };
 
-  if (authLoading || (profileLoading && !isMasterAdmin)) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="animate-spin text-primary" size={40} />
-      </div>
-    );
-  }
-
-  if (!isAdmin && !isMasterAdmin) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-md text-center shadow-lg border-destructive">
-          <CardHeader>
-            <Shield className="mx-auto text-destructive h-12 w-12 mb-2" />
-            <CardTitle>Acesso Negado</CardTitle>
-            <CardDescription>
-              Seu perfil ({userEmail}) não tem permissão para gerenciar a equipe.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => window.location.href = "/"}>Voltar ao Início</Button>
-          </CardContent>
-        </Card>
       </div>
     );
   }
@@ -249,10 +214,10 @@ export default function UserManagementPage() {
                   ) : allUsers.length === 0 ? (
                     <div className="py-10 text-center border-2 border-dashed rounded-xl">
                       <AlertCircle className="mx-auto text-muted-foreground mb-2" />
-                      <p className="text-muted-foreground text-sm font-medium">Nenhum membro cadastrado.</p>
+                      <p className="text-muted-foreground text-sm font-medium">Nenhum membro cadastrado ou falha no carregamento.</p>
                     </div>
                   ) : allUsers.map((u: any) => (
-                    <div key={u.id} className={cn(
+                    <div key={u.id || u.email} className={cn(
                       "flex items-center justify-between p-4 rounded-xl border-2 transition-all hover:border-primary/20",
                       u.ativo ? "bg-card border-transparent shadow-sm" : "bg-muted/50 grayscale opacity-60 border-transparent"
                     )}>
@@ -277,12 +242,12 @@ export default function UserManagementPage() {
                         </div>
                       </div>
                       
-                      {u.email !== userEmail && u.perfil !== "SUPER_ADMIN" && (
+                      {u.email !== userEmailNormalized && u.perfil !== "SUPER_ADMIN" && (
                         <Button 
                           variant={u.ativo ? "destructive" : "outline"}
                           size="sm" 
                           className="font-bold text-[10px] h-8 uppercase tracking-tighter"
-                          onClick={() => toggleUserStatus(u.id, u.ativo)}
+                          onClick={() => toggleUserStatus(u.id || u.email, u.ativo)}
                         >
                           {u.ativo ? "Bloquear" : "Ativar"}
                         </Button>

@@ -23,7 +23,6 @@ export default function NewDemandPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
-  const [initialSet, setInitialSet] = useState(false);
   
   const [formData, setFormData] = useState({
     titulo: "",
@@ -36,13 +35,12 @@ export default function NewDemandPage() {
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
-  // Sincroniza o responsável padrão apenas UMA vez para evitar loop infinito
+  // Define o responsável padrão de forma estável
   useEffect(() => {
-    if (user?.uid && !initialSet && !formData.responsavelId) {
+    if (user?.uid && !formData.responsavelId) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
-      setInitialSet(true);
     }
-  }, [user?.uid, initialSet, formData.responsavelId]);
+  }, [user?.uid]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,13 +51,13 @@ export default function NewDemandPage() {
       const demandId = await createDemand(db, user.uid, formData);
       toast({
         title: "Sucesso!",
-        description: "Demanda criada e atribuída com sucesso.",
+        description: "Demanda criada com sucesso.",
       });
       router.push(`/demandas/${demandId}`);
     } catch (error: any) {
       toast({
         title: "Erro ao criar demanda",
-        description: error.message || "Verifique sua conexão e tente novamente.",
+        description: error.message || "Verifique as permissões do sistema.",
         variant: "destructive",
       });
     } finally {
@@ -153,7 +151,7 @@ export default function NewDemandPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {allUsers.map((u: UserProfile) => (
-                      <SelectItem key={u.id} value={u.uid || u.email}>
+                      <SelectItem key={u.id || u.uid} value={u.uid || u.email}>
                         {u.nome} ({u.perfil})
                       </SelectItem>
                     ))}

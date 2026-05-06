@@ -3,17 +3,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Função Senior: Obtém o email de forma segura de múltiplas fontes no token
+    // Função para obter o e-mail do token de forma segura (normalizado para minúsculas)
     function getEmail() {
-      return request.auth.token.email != null ? request.auth.token.email : 
-             (request.auth.token.firebase.identities.email != null ? request.auth.token.firebase.identities.email[0] : null);
+      return request.auth != null && request.auth.token.email != null ? request.auth.token.email.lower() : null;
     }
 
-    // Função Master: Verifica o e-mail mestre com tolerância a nulos e caixa alta/baixa
+    // Função Master: Verifica se o usuário é um dos administradores principais
     function isMasterAdmin() {
       let email = getEmail();
-      return request.auth != null && email != null && 
-             (email.lower() == "edisonunb@gmail.com" || email.lower() == "gabinete.professoraflavia@gmail.com");
+      return email != null && (
+        email == "edisonunb@gmail.com" || 
+        email == "gabinete.professoraflavia@gmail.com"
+      );
     }
     
     // Regra de Ouro: O Master Admin tem acesso TOTAL e IRRESTRITO a tudo
@@ -21,16 +22,12 @@ service cloud.firestore {
       allow read, write: if isMasterAdmin();
     }
 
-    // Regras de Usuários: Permite que qualquer logado leia a lista, mas só o Master ou o dono escreva
+    // Regras específicas para coleções (Garante redundância e clareza)
     match /users/{userEmail} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && (
-        isMasterAdmin() || 
-        (getEmail() != null && getEmail().lower() == userEmail.lower())
-      );
+      allow write: if request.auth != null && (isMasterAdmin() || getEmail() == userEmail.lower());
     }
 
-    // Regras Gerais: Equipe autenticada pode operar no sistema
     match /demandas/{demandaId} {
       allow read, write: if request.auth != null;
     }
