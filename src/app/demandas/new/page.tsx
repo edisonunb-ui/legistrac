@@ -23,7 +23,7 @@ export default function NewDemandPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
-  const initializedRef = useRef(false);
+  const hasInitialized = useRef(false);
   
   const [formData, setFormData] = useState({
     titulo: "",
@@ -33,42 +33,35 @@ export default function NewDemandPage() {
     responsavelId: "",
   });
 
-  // Inicializa o responsável apenas uma vez quando o usuário carrega
-  // Usamos useRef para evitar loops infinitos de renderização
+  // Inicializa o responsável apenas uma vez para evitar loops infinitos
   useEffect(() => {
-    if (user?.uid && !initializedRef.current) {
+    if (user?.uid && !hasInitialized.current) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
-      initializedRef.current = true;
+      hasInitialized.current = true;
     }
-  }, [user?.uid]);
+  }, [user]);
 
   const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db) {
-      toast({ title: "Erro", description: "Usuário não autenticado.", variant: "destructive" });
-      return;
-    }
+    if (!user || !db) return;
     
     setSaving(true);
     try {
-      // Garante que temos um responsável definido
-      const finalResponsavelId = formData.responsavelId || user.uid;
-      
       const demandId = await createDemand(db, user.uid, {
         ...formData,
-        responsavelId: finalResponsavelId
+        responsavelId: formData.responsavelId || user.uid
       });
       
       toast({ title: "Sucesso!", description: "Demanda criada com sucesso." });
       router.push(`/demandas/${demandId}`);
     } catch (error: any) {
-      console.error("Erro ao salvar demanda:", error);
+      console.error("Erro ao salvar:", error);
       toast({
         title: "Erro ao Salvar",
-        description: "Verifique se as Regras de Segurança no Console do Firebase foram publicadas.",
+        description: "Verifique se as Regras foram publicadas no Console do Firebase.",
         variant: "destructive",
       });
     } finally {
@@ -125,7 +118,7 @@ export default function NewDemandPage() {
                     <div className="flex items-center gap-2"><UserIcon size={14} /><SelectValue /></div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={user?.uid || "me"}>Atribuir a mim</SelectItem>
+                    {user?.uid && <SelectItem value={user.uid}>Atribuir a mim</SelectItem>}
                     {allUsers.filter((u: any) => u.uid && u.uid !== user?.uid).map((u: any) => (
                       <SelectItem key={u.uid} value={u.uid}>{u.nome}</SelectItem>
                     ))}
