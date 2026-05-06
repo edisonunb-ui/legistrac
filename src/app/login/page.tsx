@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { LayoutDashboard, Loader2, Lock, Mail, AlertTriangle } from "lucide-react";
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { VEREADORES_AUTORIZADOS } from "@/lib/authorized-emails";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function LoginPage() {
@@ -35,33 +34,28 @@ export default function LoginPage() {
     if (submitting || !auth || !db) return;
     
     const emailLower = email.toLowerCase().trim();
-    
     setSubmitting(true);
 
     try {
-      // Tenta o login normal
       const userCredential = await signInWithEmailAndPassword(auth, emailLower, password);
       
       if (userCredential) {
-        // Verifica se o perfil existe no Firestore (Provisionamento)
         const userRef = doc(db, "users", emailLower);
         const userSnap = await getDoc(userRef);
         
         if (userSnap.exists()) {
-          // Atualiza o UID no Firestore após o primeiro login bem-sucedido
           await updateDoc(userRef, {
             uid: userCredential.user.uid,
             updatedAt: serverTimestamp(),
             ativo: true
           });
           
-          toast({ title: "Bem-vindo!", description: "Acesso autorizado." });
+          toast({ title: "Bem-vindo!", description: "Acesso autorizado ao LegisTrac." });
           router.push("/");
         } else {
-          // Se não houver perfil no Firestore, o acesso é negado mesmo com senha correta no Auth
           toast({
-            title: "Acesso Não Provisionado",
-            description: "Seu e-mail não foi encontrado na base de dados do gabinete.",
+            title: "Acesso Restrito",
+            description: "Seu e-mail não foi provisionado pelo administrador.",
             variant: "destructive",
           });
           await auth.signOut();
@@ -72,11 +66,13 @@ export default function LoginPage() {
       let errorMessage = "E-mail ou senha incorretos.";
       
       if (error.code === 'auth/operation-not-allowed') {
-        errorMessage = "O provedor de login está desativado no Firebase Console.";
+        errorMessage = "O provedor de login está desativado no Firebase.";
+      } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        errorMessage = "Credenciais inválidas. Verifique os dados.";
       }
 
       toast({
-        title: "Erro no Login",
+        title: "Falha na Autenticação",
         description: errorMessage,
         variant: "destructive",
       });
@@ -122,7 +118,7 @@ export default function LoginPage() {
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle className="text-xs font-bold">Nota do Sistema</AlertTitle>
             <AlertDescription className="text-[10px] leading-relaxed">
-              O acesso é restrito a membros provisionados. Se você é um vereador, certifique-se de que o método de login E-mail/Senha está ativo no Firebase.
+              O acesso é restrito a membros provisionados. Se você é um administrador, use a aba Equipe para cadastrar seus assessores.
             </AlertDescription>
           </Alert>
         </CardContent>

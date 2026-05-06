@@ -7,8 +7,7 @@ service cloud.firestore {
     function isMasterAdmin() {
       return request.auth != null && 
              request.auth.token.email != null && 
-             (request.auth.token.email.lower() == "edisonunb@gmail.com" || 
-              request.auth.token.email.lower() == "gabinete.professoraflavia@gmail.com");
+             request.auth.token.email.lower() == "edisonunb@gmail.com";
     }
 
     // Regra Global: Master Admins têm acesso TOTAL e ABSOLUTO

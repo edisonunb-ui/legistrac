@@ -2,7 +2,7 @@
 
 import { useUser, useFirestore, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createDemand } from "@/lib/demand-service";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, Save, ShieldCheck, Loader2, User as UserIcon } from "lucide-react";
 import Link from "next/link";
-import { DemandPriority, UserProfile } from "@/lib/types";
+import { DemandPriority } from "@/lib/types";
 import { collection, query, orderBy } from "firebase/firestore";
 
 export default function NewDemandPage() {
@@ -24,24 +24,16 @@ export default function NewDemandPage() {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   
-  // Inicialização estável do estado para evitar loops
   const [formData, setFormData] = useState({
     titulo: "",
     descricao: "",
     prazo: "",
     prioridade: "MEDIA" as DemandPriority,
-    responsavelId: "",
+    responsavelId: user?.uid || "",
   });
 
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
-
-  // Sincroniza o responsavelId apenas quando o usuário carrega e se o campo ainda estiver vazio
-  useEffect(() => {
-    if (user?.uid && !formData.responsavelId) {
-      setFormData(prev => ({ ...prev, responsavelId: user.uid }));
-    }
-  }, [user?.uid]); // Removida a dependência de formData.responsavelId para quebrar o loop
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +41,13 @@ export default function NewDemandPage() {
     setSaving(true);
 
     try {
-      const demandId = await createDemand(db, user.uid, formData);
+      // Garante que o responsável seja o próprio usuário se não selecionado
+      const finalData = {
+        ...formData,
+        responsavelId: formData.responsavelId || user.uid
+      };
+
+      const demandId = await createDemand(db, user.uid, finalData);
       toast({
         title: "Sucesso!",
         description: "Demanda criada com sucesso.",
@@ -66,7 +64,7 @@ export default function NewDemandPage() {
     }
   };
 
-  if (authLoading || !user) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-primary">
         <Loader2 className="animate-spin mb-4" size={40} />
@@ -151,7 +149,8 @@ export default function NewDemandPage() {
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    {allUsers.map((u: any) => (
+                    <SelectItem value={user?.uid || "me"}>Eu mesmo</SelectItem>
+                    {allUsers.filter(u => u.uid !== user?.uid).map((u: any) => (
                       <SelectItem key={u.uid || u.email} value={u.uid || u.email}>
                         {u.nome} ({u.perfil})
                       </SelectItem>
