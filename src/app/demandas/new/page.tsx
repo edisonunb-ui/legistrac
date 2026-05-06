@@ -32,12 +32,15 @@ export default function NewDemandPage() {
     responsavelId: "",
   });
 
-  // Inicializa o responsável uma única vez quando o usuário carrega
+  // Inicializa o responsável de forma estável para evitar loops de renderização
   useEffect(() => {
     if (user?.uid && !formData.responsavelId) {
-      setFormData(prev => ({ ...prev, responsavelId: user.uid }));
+      setFormData(prev => {
+        if (prev.responsavelId === user.uid) return prev;
+        return { ...prev, responsavelId: user.uid };
+      });
     }
-  }, [user?.uid]);
+  }, [user?.uid, formData.responsavelId]);
 
   const usersQuery = useMemo(() => db ? query(collection(db, "users"), orderBy("nome", "asc")) : null, [db]);
   const { data: allUsers = [] } = useCollection(usersQuery);
@@ -144,7 +147,7 @@ export default function NewDemandPage() {
               <div className="space-y-2">
                 <Label htmlFor="responsavel">Atribuir Responsável</Label>
                 <Select 
-                  value={formData.responsavelId} 
+                  value={formData.responsavelId || user?.uid || ""} 
                   onValueChange={(v) => setFormData(prev => ({ ...prev, responsavelId: v }))}
                 >
                   <SelectTrigger id="responsavel">
@@ -154,8 +157,8 @@ export default function NewDemandPage() {
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={user?.uid || ""}>Eu mesmo</SelectItem>
-                    {allUsers.map((u: any) => (
+                    <SelectItem value={user?.uid || "me"}>Eu mesmo</SelectItem>
+                    {allUsers.filter(u => u.uid !== user?.uid).map((u: any) => (
                       <SelectItem key={u.uid || u.email} value={u.uid || u.email}>
                         {u.nome} ({u.perfil})
                       </SelectItem>

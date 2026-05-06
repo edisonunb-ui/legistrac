@@ -2,26 +2,16 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Função para verificar se é o e-mail mestre de forma segura
-    function isMasterAdmin() {
-      return request.auth != null && 
-             request.auth.token != null && 
-             request.auth.token.email != null && 
-             request.auth.token.email.lower() == "edisonunb@gmail.com";
-    }
-
-    // Regra de Ouro: Super Admin tem acesso total a tudo
+    // Permite acesso total para o email do SuperAdmin
     match /{document=**} {
-      allow read, write: if isMasterAdmin();
+      allow read, write: if request.auth != null && 
+                          request.auth.token.email.lower() == "edisonunb@gmail.com";
     }
 
     // Regras gerais para usuários autenticados
     match /users/{userEmail} {
       allow read: if request.auth != null;
-      // Permite que o próprio usuário edite seus dados se autenticado
-      allow write: if request.auth != null && 
-                     request.auth.token.email != null && 
-                     request.auth.token.email.lower() == userEmail.lower();
+      allow write: if request.auth != null && request.auth.token.email.lower() == userEmail.lower();
     }
 
     match /demandas/{docId} {
@@ -29,8 +19,7 @@ service cloud.firestore {
     }
 
     match /tramites/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read, write: if request.auth != null;
     }
 
     match /notificacoes/{docId} {
