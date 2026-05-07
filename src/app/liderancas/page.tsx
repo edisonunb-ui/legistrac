@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useFirestore, useCollection, useUser } from "@/firebase";
@@ -12,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, Plus, MapPin, Phone, Users, ChevronRight, ChevronLeft, Target } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 export default function LeadersPage() {
   const { user } = useUser();
