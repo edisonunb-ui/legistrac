@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -8,7 +9,7 @@
         "uid": { "type": "string" },
         "nome": { "type": "string" },
         "email": { "type": "string" },
-        "perfil": { "type": "string", "enum": ["ADMIN", "ASSESSOR"] },
+        "perfil": { "type": "string", "enum": ["SUPER_ADMIN", "ADMIN", "ASSESSOR", "ESTAGIARIO"] },
         "ativo": { "type": "boolean" },
         "createdAt": { "type": "object" }
       },
@@ -16,7 +17,7 @@
     },
     "Demand": {
       "title": "Demand",
-      "description": "A demand or request",
+      "description": "A cabinet demand",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -26,35 +27,33 @@
         "responsavelAtual": { "type": "string" },
         "status": { "type": "string", "enum": ["ABERTO", "EM_ANDAMENTO", "AGUARDANDO_VEREADORA", "FINALIZADO"] },
         "prazo": { "type": "string" },
-        "dataCriacao": { "type": "object" },
-        "dataAtualizacao": { "type": "object" },
-        "finalizada": { "type": "boolean" },
-        "prioridade": { "type": "string", "enum": ["BAIXA", "MEDIA", "ALTA"] }
+        "prioridade": { "type": "string", "enum": ["BAIXA", "MEDIA", "ALTA"] },
+        "liderancaId": { "type": "string" }
       }
     },
-    "Tramite": {
-      "title": "Tramite",
-      "description": "Historical record of demand movement",
+    "Leader": {
+      "title": "Leader",
+      "description": "Political base leader",
       "type": "object",
       "properties": {
-        "demandaId": { "type": "string" },
-        "de": { "type": "string" },
-        "para": { "type": "string" },
-        "acao": { "type": "string", "enum": ["ENVIO", "DEVOLUCAO", "FINALIZACAO", "REABERTURA"] },
-        "observacao": { "type": "string" },
-        "data": { "type": "object" }
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "bairro": { "type": "string" },
+        "contato": { "type": "string" },
+        "potencialVotos": { "type": "number" },
+        "influencia": { "type": "string", "enum": ["BAIXA", "MEDIA", "ALTA"] },
+        "status": { "type": "string", "enum": ["ATIVO", "PROSPECTO", "INATIVO"] }
       }
     },
-    "Notification": {
-      "title": "Notification",
-      "description": "User notification",
+    "Territory": {
+      "title": "Territory",
+      "description": "Territorial base management",
       "type": "object",
       "properties": {
-        "userId": { "type": "string" },
-        "mensagem": { "type": "string" },
-        "demandaId": { "type": "string" },
-        "lida": { "type": "boolean" },
-        "data": { "type": "object" }
+        "id": { "type": "string" },
+        "bairro": { "type": "string" },
+        "metaVotos": { "type": "number" },
+        "votosAtuais": { "type": "number" }
       }
     }
   },
@@ -70,13 +69,13 @@
       "schema": "Demand",
       "description": "Cabinet demands"
     },
-    "/tramites/{tramiteId}": {
-      "schema": "Tramite",
-      "description": "Demand history (immutable)"
+    "/liderancas/{leaderId}": {
+      "schema": "Leader",
+      "description": "Political leaders"
     },
-    "/notificacoes/{notificationId}": {
-      "schema": "Notification",
-      "description": "User notifications"
+    "/territorios/{territoryId}": {
+      "schema": "Territory",
+      "description": "Territorial data"
     }
   }
 }

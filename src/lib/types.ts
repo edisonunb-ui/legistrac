@@ -1,3 +1,4 @@
+
 import { Timestamp } from "firebase/firestore";
 
 export type UserRole = "SUPER_ADMIN" | "ADMIN" | "ASSESSOR" | "ESTAGIARIO";
@@ -21,8 +22,8 @@ export interface Attachment {
 }
 
 export interface UserProfile {
-  id: string; // Document ID
-  uid?: string; // Firebase Auth UID (populated after first login)
+  id: string;
+  uid?: string;
   nome: string;
   email: string;
   perfil: UserRole;
@@ -41,22 +42,39 @@ export interface Demand {
   criadoPor: string;
   responsavelAtual: string;
   status: DemandStatus;
-  prazo: string; // ISO date string
+  prazo: string;
   dataCriacao: Timestamp;
   dataAtualizacao: Timestamp;
   finalizada: boolean;
   prioridade: DemandPriority;
   anexos?: Attachment[];
+  liderancaId?: string;
 }
 
-export type TramiteAction = "ENVIO" | "DEVOLUCAO" | "FINALIZACAO" | "REABERTURA";
+export interface Leader {
+  id: string;
+  nome: string;
+  bairro: string;
+  contato: string;
+  potencialVotos: number;
+  influencia: "BAIXA" | "MEDIA" | "ALTA";
+  status: "ATIVO" | "PROSPECTO" | "INATIVO";
+  dataCriacao?: Timestamp;
+}
+
+export interface Territory {
+  id: string;
+  bairro: string;
+  metaVotos: number;
+  votosAtuais: number;
+}
 
 export interface Tramite {
   id: string;
   demandaId: string;
   de: string;
   para: string;
-  acao: TramiteAction;
+  acao: "ENVIO" | "DEVOLUCAO" | "FINALIZACAO" | "REABERTURA";
   observacao: string;
   data: Timestamp;
   anexos?: Attachment[];
