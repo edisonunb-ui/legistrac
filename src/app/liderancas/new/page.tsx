@@ -26,7 +26,7 @@ export default function NewLeaderPage() {
     nome: "",
     bairro: "",
     contato: "",
-    potencialVotos: 0,
+    potencialVotos: "",
     influencia: "MEDIA",
     status: "ATIVO"
   });
@@ -39,7 +39,7 @@ export default function NewLeaderPage() {
     try {
       await addDoc(collection(db, "liderancas"), {
         ...formData,
-        potencialVotos: Number(formData.potencialVotos),
+        potencialVotos: Number(formData.potencialVotos) || 0,
         dataCriacao: serverTimestamp(),
         criadoPor: user.uid
       });
@@ -90,7 +90,13 @@ export default function NewLeaderPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-bold uppercase text-muted-foreground">Potencial de Votos (Estimativa)</Label>
-                  <Input type="number" required value={formData.potencialVotos} onChange={e => setFormData(p => ({ ...p, potencialVotos: parseInt(e.target.value) }))} className="bg-background border-primary/10" />
+                  <Input 
+                    type="number" 
+                    required 
+                    value={formData.potencialVotos} 
+                    onChange={e => setFormData(p => ({ ...p, potencialVotos: e.target.value }))} 
+                    className="bg-background border-primary/10" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-bold uppercase text-muted-foreground">Grau de Influência</Label>
