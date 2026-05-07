@@ -88,3 +88,7 @@ export interface Notification {
   lida: boolean;
   data: Timestamp;
 }
+
+export interface GlobalConfig {
+  metaVotos2026: number;
+}

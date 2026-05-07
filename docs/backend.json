@@ -55,6 +55,14 @@
         "metaVotos": { "type": "number" },
         "votosAtuais": { "type": "number" }
       }
+    },
+    "GlobalConfig": {
+      "title": "GlobalConfig",
+      "description": "Global system configurations",
+      "type": "object",
+      "properties": {
+        "metaVotos2026": { "type": "number" }
+      }
     }
   },
   "auth": {
@@ -76,6 +84,10 @@
     "/territorios/{territoryId}": {
       "schema": "Territory",
       "description": "Territorial data"
+    },
+    "/config/{configId}": {
+      "schema": "GlobalConfig",
+      "description": "System settings"
     }
   }
 }

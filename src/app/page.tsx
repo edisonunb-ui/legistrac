@@ -3,9 +3,9 @@
 
 import { useFirestore, useCollection, useUser, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useMemo } from "react";
-import { collection, query, doc } from "firebase/firestore";
-import { Demand, Leader } from "@/lib/types";
+import { useMemo, useState, useEffect } from "react";
+import { collection, query, doc, setDoc } from "firebase/firestore";
+import { Demand, Leader, GlobalConfig } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Users, 
@@ -15,17 +15,33 @@ import {
   PlusCircle,
   Loader2,
   ChevronRight,
-  ClipboardList
+  ClipboardList,
+  Edit2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 export default function StrategicDashboard() {
-  const { user, loading } = useUser();
+  const { user, loading: authLoading } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
+
+  const [isEditingMeta, setIsEditingMeta] = useState(false);
+  const [newMetaValue, setNewMetaValue] = useState("");
 
   const demandsQuery = useMemo(() => db ? query(collection(db, "demandas")) : null, [db]);
   const { data: allDemands = [] } = useCollection(demandsQuery);
@@ -33,9 +49,18 @@ export default function StrategicDashboard() {
   const leadersQuery = useMemo(() => db ? query(collection(db, "liderancas")) : null, [db]);
   const { data: allLeaders = [] } = useCollection(leadersQuery);
 
+  const configRef = useMemo(() => db ? doc(db, "config", "global") : null, [db]);
+  const { data: config, loading: configLoading } = useDoc<GlobalConfig>(configRef);
+
+  const userEmail = user?.email?.toLowerCase().trim();
+  const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
+  const { data: profile } = useDoc(profileRef);
+
+  const isAdmin = (profile as any)?.perfil === "ADMIN" || (profile as any)?.perfil === "SUPER_ADMIN" || user?.email === "edisonunb@gmail.com";
+
   const stats = useMemo(() => {
     const totalVotosMapeados = allLeaders.reduce((acc, curr) => acc + (curr.potencialVotos || 0), 0);
-    const metaGeral = 50000; // Meta exemplo para 2026
+    const metaGeral = config?.metaVotos2026 || 50000;
     const progresso = (totalVotosMapeados / metaGeral) * 100;
 
     return {
@@ -45,9 +70,32 @@ export default function StrategicDashboard() {
       progressoMeta: Math.min(progresso, 100),
       metaGeral
     };
-  }, [allDemands, allLeaders]);
+  }, [allDemands, allLeaders, config]);
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="animate-spin text-primary" /></div>;
+  useEffect(() => {
+    if (config?.metaVotos2026) {
+      setNewMetaValue(config.metaVotos2026.toString());
+    }
+  }, [config]);
+
+  const handleUpdateMeta = async () => {
+    if (!db || !configRef) return;
+    const val = parseInt(newMetaValue);
+    if (isNaN(val) || val <= 0) {
+      toast({ title: "Valor inválido", description: "Insira um número válido para a meta.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      await setDoc(configRef, { metaVotos2026: val }, { merge: true });
+      toast({ title: "Meta Atualizada", description: `A meta geral foi alterada para ${val.toLocaleString()} votos.` });
+      setIsEditingMeta(false);
+    } catch (e) {
+      toast({ title: "Erro", description: "Falha ao atualizar a meta estratégica.", variant: "destructive" });
+    }
+  };
+
+  if (authLoading || configLoading) return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="animate-spin text-primary" /></div>;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -112,16 +160,48 @@ export default function StrategicDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-primary/10">
+          <Card className="bg-card border-primary/10 relative group">
             <CardContent className="pt-6">
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Meta Geral 2026</p>
-                  <h3 className="text-3xl font-bold">50K</h3>
+                  <h3 className="text-3xl font-bold">{(stats.metaGeral / 1000).toFixed(0)}K</h3>
                 </div>
-                <div className="p-2 bg-primary/10 text-primary rounded-lg"><TrendingUp size={24} /></div>
+                <div className="p-2 bg-primary/10 text-primary rounded-lg flex flex-col items-center">
+                  <TrendingUp size={24} />
+                  {isAdmin && (
+                    <Dialog open={isEditingMeta} onOpenChange={setIsEditingMeta}>
+                      <DialogTrigger asChild>
+                        <button className="mt-2 text-[10px] flex items-center gap-1 hover:underline text-primary/70">
+                          <Edit2 size={10} /> Editar
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Ajustar Meta Estratégica</DialogTitle>
+                        </DialogHeader>
+                        <div className="py-4 space-y-4">
+                          <div className="space-y-2">
+                            <Label>Objetivo de Votos (Total)</Label>
+                            <Input 
+                              type="number" 
+                              value={newMetaValue} 
+                              onChange={e => setNewMetaValue(e.target.value)}
+                              placeholder="Ex: 50000"
+                            />
+                            <p className="text-[10px] text-muted-foreground">Esta meta define o progresso de todas as barras de crescimento do dashboard.</p>
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button variant="ghost" onClick={() => setIsEditingMeta(false)}>Cancelar</Button>
+                          <Button onClick={handleUpdateMeta}>Salvar Novo Objetivo</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                </div>
               </div>
-              <p className="text-[10px] text-muted-foreground mt-4 font-bold">VOTOS ESTIMADOS</p>
+              <p className="text-[10px] text-muted-foreground mt-4 font-bold uppercase">Objetivo de Votos Estimado</p>
             </CardContent>
           </Card>
         </div>
@@ -175,9 +255,9 @@ export default function StrategicDashboard() {
                   "O sucesso eleitoral é construído na rotina do gabinete. Cada demanda atendida é um tijolo na base de confiança do eleitor."
                 </p>
                 <div className="mt-6 p-4 bg-white/10 rounded-lg">
-                  <p className="text-[10px] font-bold uppercase mb-2 tracking-widest">Próxima Grande Meta</p>
-                  <p className="text-xl font-bold">100 Líderes Ativos</p>
-                  <Progress value={(allLeaders.length / 100) * 100} className="h-1 bg-white/20 mt-2" />
+                  <p className="text-[10px] font-bold uppercase mb-2 tracking-widest">Capacidade Atual</p>
+                  <p className="text-xl font-bold">{stats.votosMapeados.toLocaleString()} / {stats.metaGeral.toLocaleString()}</p>
+                  <Progress value={stats.progressoMeta} className="h-1 bg-white/20 mt-2" />
                 </div>
               </CardContent>
             </Card>
