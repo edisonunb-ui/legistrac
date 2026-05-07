@@ -49,6 +49,19 @@ export interface Demand {
   prioridade: DemandPriority;
   anexos?: Attachment[];
   liderancaId?: string;
+  atendimentoId?: string;
+}
+
+export interface CitizenService {
+  id: string;
+  municipeNome: string;
+  municipeEndereco: string;
+  municipeTituloEleitoral: string;
+  municipeTelefone: string;
+  descricaoSolicitacao: string;
+  dataAtendimento: Timestamp;
+  atendidoPor: string;
+  demandaId?: string;
 }
 
 export interface Leader {

@@ -3,7 +3,7 @@
 
 import { useUser, useFirestore, useAuthInstance, useDoc } from "@/firebase";
 import { Button } from "@/components/ui/button";
-import { Bell, LogOut, User, LayoutDashboard, ListTodo, PlusCircle, Users, MapPin, Target } from "lucide-react";
+import { Bell, LogOut, User, LayoutDashboard, ListTodo, PlusCircle, Users, MapPin, Target, PhoneIncoming } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -43,9 +43,9 @@ export function Navbar() {
 
   const navItems = [
     { label: "Dashboard", icon: LayoutDashboard, href: "/" },
+    { label: "Atendimentos", icon: PhoneIncoming, href: "/atendimentos" },
     { label: "Demandas", icon: ListTodo, href: "/demandas" },
     { label: "Lideranças", icon: Users, href: "/liderancas" },
-    { label: "Territórios", icon: MapPin, href: "/territorios" },
   ];
 
   return (

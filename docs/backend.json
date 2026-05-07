@@ -28,7 +28,24 @@
         "status": { "type": "string", "enum": ["ABERTO", "EM_ANDAMENTO", "AGUARDANDO_VEREADORA", "FINALIZADO"] },
         "prazo": { "type": "string" },
         "prioridade": { "type": "string", "enum": ["BAIXA", "MEDIA", "ALTA"] },
-        "liderancaId": { "type": "string" }
+        "liderancaId": { "type": "string" },
+        "atendimentoId": { "type": "string" }
+      }
+    },
+    "CitizenService": {
+      "title": "CitizenService",
+      "description": "Citizen service record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "municipeNome": { "type": "string" },
+        "municipeEndereco": { "type": "string" },
+        "municipeTituloEleitoral": { "type": "string" },
+        "municipeTelefone": { "type": "string" },
+        "descricaoSolicitacao": { "type": "string" },
+        "dataAtendimento": { "type": "object" },
+        "atendidoPor": { "type": "string" },
+        "demandaId": { "type": "string" }
       }
     },
     "Leader": {
@@ -76,6 +93,10 @@
     "/demandas/{demandaId}": {
       "schema": "Demand",
       "description": "Cabinet demands"
+    },
+    "/atendimentos/{atendimentoId}": {
+      "schema": "CitizenService",
+      "description": "Citizen service records"
     },
     "/liderancas/{leaderId}": {
       "schema": "Leader",
