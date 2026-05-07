@@ -18,6 +18,7 @@ import { ChevronLeft, Save, Loader2, User, Phone, MapPin, ClipboardList, Send, A
 import Link from "next/link";
 import { useCollection } from "@/firebase";
 import { DemandPriority } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export default function NewCitizenServicePage() {
   const { user } = useUser();
