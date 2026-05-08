@@ -233,7 +233,7 @@ export default function UserManagementPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ASSESSOR">Assessor</SelectItem>
-                      <SelectItem value="ADMIN">Administrador</SelectItem>
+                      <SelectItem value="ADMIN">Vereador</SelectItem>
                       <SelectItem value="ESTAGIARIO">Estagiário</SelectItem>
                     </SelectContent>
                   </Select>
@@ -261,7 +261,7 @@ export default function UserManagementPage() {
                         <p className="font-bold">{u.nome || "Usuário sem nome"}</p>
                         <p className="text-xs text-muted-foreground">
                           {currentEmail} • 
-                          <Badge variant="secondary" className="ml-2 text-[8px] font-bold uppercase">{u.perfil}</Badge>
+                          <Badge variant="secondary" className="ml-2 text-[8px] font-bold uppercase">{u.perfil === "ADMIN" ? "VEREADOR" : u.perfil}</Badge>
                           <span className="ml-2 text-primary font-bold">
                             {cabinets.find((c:any) => c.id === u.cabinetId)?.vereador || 'Sem Gabinete'}
                           </span>
@@ -298,7 +298,7 @@ export default function UserManagementPage() {
                                   <SelectTrigger><SelectValue /></SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="ASSESSOR">Assessor</SelectItem>
-                                    <SelectItem value="ADMIN">Administrador</SelectItem>
+                                    <SelectItem value="ADMIN">Vereador</SelectItem>
                                     <SelectItem value="ESTAGIARIO">Estagiário</SelectItem>
                                     {isThisUserMaster && <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>}
                                   </SelectContent>
@@ -327,7 +327,6 @@ export default function UserManagementPage() {
                           </DialogContent>
                         </Dialog>
 
-                        {/* REGRA DE OURO: Se for o Master (e-mail ou ID ou Perfil), não mostra o excluir */}
                         {isMasterAdmin && !isThisUserMaster && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
