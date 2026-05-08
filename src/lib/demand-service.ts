@@ -14,6 +14,7 @@ export async function createDemand(
   db: Firestore,
   userId: string,
   data: { 
+    cabinetId: string;
     titulo: string; 
     descricao: string; 
     prazo: string; 
@@ -23,6 +24,7 @@ export async function createDemand(
   }
 ) {
   if (!userId) throw new Error("Usuário não identificado.");
+  if (!data.cabinetId) throw new Error("Gabinete não identificado.");
   
   const demandRef = doc(collection(db, "demandas"));
   const tramiteRef = doc(collection(db, "tramites"));
@@ -30,6 +32,7 @@ export async function createDemand(
 
   const demandData = {
     id: demandRef.id,
+    cabinetId: data.cabinetId,
     titulo: data.titulo,
     descricao: data.descricao,
     prazo: data.prazo,
@@ -47,6 +50,7 @@ export async function createDemand(
     transaction.set(demandRef, demandData);
     transaction.set(tramiteRef, {
       demandaId: demandRef.id,
+      cabinetId: data.cabinetId,
       de: userId,
       para: targetResponsavel,
       acao: "ENVIO",
@@ -81,6 +85,7 @@ export async function sendDemand(
   await runTransaction(db, async (transaction) => {
     const demandDoc = await transaction.get(demandRef);
     const existingAnexos = demandDoc.data()?.anexos || [];
+    const cabinetId = demandDoc.data()?.cabinetId;
 
     transaction.update(demandRef, {
       responsavelAtual: para,
@@ -91,6 +96,7 @@ export async function sendDemand(
 
     transaction.set(tramiteRef, {
       demandaId,
+      cabinetId: cabinetId || null,
       de,
       para,
       acao: "ENVIO",
@@ -101,6 +107,7 @@ export async function sendDemand(
 
     transaction.set(notificationRef, {
       userId: para,
+      cabinetId: cabinetId || null,
       mensagem: `Você recebeu uma nova demanda para análise.`,
       demandaId,
       lida: false,
@@ -127,6 +134,7 @@ export async function returnDemand(
   await runTransaction(db, async (transaction) => {
     const demandDoc = await transaction.get(demandRef);
     const existingAnexos = demandDoc.data()?.anexos || [];
+    const cabinetId = demandDoc.data()?.cabinetId;
 
     transaction.update(demandRef, {
       responsavelAtual: para,
@@ -137,6 +145,7 @@ export async function returnDemand(
 
     transaction.set(tramiteRef, {
       demandaId,
+      cabinetId: cabinetId || null,
       de,
       para,
       acao: "DEVOLUCAO",
@@ -147,6 +156,7 @@ export async function returnDemand(
 
     transaction.set(notificationRef, {
       userId: para,
+      cabinetId: cabinetId || null,
       mensagem: `Uma demanda foi devolvida para você.`,
       demandaId,
       lida: false,
@@ -170,6 +180,9 @@ export async function finalizeDemand(
   const notificationRef = doc(collection(db, "notificacoes"));
 
   await runTransaction(db, async (transaction) => {
+    const demandDoc = await transaction.get(demandRef);
+    const cabinetId = demandDoc.data()?.cabinetId;
+
     transaction.update(demandRef, {
       status: "FINALIZADO",
       finalizada: true,
@@ -178,6 +191,7 @@ export async function finalizeDemand(
 
     transaction.set(tramiteRef, {
       demandaId,
+      cabinetId: cabinetId || null,
       de: userId,
       para: userId,
       acao: "FINALIZACAO",
@@ -187,6 +201,7 @@ export async function finalizeDemand(
 
     transaction.set(notificationRef, {
       userId: criadorId,
+      cabinetId: cabinetId || null,
       mensagem: `Sua demanda foi finalizada com sucesso.`,
       demandaId,
       lida: false,
@@ -210,6 +225,9 @@ export async function reopenDemand(
   const notificationRef = doc(collection(db, "notificacoes"));
 
   await runTransaction(db, async (transaction) => {
+    const demandDoc = await transaction.get(demandRef);
+    const cabinetId = demandDoc.data()?.cabinetId;
+
     transaction.update(demandRef, {
       status: "EM_ANDAMENTO",
       finalizada: false,
@@ -218,6 +236,7 @@ export async function reopenDemand(
 
     transaction.set(tramiteRef, {
       demandaId,
+      cabinetId: cabinetId || null,
       de: userId,
       para: responsavelId,
       acao: "REABERTURA",
@@ -227,6 +246,7 @@ export async function reopenDemand(
 
     transaction.set(notificationRef, {
       userId: responsavelId,
+      cabinetId: cabinetId || null,
       mensagem: `Uma demanda foi reaberta para novos ajustes.`,
       demandaId,
       lida: false,

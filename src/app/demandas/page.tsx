@@ -1,10 +1,9 @@
-
 "use client";
 
 import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
-import { collection, query, doc } from "firebase/firestore";
+import { collection, query, doc, where } from "firebase/firestore";
 import { Demand } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -29,6 +28,8 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
+const MASTER_EMAIL = "edisonunb@gmail.com";
+
 export default function DemandListPage() {
   const { user } = useUser();
   const db = useFirestore();
@@ -40,11 +41,17 @@ export default function DemandListPage() {
   const profileRef = useMemo(() => userEmail && db ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
-  // Consulta simples sem orderBy para evitar erro de índice
+  const isMasterAdmin = userEmail === MASTER_EMAIL;
+  const cabinetId = (profile as any)?.cabinetId;
+  const isVereador = (profile as any)?.perfil === "ADMIN";
+
+  // Consulta filtrada por gabinete para LGPD (exceto SuperAdmin)
   const demandsQuery = useMemo(() => {
     if (!db || !user) return null;
-    return query(collection(db, "demandas"));
-  }, [db, user]);
+    if (isMasterAdmin) return query(collection(db, "demandas"));
+    if (cabinetId) return query(collection(db, "demandas"), where("cabinetId", "==", cabinetId));
+    return null;
+  }, [db, user, isMasterAdmin, cabinetId]);
   
   const { data: allDemandsRaw = [], loading } = useCollection(demandsQuery);
 
@@ -56,7 +63,9 @@ export default function DemandListPage() {
       return dateB - dateA;
     });
 
-    if (filterType === "MINHAS" && user) {
+    // Se for Vereador ou tiver permissão, pode ver "TODAS" do gabinete.
+    // Senão, vê apenas as suas por padrão se não for master.
+    if (filterType === "MINHAS" && user && !isMasterAdmin) {
       result = result.filter((d: Demand) => d.responsavelAtual === user.uid);
     }
 
@@ -73,10 +82,10 @@ export default function DemandListPage() {
     }
 
     return result;
-  }, [allDemandsRaw, filterType, searchTerm, statusFilter, user]);
+  }, [allDemandsRaw, filterType, searchTerm, statusFilter, user, isMasterAdmin]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <header className="mb-8 space-y-4">
@@ -86,14 +95,14 @@ export default function DemandListPage() {
               Voltar ao Dashboard
             </Link>
             <div className="flex items-center justify-between mt-2">
-              <h1 className="text-3xl font-headline font-bold text-foreground">Demandas</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Demandas</h1>
               <Link href="/demandas/new">
-                <Button size="sm" className="shadow-sm">Nova Demanda</Button>
+                <Button size="sm" className="shadow-lg shadow-primary/10">Nova Demanda</Button>
               </Link>
             </div>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-4 p-4 bg-card rounded-xl border shadow-sm">
+          <div className="flex flex-col lg:flex-row gap-4 p-4 bg-card rounded-xl border border-primary/10 shadow-sm">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
               <Input 
@@ -113,9 +122,7 @@ export default function DemandListPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="MINHAS">Minhas Demandas</SelectItem>
-                    {(profile as any)?.perfil === "ADMIN" || (profile as any)?.perfil === "SUPER_ADMIN" ? (
-                      <SelectItem value="TODAS">Todas (Geral)</SelectItem>
-                    ) : null}
+                    {(isVereador || isMasterAdmin) && <SelectItem value="TODAS">Todas (Gabinete)</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
@@ -143,12 +150,12 @@ export default function DemandListPage() {
             ))}
           </div>
         ) : filteredDemands.length === 0 ? (
-          <div className="text-center py-20 bg-card rounded-2xl border shadow-sm">
+          <div className="text-center py-20 bg-card rounded-2xl border border-dashed border-primary/10 shadow-sm">
             <div className="inline-block p-6 bg-muted rounded-full mb-4">
-              <AlertCircle size={48} className="text-muted-foreground" />
+              <AlertCircle size={48} className="text-muted-foreground opacity-20" />
             </div>
             <h3 className="text-xl font-semibold mb-2">Nenhuma demanda encontrada</h3>
-            <p className="text-muted-foreground max-w-sm mx-auto">Não encontramos registros com os filtros aplicados.</p>
+            <p className="text-muted-foreground max-w-sm mx-auto">Não encontramos registros com os filtros aplicados neste gabinete.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -158,7 +165,7 @@ export default function DemandListPage() {
               
               return (
                 <Link key={demand.id} href={`/demandas/${demand.id}`}>
-                  <Card className="h-full border hover:border-primary hover:shadow-lg transition-all flex flex-col group">
+                  <Card className="h-full border border-primary/10 hover:border-primary/40 hover:shadow-lg transition-all flex flex-col group overflow-hidden">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-2">
                         <Badge variant={demand.prioridade === "ALTA" ? "destructive" : demand.prioridade === "MEDIA" ? "secondary" : "outline"} className="text-[10px] uppercase">
@@ -174,15 +181,15 @@ export default function DemandListPage() {
                     </CardHeader>
                     <CardContent className="flex-1 space-y-4">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Calendar size={14} />
+                        <Calendar size={14} className="text-primary" />
                         <span>Prazo: {new Date(demand.prazo).toLocaleDateString()}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock size={14} />
+                        <Clock size={14} className="text-primary" />
                         <span>Atualizado há {diffHours}h</span>
                       </div>
                       
-                      <div className="pt-4 border-t flex items-center justify-between">
+                      <div className="pt-4 border-t border-primary/5 flex items-center justify-between">
                         <Badge className={cn(
                           "text-[10px] font-medium uppercase",
                           demand.status === "ABERTO" && "bg-blue-100 text-blue-700 border-blue-200",

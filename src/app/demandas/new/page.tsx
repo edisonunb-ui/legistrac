@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useUser, useFirestore, useCollection, useStorage } from "@/firebase";
+import { useUser, useFirestore, useCollection, useDoc, useStorage } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -16,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, Save, Loader2, User as UserIcon, Paperclip, X, FileText } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority, Attachment } from "@/lib/types";
-import { collection, query, Timestamp } from "firebase/firestore";
+import { collection, query, Timestamp, doc, where } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function NewDemandPage() {
@@ -39,6 +38,12 @@ export default function NewDemandPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [uploadStatus, setUploadStatus] = useState<{ current: number, total: number } | null>(null);
 
+  const userEmail = user?.email?.toLowerCase().trim();
+  const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
+  const { data: profile } = useDoc(profileRef);
+
+  const cabinetId = (profile as any)?.cabinetId;
+
   useEffect(() => {
     if (user?.uid && !hasInitialized.current) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
@@ -46,7 +51,11 @@ export default function NewDemandPage() {
     }
   }, [user]);
 
-  const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
+  const usersQuery = useMemo(() => {
+    if (!db || !cabinetId) return null;
+    return query(collection(db, "users"), where("cabinetId", "==", cabinetId));
+  }, [db, cabinetId]);
+  
   const { data: allUsers = [] } = useCollection(usersQuery);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,7 +77,6 @@ export default function NewDemandPage() {
       const file = files[i];
       setUploadStatus({ current: i + 1, total: files.length });
       
-      // Sanitiza o nome do arquivo removendo espaços e caracteres especiais para evitar erros de URL
       const sanitizedName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
       const storagePath = `demandas/${Date.now()}_${sanitizedName}`;
       const storageRef = ref(storage, storagePath);
@@ -87,11 +95,7 @@ export default function NewDemandPage() {
           enviadoPor: user?.uid || "anonimo"
         });
       } catch (err: any) {
-        console.error(`Falha no upload do arquivo ${file.name}:`, err);
-        const msg = err.code === 'storage/unauthorized' 
-          ? "Erro de permissão no Storage (CORS). Verifique as instruções no painel." 
-          : `Erro ao subir ${file.name}: ${err.message}`;
-        throw new Error(msg);
+        throw new Error(`Erro ao subir ${file.name}: ${err.message}`);
       }
     }
 
@@ -100,8 +104,8 @@ export default function NewDemandPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db || !storage) {
-      toast({ title: "Erro", description: "Serviços não carregados.", variant: "destructive" });
+    if (!user || !db || !cabinetId) {
+      toast({ title: "Erro", description: "Dados do gabinete não carregados.", variant: "destructive" });
       return;
     }
     
@@ -110,6 +114,7 @@ export default function NewDemandPage() {
       const attachments = await uploadFiles();
       
       const demandId = await createDemand(db, user.uid, {
+        cabinetId,
         ...formData,
         responsavelId: formData.responsavelId || user.uid,
         anexos: attachments
@@ -118,39 +123,38 @@ export default function NewDemandPage() {
       toast({ title: "Sucesso!", description: "Demanda registrada com sucesso." });
       router.push(`/demandas/${demandId}`);
     } catch (error: any) {
-      console.error("Erro completo ao salvar:", error);
       toast({
         title: "Falha no Envio",
-        description: error.message || "Verifique se o Storage e o CORS estão configurados corretamente.",
+        description: error.message || "Erro ao salvar demanda.",
         variant: "destructive",
       });
-      setSaving(false); // Garante que destrava o botão em caso de erro
+      setSaving(false);
       setUploadStatus(null);
     }
   };
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
+  if (authLoading || !profile) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin text-primary" /></div>;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <header className="mb-8">
           <Link href="/demandas" className="flex items-center gap-2 text-muted-foreground hover:text-primary mb-4 w-fit text-sm font-medium">
             <ChevronLeft size={16} /> Voltar para lista
           </Link>
-          <h1 className="text-3xl font-headline font-bold">Nova Demanda</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Nova Demanda</h1>
         </header>
 
-        <Card className="max-w-3xl border-none shadow-xl">
+        <Card className="max-w-3xl border-primary/10 shadow-xl overflow-hidden">
           <form onSubmit={handleSubmit}>
-            <CardHeader>
+            <CardHeader className="bg-primary/5">
               <CardTitle className="text-lg font-bold">Dados da Solicitação</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 pt-6">
               <div className="space-y-2">
                 <Label htmlFor="titulo">Título</Label>
-                <Input id="titulo" required value={formData.titulo} onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))} />
+                <Input id="titulo" required value={formData.titulo} onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))} placeholder="Resumo curto da demanda" />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -175,12 +179,12 @@ export default function NewDemandPage() {
                 <Label>Responsável Atual</Label>
                 <Select value={formData.responsavelId} onValueChange={(v) => setFormData(prev => ({ ...prev, responsavelId: v }))}>
                   <SelectTrigger>
-                    <div className="flex items-center gap-2"><UserIcon size={14} /><SelectValue /></div>
+                    <div className="flex items-center gap-2"><UserIcon size={14} className="text-primary"/><SelectValue /></div>
                   </SelectTrigger>
                   <SelectContent>
                     {user?.uid && <SelectItem value={user.uid}>Atribuir a mim</SelectItem>}
                     {allUsers.filter((u: any) => u.uid && u.uid !== user?.uid).map((u: any) => (
-                      <SelectItem key={u.uid} value={u.uid}>{u.nome}</SelectItem>
+                      <SelectItem key={u.uid} value={u.uid}>{u.nome} ({u.perfil})</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -188,36 +192,36 @@ export default function NewDemandPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="descricao">Descrição Detalhada</Label>
-                <Textarea id="descricao" rows={4} required value={formData.descricao} onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))} />
+                <Textarea id="descricao" rows={4} required value={formData.descricao} onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))} placeholder="Explique detalhadamente o que precisa ser feito..." />
               </div>
 
-              <div className="space-y-3 p-4 bg-muted/20 rounded-xl border-2 border-dashed border-muted">
-                <Label className="flex items-center gap-2 text-primary font-bold">
-                  <Paperclip size={16} /> Anexos (Fotos e Documentos)
+              <div className="space-y-3 p-4 bg-primary/5 rounded-xl border-2 border-dashed border-primary/20">
+                <Label className="flex items-center gap-2 text-primary font-bold text-xs uppercase">
+                  <Paperclip size={14} /> Anexos (Fotos e Documentos)
                 </Label>
                 <Input 
                   type="file" 
                   multiple 
-                  className="bg-background cursor-pointer" 
+                  className="bg-background cursor-pointer h-9 text-xs" 
                   onChange={handleFileChange}
                 />
                 
                 {files.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
                     {files.map((file, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-2 bg-background rounded-lg border text-xs animate-in fade-in zoom-in-95">
+                      <div key={idx} className="flex items-center justify-between p-2 bg-background rounded-lg border border-primary/10 text-[10px] animate-in fade-in zoom-in-95">
                         <div className="flex items-center gap-2 truncate">
-                          <FileText size={14} className="text-muted-foreground" />
+                          <FileText size={12} className="text-primary" />
                           <span className="truncate font-medium">{file.name}</span>
                         </div>
                         <Button 
                           type="button" 
                           variant="ghost" 
                           size="sm" 
-                          className="h-6 w-6 p-0 text-destructive hover:bg-destructive/10"
+                          className="h-5 w-5 p-0 text-destructive hover:bg-destructive/10"
                           onClick={() => removeFile(idx)}
                         >
-                          <X size={14} />
+                          <X size={12} />
                         </Button>
                       </div>
                     ))}
@@ -225,19 +229,17 @@ export default function NewDemandPage() {
                 )}
               </div>
             </CardContent>
-            <CardFooter className="flex justify-end gap-3 bg-muted/30 pt-6">
-              <Button type="button" variant="outline" onClick={() => router.back()} disabled={saving}>Cancelar</Button>
-              <Button type="submit" disabled={saving} className="min-w-[140px]">
+            <CardFooter className="flex justify-end gap-3 bg-muted/20 pt-6">
+              <Button type="button" variant="ghost" onClick={() => router.back()} disabled={saving}>Cancelar</Button>
+              <Button type="submit" disabled={saving} className="min-w-[160px] font-bold shadow-lg shadow-primary/10">
                 {saving ? (
                   <>
                     <Loader2 className="animate-spin mr-2" />
-                    {uploadStatus 
-                      ? `Enviando ${uploadStatus.current}/${uploadStatus.total}...` 
-                      : "Salvando..."}
+                    {uploadStatus ? `${uploadStatus.current}/${uploadStatus.total}...` : "Salvando..."}
                   </>
                 ) : (
                   <>
-                    <Save className="mr-2" /> Registrar Demanda
+                    <Save className="mr-2" size={18} /> Registrar Demanda
                   </>
                 )}
               </Button>
