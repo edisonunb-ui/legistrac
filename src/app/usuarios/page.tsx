@@ -139,8 +139,8 @@ export default function UserManagementPage() {
 
   const handleEditOpen = (u: any) => {
     setEditingUser(u);
-    setEditName(u.nome);
-    setEditRole(u.perfil);
+    setEditName(u.nome || "");
+    setEditRole(u.perfil || "ASSESSOR");
     setEditCabinetId(u.cabinetId || "");
     setEditPermissions(u.permissoes || {
       visualizar_todas: false,
@@ -155,7 +155,8 @@ export default function UserManagementPage() {
     if (!db || !editingUser) return;
     setIsUpdating(true);
     try {
-      const userDocRef = doc(db, "users", editingUser.email.toLowerCase().trim());
+      const emailToUse = (editingUser.email || editingUser.id || "").toLowerCase().trim();
+      const userDocRef = doc(db, "users", emailToUse);
       await updateDoc(userDocRef, {
         nome: editName,
         perfil: editRole,
@@ -228,7 +229,8 @@ export default function UserManagementPage() {
                 <div className="space-y-2">
                   <Label>Perfil</Label>
                   <Select value={newRole} onValueChange={(v: UserRole) => handleRoleChange(v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger><SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ASSESSOR">Assessor</SelectItem>
                       <SelectItem value="ADMIN">Administrador</SelectItem>
@@ -250,14 +252,15 @@ export default function UserManagementPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {usersLoading ? <Loader2 className="animate-spin mx-auto" /> : allUsers.map((u: any) => {
-                  const isThisUserMaster = u.email?.toLowerCase().trim() === MASTER_EMAIL;
+                  const currentEmail = (u.email || u.id || "").toLowerCase().trim();
+                  const isThisUserMaster = currentEmail === MASTER_EMAIL || u.perfil === "SUPER_ADMIN";
                   
                   return (
-                    <div key={u.email} className="flex items-center justify-between p-4 border rounded-xl hover:bg-muted/10 transition-colors">
+                    <div key={u.id} className="flex items-center justify-between p-4 border rounded-xl hover:bg-muted/10 transition-colors">
                       <div>
-                        <p className="font-bold">{u.nome}</p>
+                        <p className="font-bold">{u.nome || "Usuário sem nome"}</p>
                         <p className="text-xs text-muted-foreground">
-                          {u.email} • 
+                          {currentEmail} • 
                           <Badge variant="secondary" className="ml-2 text-[8px] font-bold uppercase">{u.perfil}</Badge>
                           <span className="ml-2 text-primary font-bold">
                             {cabinets.find((c:any) => c.id === u.cabinetId)?.vereador || 'Sem Gabinete'}
@@ -265,7 +268,7 @@ export default function UserManagementPage() {
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <Dialog open={!!editingUser && editingUser.email === u.email} onOpenChange={(open) => !open && setEditingUser(null)}>
+                        <Dialog open={!!editingUser && (editingUser.email === u.email || editingUser.id === u.id)} onOpenChange={(open) => !open && setEditingUser(null)}>
                           <DialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="text-primary" onClick={() => handleEditOpen(u)}>
                               <Edit2 size={18} />
@@ -324,11 +327,12 @@ export default function UserManagementPage() {
                           </DialogContent>
                         </Dialog>
 
+                        {/* REGRA DE OURO: Se for o Master (e-mail ou ID ou Perfil), não mostra o excluir */}
                         {isMasterAdmin && !isThisUserMaster && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="icon" className="text-destructive">
-                                {isDeleting === u.email ? <Loader2 className="animate-spin" /> : <Trash2 size={18} />}
+                                {isDeleting === u.id ? <Loader2 className="animate-spin" /> : <Trash2 size={18} />}
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
@@ -340,7 +344,7 @@ export default function UserManagementPage() {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDeleteUser(u.email)} className="bg-destructive">Confirmar</AlertDialogAction>
+                                <AlertDialogAction onClick={() => handleDeleteUser(u.email || u.id)} className="bg-destructive">Confirmar</AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
