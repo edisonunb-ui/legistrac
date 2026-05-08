@@ -15,7 +15,8 @@ import {
   Loader2,
   ChevronRight,
   ClipboardList,
-  Edit2
+  Edit2,
+  AlertCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -55,7 +56,7 @@ export default function StrategicDashboard() {
       ? query(collection(db, "demandas"))
       : query(collection(db, "demandas"), where("cabinetId", "==", cabinetId));
   }, [db, cabinetId, isSuperAdmin]);
-  const { data: allDemands = [] } = useCollection(demandsQuery);
+  const { data: allDemands = [], loading: loadingDemands } = useCollection(demandsQuery);
 
   const leadersQuery = useMemo(() => {
     if (!db || (!cabinetId && !isSuperAdmin)) return null;
@@ -63,18 +64,17 @@ export default function StrategicDashboard() {
       ? query(collection(db, "liderancas"))
       : query(collection(db, "liderancas"), where("cabinetId", "==", cabinetId));
   }, [db, cabinetId, isSuperAdmin]);
-  const { data: allLeaders = [] } = useCollection(leadersQuery);
+  const { data: allLeaders = [], loading: loadingLeaders } = useCollection(leadersQuery);
 
   const configRef = useMemo(() => {
-    if (!db) return null;
-    // Evita erro de 'indexOf' garantindo que os segmentos do path existam
+    if (!db || !profile) return null;
     if (isSuperAdmin) {
       return doc(db, "config", "global");
     } else if (cabinetId) {
       return doc(db, "gabinetes", cabinetId, "config", "global");
     }
     return null;
-  }, [db, cabinetId, isSuperAdmin]);
+  }, [db, profile, cabinetId, isSuperAdmin]);
   const { data: config } = useDoc<GlobalConfig>(configRef);
 
   const stats = useMemo(() => {
@@ -100,156 +100,231 @@ export default function StrategicDashboard() {
   const handleUpdateMeta = async () => {
     if (!db || !configRef) return;
     const val = parseInt(newMetaValue);
-    if (isNaN(val) || val <= 0) return;
+    if (isNaN(val) || val <= 0) {
+      toast({ title: "Valor Inválido", variant: "destructive" });
+      return;
+    }
 
     try {
-      await setDoc(configRef, { metaVotos2026: val, cabinetId: cabinetId || "global" }, { merge: true });
-      toast({ title: "Meta Atualizada" });
+      await setDoc(configRef, { 
+        metaVotos2026: val, 
+        cabinetId: cabinetId || "global",
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      toast({ title: "Meta Atualizada", description: "O objetivo estratégico foi salvo." });
       setIsEditingMeta(false);
     } catch (e) {
-      toast({ title: "Erro", variant: "destructive" });
+      toast({ title: "Erro", description: "Não foi possível salvar a nova meta.", variant: "destructive" });
     }
   };
 
-  if (authLoading) return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="animate-spin text-primary" /></div>;
+  if (authLoading || (profile && loadingDemands && loadingLeaders)) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background gap-4">
+        <Loader2 className="animate-spin text-primary h-10 w-10" />
+        <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest animate-pulse">Sincronizando Gabinete...</p>
+      </div>
+    );
+  }
+
+  if (!authLoading && !profile && userEmail !== "edisonunb@gmail.com") {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="max-w-md w-full border-destructive/20 bg-destructive/5">
+          <CardContent className="pt-6 text-center space-y-4">
+            <AlertCircle size={48} className="mx-auto text-destructive" />
+            <h2 className="text-xl font-bold">Acesso não provisionado</h2>
+            <p className="text-sm text-muted-foreground">Seu e-mail não foi encontrado na base de usuários autorizados deste gabinete. Entre em contato com o administrador.</p>
+            <Button variant="outline" onClick={() => signOut(initializeFirebase().auth)}>Sair do Sistema</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
-        <header className="mb-10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <main className="container mx-auto px-4 py-6 md:py-10">
+        <header className="mb-8 md:mb-12">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
-              <h1 className="text-4xl font-bold tracking-tighter">Blueprint Estratégico <span className="text-primary">2026</span></h1>
-              <p className="text-muted-foreground text-lg">Gestão de Gabinete de Alta Performance</p>
+              <h1 className="text-3xl md:text-5xl font-bold tracking-tighter">Blueprint Estratégico <span className="text-primary">2026</span></h1>
+              <p className="text-muted-foreground text-base md:text-xl mt-1">Gestão de Gabinete de Alta Performance</p>
             </div>
-            <div className="flex gap-2">
-              <Link href="/demandas/new"><Button variant="outline" className="border-primary/20">Nova Demanda</Button></Link>
-              <Link href="/liderancas/new"><Button className="bg-primary text-primary-foreground font-bold">Cadastrar Líder</Button></Link>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Link href="/demandas/new" className="w-full sm:w-auto"><Button variant="outline" className="w-full border-primary/20 h-11">Nova Demanda</Button></Link>
+              <Link href="/liderancas/new" className="w-full sm:w-auto"><Button className="w-full bg-primary text-primary-foreground font-bold h-11">Cadastrar Líder</Button></Link>
             </div>
           </div>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-          <Card className="bg-card border-primary/10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-10">
+          <Card className="bg-card border-primary/10 shadow-lg">
             <CardContent className="pt-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Votos Mapeados</p>
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1 tracking-widest">Votos Mapeados</p>
                   <h3 className="text-3xl font-bold">{stats.votosMapeados.toLocaleString()}</h3>
                 </div>
                 <div className="p-2 bg-primary/10 text-primary rounded-lg"><Target size={24} /></div>
               </div>
               <div className="mt-4">
                 <div className="flex justify-between text-[10px] mb-1 font-bold">
-                  <span>PROGRESSO META 2026</span>
-                  <span>{stats.progressoMeta.toFixed(1)}%</span>
+                  <span className="text-muted-foreground">PROGRESSO META 2026</span>
+                  <span className="text-primary">{stats.progressoMeta.toFixed(1)}%</span>
                 </div>
-                <Progress value={stats.progressoMeta} className="h-1.5" />
+                <Progress value={stats.progressoMeta} className="h-2" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-primary/10">
+          <Card className="bg-card border-primary/10 shadow-lg">
             <CardContent className="pt-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Total de Líderes</p>
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1 tracking-widest">Base de Líderes</p>
                   <h3 className="text-3xl font-bold">{stats.totalLideres}</h3>
                 </div>
                 <div className="p-2 bg-primary/10 text-primary rounded-lg"><Users size={24} /></div>
               </div>
-              <p className="text-[10px] text-muted-foreground mt-4 font-bold">BASE TERRITORIAL ATIVA</p>
+              <p className="text-[10px] text-muted-foreground mt-4 font-bold uppercase tracking-widest flex items-center gap-1">
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse" /> Territorial Ativa
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-primary/10">
+          <Card className="bg-card border-primary/10 shadow-lg">
             <CardContent className="pt-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Demandas Gabinete</p>
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1 tracking-widest">Processos Ativos</p>
                   <h3 className="text-3xl font-bold">{stats.demandasAtivas}</h3>
                 </div>
                 <div className="p-2 bg-primary/10 text-primary rounded-lg"><ClipboardList size={24} /></div>
               </div>
-              <p className="text-[10px] text-muted-foreground mt-4 font-bold">PROCESSOS EM TRÂMITE</p>
+              <p className="text-[10px] text-muted-foreground mt-4 font-bold uppercase tracking-widest">Em trâmite interno</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-primary/10">
+          <Card className="bg-card border-primary/10 shadow-lg">
             <CardContent className="pt-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Meta Geral 2026</p>
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1 tracking-widest">Meta Estratégica</p>
                   <h3 className="text-3xl font-bold">{(stats.metaGeral / 1000).toFixed(0)}K</h3>
                 </div>
                 <div className="p-2 bg-primary/10 text-primary rounded-lg flex flex-col items-center">
                   <TrendingUp size={24} />
-                  <Dialog open={isEditingMeta} onOpenChange={setIsEditingMeta}>
-                    <DialogTrigger asChild>
-                      <button className="mt-2 text-[10px] flex items-center gap-1 hover:underline text-primary/70">
-                        <Edit2 size={10} /> Editar
-                      </button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader><DialogTitle>Ajustar Meta Estratégica</DialogTitle></DialogHeader>
-                      <div className="py-4 space-y-4">
-                        <Label>Objetivo de Votos (Total)</Label>
-                        <Input type="number" value={newMetaValue} onChange={e => setNewMetaValue(e.target.value)} />
-                      </div>
-                      <DialogFooter>
-                        <Button onClick={handleUpdateMeta}>Salvar</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                  {(profile?.perfil === "ADMIN" || isSuperAdmin) && (
+                    <Dialog open={isEditingMeta} onOpenChange={setIsEditingMeta}>
+                      <DialogTrigger asChild>
+                        <button className="mt-2 text-[10px] flex items-center gap-1 hover:underline text-primary/70 font-bold uppercase tracking-tighter">
+                          <Edit2 size={10} /> Ajustar
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader><DialogTitle>Meta Eleitoral 2026</DialogTitle></DialogHeader>
+                        <div className="py-6 space-y-4">
+                          <Label className="text-xs uppercase font-bold text-muted-foreground">Objetivo de Votos (Total)</Label>
+                          <Input 
+                            type="number" 
+                            className="h-12 text-lg font-bold"
+                            value={newMetaValue} 
+                            onChange={e => setNewMetaValue(e.target.value)} 
+                          />
+                          <p className="text-[10px] text-muted-foreground">Esta meta será compartilhada com toda a equipe do gabinete para acompanhamento do progresso.</p>
+                        </div>
+                        <DialogFooter>
+                          <Button className="w-full h-11 font-bold" onClick={handleUpdateMeta}>Salvar Objetivo</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  )}
                 </div>
               </div>
-              <p className="text-[10px] text-muted-foreground mt-4 font-bold uppercase">Objetivo Estimado</p>
+              <p className="text-[10px] text-muted-foreground mt-4 font-bold uppercase tracking-widest">Projeção 2026</p>
             </CardContent>
           </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <section className="lg:col-span-2">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold flex items-center gap-2">
-                <Users className="text-primary" size={20} /> Lideranças Estratégicas
+                <Users className="text-primary" size={20} /> Lideranças Recentes
               </h2>
+              <Link href="/liderancas" className="text-xs font-bold text-primary hover:underline">VER MAPA COMPLETO</Link>
             </div>
-            <div className="grid gap-3">
-              {allLeaders.length === 0 ? <p className="text-muted-foreground text-center py-10">Sem líderes cadastrados.</p> : 
+            <div className="space-y-3">
+              {allLeaders.length === 0 ? (
+                <div className="text-center py-16 bg-card rounded-2xl border border-dashed border-primary/10">
+                  <Users size={40} className="mx-auto text-muted-foreground opacity-10 mb-4" />
+                  <p className="text-sm text-muted-foreground">Sua base territorial ainda não possui líderes mapeados.</p>
+                </div>
+              ) : 
                 allLeaders.slice(0, 5).map((l: Leader) => (
-                  <Card key={l.id} className="border-none shadow-sm hover:bg-primary/5 transition-colors">
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center font-bold text-primary">
-                          {l.nome[0].toUpperCase()}
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-sm">{l.nome}</h4>
-                          <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-1 font-bold">
-                            <span><MapPin size={10} /> {l.bairro}</span>
-                            <span className="text-primary">{l.potencialVotos} Votos</span>
+                  <Link key={l.id} href="/liderancas">
+                    <Card className="border-none shadow-sm hover:bg-primary/5 transition-colors mb-3 group">
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center font-bold text-primary text-sm">
+                            {l.nome[0].toUpperCase()}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-sm group-hover:text-primary transition-colors">{l.nome}</h4>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground mt-1 font-bold uppercase">
+                              <span className="flex items-center gap-1"><MapPin size={10} /> {l.bairro}</span>
+                              <span className="text-primary">{l.potencialVotos} Votos</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <ChevronRight size={18} className="text-muted-foreground" />
-                    </CardContent>
-                  </Card>
+                        <ChevronRight size={18} className="text-muted-foreground group-hover:text-primary transition-transform" />
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))
               }
             </div>
           </section>
 
           <aside className="space-y-6">
-            <Card className="bg-primary text-primary-foreground border-none">
-              <CardHeader><CardTitle className="text-lg">Foco em 2026</CardTitle></CardHeader>
-              <CardContent>
-                <p className="text-sm opacity-90 font-medium">"Cada atendimento é um voto conquistado."</p>
-                <div className="mt-6 p-4 bg-white/10 rounded-lg">
-                  <p className="text-[10px] font-bold uppercase mb-2">Capacidade Atual</p>
-                  <p className="text-xl font-bold">{stats.votosMapeados.toLocaleString()} / {stats.metaGeral.toLocaleString()}</p>
-                  <Progress value={stats.progressoMeta} className="h-1 bg-white/20 mt-2" />
+            <Card className="bg-primary text-primary-foreground border-none shadow-xl shadow-primary/10 overflow-hidden relative">
+              <div className="absolute top-0 right-0 p-4 opacity-10"><Target size={120} /></div>
+              <CardHeader className="relative z-10"><CardTitle className="text-lg">Foco Estratégico</CardTitle></CardHeader>
+              <CardContent className="relative z-10">
+                <p className="text-sm opacity-90 font-medium italic">"Cada atendimento registrado é uma semente plantada para a vitória em 2026."</p>
+                <div className="mt-8 p-5 bg-black/10 rounded-xl border border-white/10">
+                  <p className="text-[10px] font-bold uppercase mb-2 tracking-widest opacity-70">Capacidade da Base</p>
+                  <p className="text-2xl font-bold">{stats.votosMapeados.toLocaleString()} <span className="text-xs font-normal opacity-60">/ {stats.metaGeral.toLocaleString()}</span></p>
+                  <Progress value={stats.progressoMeta} className="h-1.5 bg-white/20 mt-3" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card border-primary/10 shadow-lg">
+              <CardHeader><CardTitle className="text-sm font-bold uppercase tracking-widest">Resumo do Gabinete</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                    <span className="text-xs font-bold">Abertas</span>
+                  </div>
+                  <span className="text-xs font-mono">{allDemands.filter(d => d.status === "ABERTO").length}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full" />
+                    <span className="text-xs font-bold">Em Trâmite</span>
+                  </div>
+                  <span className="text-xs font-mono">{allDemands.filter(d => d.status === "EM_ANDAMENTO").length}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    <span className="text-xs font-bold">Finalizadas</span>
+                  </div>
+                  <span className="text-xs font-mono">{allDemands.filter(d => d.status === "FINALIZADO").length}</span>
                 </div>
               </CardContent>
             </Card>

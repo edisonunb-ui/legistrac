@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
@@ -13,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Loader2, Trash2, ChevronLeft, Building2, Edit2 } from "lucide-react";
+import { Users, Loader2, Trash2, ChevronLeft, Building2, Edit2, ShieldCheck, Mail } from "lucide-react";
 import { provisionarMembro, excluirUsuario } from "@/app/actions/provisionamento";
 import Link from "next/link";
 import {
@@ -203,38 +204,41 @@ export default function UserManagementPage() {
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <header className="mb-8 flex flex-col gap-4">
-          <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-primary text-sm font-medium">
-            <ChevronLeft size={16} /> Voltar ao Dashboard
+          <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-primary text-sm font-bold uppercase tracking-widest">
+            <ChevronLeft size={16} /> Dashboard
           </Link>
-          <div className="flex justify-between items-end">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
             <div>
-              <h1 className="text-3xl font-bold flex items-center gap-2"><Users className="text-primary" /> Gestão da Equipe</h1>
-              <p className="text-muted-foreground">Gerencie o acesso e as permissões dos membros do gabinete.</p>
+              <h1 className="text-3xl font-bold flex items-center gap-2"><Users className="text-primary" /> Equipe do <span className="text-primary">Gabinete</span></h1>
+              <p className="text-muted-foreground">Gerencie o acesso e as permissões de assessores e estagiários.</p>
             </div>
-            {isMasterAdmin && <Link href="/gabinetes"><Button variant="outline" className="gap-2"><Building2 size={16} /> Gerenciar Gabinetes</Button></Link>}
+            {isMasterAdmin && <Link href="/gabinetes" className="w-full sm:w-auto"><Button variant="outline" className="w-full sm:w-auto gap-2 font-bold"><Building2 size={16} /> Gabinetes Isolados</Button></Link>}
           </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <Card className="h-fit border-primary/10 bg-card">
+          <Card className="h-fit border-primary/10 bg-card shadow-xl">
             <CardHeader className="bg-primary/5">
-              <CardTitle className="text-lg font-bold">Novo Assessor</CardTitle>
+              <CardTitle className="text-lg font-bold uppercase tracking-widest">Novo Assessor</CardTitle>
             </CardHeader>
             <CardContent className="pt-6 space-y-4">
               <form onSubmit={handleAddUser} className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Nome Completo</Label>
-                  <Input value={newName} onChange={e => setNewName(e.target.value)} required placeholder="Nome do colaborador" />
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Nome Completo</Label>
+                  <Input value={newName} onChange={e => setNewName(e.target.value)} required placeholder="Ex: João Silva" className="bg-background" />
                 </div>
                 <div className="space-y-2">
-                  <Label>E-mail de Acesso</Label>
-                  <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required placeholder="email@exemplo.com" />
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">E-mail de Acesso</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+                    <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required placeholder="email@exemplo.com" className="pl-9 bg-background" />
+                  </div>
                 </div>
                 {isMasterAdmin && (
                   <div className="space-y-2">
-                    <Label>Gabinete Destino</Label>
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Gabinete Destino</Label>
                     <Select value={newCabinetId} onValueChange={setNewCabinetId} required>
-                      <SelectTrigger><SelectValue placeholder="Selecione o Gabinete" /></SelectTrigger>
+                      <SelectTrigger className="bg-background"><SelectValue placeholder="Selecione o Gabinete" /></SelectTrigger>
                       <SelectContent>
                         {cabinets.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.vereador}</SelectItem>)}
                       </SelectContent>
@@ -242,9 +246,9 @@ export default function UserManagementPage() {
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label>Perfil</Label>
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Perfil / Cargo</Label>
                   <Select value={newRole} onValueChange={(v: UserRole) => handleRoleChange(v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ASSESSOR">Assessor</SelectItem>
                       <SelectItem value="ADMIN">Vereador</SelectItem>
@@ -254,20 +258,22 @@ export default function UserManagementPage() {
                 </div>
 
                 <div className="space-y-3 border-t border-primary/10 pt-4">
-                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Permissões Iniciais</Label>
-                  {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
-                    <div key={key} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`new-${key}`} 
-                        checked={permissions[key as keyof UserPermissions]} 
-                        onCheckedChange={(checked) => setPermissions(prev => ({ ...prev, [key]: !!checked }))}
-                      />
-                      <label htmlFor={`new-${key}`} className="text-xs font-medium leading-none cursor-pointer">{label}</label>
-                    </div>
-                  ))}
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Permissões Diretas</Label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
+                      <div key={key} className="flex items-center space-x-3 p-2 bg-muted/30 rounded-lg">
+                        <Checkbox 
+                          id={`new-${key}`} 
+                          checked={permissions[key as keyof UserPermissions]} 
+                          onCheckedChange={(checked) => setPermissions(prev => ({ ...prev, [key]: !!checked }))}
+                        />
+                        <label htmlFor={`new-${key}`} className="text-[11px] font-bold leading-none cursor-pointer text-foreground/80">{label}</label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-                <Button className="w-full font-bold shadow-lg shadow-primary/10" type="submit" disabled={isAdding}>
+                <Button className="w-full font-bold h-11 shadow-lg shadow-primary/20" type="submit" disabled={isAdding}>
                   {isAdding ? <Loader2 className="animate-spin" /> : "Provisionar Acesso"}
                 </Button>
               </form>
@@ -275,56 +281,74 @@ export default function UserManagementPage() {
           </Card>
 
           <div className="lg:col-span-2 space-y-4">
-            <Card className="border-primary/10">
-              <CardHeader>
-                <CardTitle className="text-lg">Membros da Equipe</CardTitle>
+            <Card className="border-primary/10 shadow-xl overflow-hidden">
+              <CardHeader className="bg-primary/5 flex flex-row items-center justify-between">
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                  <ShieldCheck size={20} className="text-primary" /> Membros Ativos
+                </CardTitle>
+                <Badge variant="outline" className="text-[10px] font-bold uppercase">{allUsers.length} Usuários</Badge>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="pt-6 space-y-3">
                 {usersLoading ? (
-                  <div className="flex justify-center py-10"><Loader2 className="animate-spin text-primary" /></div>
+                  <div className="flex flex-col items-center justify-center py-20 gap-4">
+                    <Loader2 className="animate-spin text-primary" />
+                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Sincronizando Lista...</p>
+                  </div>
                 ) : allUsers.length === 0 ? (
-                  <div className="text-center py-10 text-muted-foreground">Nenhum membro cadastrado neste gabinete.</div>
+                  <div className="text-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed">
+                    <Users size={48} className="mx-auto text-muted-foreground opacity-10 mb-4" />
+                    <p className="text-muted-foreground font-bold">Nenhum membro cadastrado.</p>
+                  </div>
                 ) : allUsers.map((u: any) => {
                   const currentEmail = (u.email || u.id || "").toLowerCase().trim();
                   const isThisUserMaster = currentEmail === MASTER_EMAIL || u.perfil === "SUPER_ADMIN";
                   
                   return (
-                    <div key={u.id} className="flex items-center justify-between p-4 border border-primary/5 rounded-xl hover:bg-muted/30 transition-colors">
-                      <div>
-                        <p className="font-bold">{u.nome || "Usuário sem nome"}</p>
-                        <div className="flex flex-wrap items-center gap-2 mt-1">
-                          <span className="text-xs text-muted-foreground">{currentEmail}</span>
-                          <Badge variant="secondary" className="text-[8px] font-bold uppercase">
-                            {u.perfil === "ADMIN" ? "VEREADOR" : u.perfil}
-                          </Badge>
-                          {isMasterAdmin && (
-                            <span className="text-[10px] text-primary font-bold">
-                              {cabinets.find((c:any) => c.id === u.cabinetId)?.vereador || 'Sem Gabinete'}
-                            </span>
-                          )}
+                    <div key={u.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-primary/5 rounded-xl hover:bg-primary/5 transition-all group gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                          {u.nome?.[0]?.toUpperCase() || "U"}
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm sm:text-base">{u.nome || "Usuário sem nome"}</p>
+                          <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-muted-foreground font-mono">{currentEmail}</span>
+                            <Badge variant="secondary" className={cn(
+                              "text-[8px] font-bold uppercase tracking-tighter",
+                              u.perfil === "ADMIN" && "bg-primary/20 text-primary border-primary/30",
+                              u.perfil === "SUPER_ADMIN" && "bg-purple-500/10 text-purple-500 border-purple-500/30"
+                            )}>
+                              {u.perfil === "ADMIN" ? "VEREADOR" : u.perfil}
+                            </Badge>
+                            {isMasterAdmin && (
+                              <Badge variant="outline" className="text-[8px] font-bold text-primary border-primary/20 bg-primary/5">
+                                {cabinets.find((c:any) => c.id === u.cabinetId)?.vereador || 'Sem Gabinete'}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 pt-2 sm:pt-0">
                         <Dialog open={!!editingUser && (editingUser.email === u.email || editingUser.id === u.id)} onOpenChange={(open) => !open && setEditingUser(null)}>
                           <DialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10" onClick={() => handleEditOpen(u)}>
-                              <Edit2 size={18} />
+                            <Button variant="ghost" size="icon" className="h-9 w-9 text-primary hover:bg-primary/10" onClick={() => handleEditOpen(u)}>
+                              <Edit2 size={16} />
                             </Button>
                           </DialogTrigger>
                           <DialogContent className="max-w-md">
                             <DialogHeader>
-                              <DialogTitle>Editar Perfil</DialogTitle>
+                              <DialogTitle>Editar Perfil do Assessor</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4 py-4">
                               <div className="space-y-2">
-                                <Label>Nome Completo</Label>
-                                <Input value={editName} onChange={e => setEditName(e.target.value)} />
+                                <Label className="text-[10px] font-bold uppercase text-muted-foreground">Nome Completo</Label>
+                                <Input value={editName} onChange={e => setEditName(e.target.value)} className="bg-background" />
                               </div>
                               {isMasterAdmin && (
                                 <div className="space-y-2">
-                                  <Label>Gabinete</Label>
+                                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Vincular a Gabinete</Label>
                                   <Select value={editCabinetId} onValueChange={setEditCabinetId}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                       {cabinets.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.vereador}</SelectItem>)}
                                     </SelectContent>
@@ -332,9 +356,9 @@ export default function UserManagementPage() {
                                 </div>
                               )}
                               <div className="space-y-2">
-                                <Label>Perfil/Cargo</Label>
+                                <Label className="text-[10px] font-bold uppercase text-muted-foreground">Cargo / Hierarquia</Label>
                                 <Select value={editRole} onValueChange={(v: UserRole) => handleRoleChange(v, true)}>
-                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                                  <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="ASSESSOR">Assessor</SelectItem>
                                     <SelectItem value="ADMIN">Vereador</SelectItem>
@@ -344,45 +368,50 @@ export default function UserManagementPage() {
                                 </Select>
                               </div>
                               <div className="space-y-3 border-t border-primary/10 pt-4">
-                                <Label className="text-xs font-bold uppercase text-muted-foreground">Permissões Específicas</Label>
-                                {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
-                                  <div key={key} className="flex items-center space-x-2">
-                                    <Checkbox 
-                                      id={`edit-${key}`} 
-                                      checked={editPermissions[key as keyof UserPermissions]} 
-                                      onCheckedChange={(checked) => setEditPermissions(prev => ({ ...prev, [key]: !!checked }))}
-                                    />
-                                    <label htmlFor={`edit-${key}`} className="text-sm font-medium leading-none cursor-pointer">{label}</label>
-                                  </div>
-                                ))}
+                                <Label className="text-[10px] font-bold uppercase text-muted-foreground">Permissões Customizadas</Label>
+                                <div className="grid grid-cols-1 gap-2">
+                                  {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
+                                    <div key={key} className="flex items-center space-x-3 p-2 bg-muted/30 rounded-lg">
+                                      <Checkbox 
+                                        id={`edit-${key}`} 
+                                        checked={editPermissions[key as keyof UserPermissions]} 
+                                        onCheckedChange={(checked) => setEditPermissions(prev => ({ ...prev, [key]: !!checked }))}
+                                      />
+                                      <label htmlFor={`edit-${key}`} className="text-sm font-bold leading-none cursor-pointer text-foreground/80">{label}</label>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             </div>
                             <DialogFooter>
-                              <Button variant="outline" onClick={() => setEditingUser(null)}>Cancelar</Button>
-                              <Button onClick={handleUpdateUser} disabled={isUpdating}>
+                              <Button variant="outline" onClick={() => setEditingUser(null)} className="font-bold">Cancelar</Button>
+                              <Button onClick={handleUpdateUser} disabled={isUpdating} className="font-bold">
                                 {isUpdating ? <Loader2 className="animate-spin" /> : "Salvar Alterações"}
                               </Button>
                             </DialogFooter>
                           </DialogContent>
                         </Dialog>
 
-                        {isMasterAdmin && !isThisUserMaster && (
+                        {/* Proteção SuperAdmin: Nunca mostrar lixeira para o próprio master */}
+                        {!isThisUserMaster && (isMasterAdmin || (profile?.perfil === "ADMIN" && u.perfil !== "ADMIN")) && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10">
-                                {isDeleting === u.id ? <Loader2 className="animate-spin" /> : <Trash2 size={18} />}
+                              <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10">
+                                {isDeleting === u.id ? <Loader2 className="animate-spin" /> : <Trash2 size={16} />}
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Excluir Usuário?</AlertDialogTitle>
+                                <AlertDialogTitle>Remover Acesso?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Isso removerá o acesso de <strong>{u.nome}</strong> permanentemente do sistema.
+                                  Esta ação removerá permanentemente o acesso de <strong>{u.nome}</strong> ao sistema deste gabinete. Os processos criados por este usuário não serão excluídos.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDeleteUser(u.email || u.id)} className="bg-destructive text-destructive-foreground">Confirmar</AlertDialogAction>
+                                <AlertDialogCancel className="font-bold">Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteUser(u.email || u.id)} className="bg-destructive text-destructive-foreground font-bold hover:bg-destructive/90">
+                                  Confirmar Exclusão
+                                </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
