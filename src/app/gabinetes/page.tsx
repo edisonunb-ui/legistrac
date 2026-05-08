@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/dialog";
 
 export default function GabinetesPage() {
-  const { user } = userUser();
+  const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
   const [nome, setNome] = useState("");
