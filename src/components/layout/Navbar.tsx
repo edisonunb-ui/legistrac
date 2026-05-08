@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useUser, useFirestore, useAuthInstance, useDoc, useCollection } from "@/firebase";
+import { useUser, useFirestore, useAuthInstance, useDoc } from "@/firebase";
 import { Button } from "@/components/ui/button";
-import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, ShieldCheck } from "lucide-react";
+import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -47,6 +47,7 @@ export function Navbar() {
     { label: "Dashboard", icon: LayoutDashboard, href: "/" },
     { label: "Atendimentos", icon: PhoneIncoming, href: "/atendimentos" },
     { label: "Demandas", icon: ListTodo, href: "/demandas" },
+    { label: "Legislativo", icon: Gavel, href: "/legislativo" },
     { label: "Lideranças", icon: Users, href: "/liderancas" },
   ];
 

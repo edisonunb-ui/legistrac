@@ -87,12 +87,18 @@ export interface Leader {
   dataCriacao?: Timestamp;
 }
 
-export interface Territory {
+export interface LegislativeAction {
   id: string;
   cabinetId: string;
-  bairro: string;
-  metaVotos: number;
-  votosAtuais: number;
+  tipo: "INDICACAO" | "PROJETO_LEI" | "REQUERIMENTO" | "MOCAO";
+  numero?: string;
+  ano: number;
+  titulo: string;
+  ementa: string;
+  status: "ELABORACAO" | "PROTOCOLADO" | "APROVADO" | "REJEITADO";
+  linkOficial?: string;
+  dataProtocolo?: Timestamp;
+  demandaOrigemId?: string;
 }
 
 export interface Tramite {
