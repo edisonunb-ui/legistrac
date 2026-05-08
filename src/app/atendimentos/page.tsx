@@ -4,7 +4,7 @@
 import { useFirestore, useCollection, useUser, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
-import { collection, query, orderBy, doc, deleteDoc, where } from "firebase/firestore";
+import { collection, query, orderBy, doc, deleteDoc, where, updateDoc } from "firebase/firestore";
 import { CitizenService } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -48,18 +48,28 @@ export default function CitizenServiceListPage() {
   const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
-  const isAdmin = (profile as any)?.perfil === "ADMIN" || (profile as any)?.perfil === "SUPER_ADMIN" || user?.email === "edisonunb@gmail.com";
   const isMasterAdmin = user?.email === "edisonunb@gmail.com";
+  const isAdmin = (profile as any)?.perfil === "ADMIN" || (profile as any)?.perfil === "SUPER_ADMIN" || isMasterAdmin;
   const cabinetId = (profile as any)?.cabinetId;
 
   const servicesQuery = useMemo(() => {
     if (!db || !user) return null;
+    // Filtro básico de não-excluído para todos
     if (isMasterAdmin) return query(collection(db, "atendimentos"), orderBy("dataAtendimento", "desc"));
-    if (cabinetId) return query(collection(db, "atendimentos"), where("cabinetId", "==", cabinetId), orderBy("dataAtendimento", "desc"));
+    if (cabinetId) return query(
+      collection(db, "atendimentos"), 
+      where("cabinetId", "==", cabinetId),
+      orderBy("dataAtendimento", "desc")
+    );
     return null;
   }, [db, user, isMasterAdmin, cabinetId]);
   
-  const { data: services = [], loading } = useCollection(servicesQuery);
+  const { data: rawServices = [], loading } = useCollection(servicesQuery);
+
+  const services = useMemo(() => {
+    // Só mostramos o que não foi "deletado" (exceto talvez para o superadmin, mas para limpar a UI filtramos aqui)
+    return rawServices.filter((s: any) => !s.deleted);
+  }, [rawServices]);
 
   const filteredServices = useMemo(() => {
     return services.filter((s: CitizenService) => 
@@ -73,8 +83,18 @@ export default function CitizenServiceListPage() {
     if (!db) return;
     setDeletingId(id);
     try {
-      await deleteDoc(doc(db, "atendimentos", id));
-      toast({ title: "Registro excluído", description: "O atendimento foi removido permanentemente." });
+      if (isMasterAdmin) {
+        // SuperAdmin apaga de verdade
+        await deleteDoc(doc(db, "atendimentos", id));
+      } else {
+        // Outros apenas marcam como deletado (Lixeira)
+        await updateDoc(doc(db, "atendimentos", id), {
+          deleted: true,
+          deletedAt: new Date().toISOString(),
+          deletedBy: user?.uid
+        });
+      }
+      toast({ title: "Registro removido", description: "O atendimento foi enviado para a lixeira de segurança." });
     } catch (e) {
       toast({ title: "Erro ao excluir", description: "Não foi possível remover o registro.", variant: "destructive" });
     } finally {
@@ -147,8 +167,9 @@ export default function CitizenServiceListPage() {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Excluir Atendimento?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Esta ação removerá o registro do munícipe <strong>{s.municipeNome}</strong> permanentemente. 
-                                A demanda vinculada (se houver) não será excluída automaticamente.
+                                {isMasterAdmin 
+                                  ? "Como SuperAdmin, esta ação removerá o registro PERMANENTEMENTE." 
+                                  : "Esta ação enviará o registro para a lixeira de segurança. Somente o SuperAdmin poderá apagá-lo definitivamente."}
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>

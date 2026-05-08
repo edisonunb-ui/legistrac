@@ -37,6 +37,8 @@ export interface UserProfile {
   perfil: UserRole;
   cabinetId: string;
   ativo: boolean;
+  deleted?: boolean;
+  deletedAt?: string;
   createdAt: Timestamp;
   permissoes: UserPermissions;
 }
@@ -60,6 +62,8 @@ export interface Demand {
   anexos?: Attachment[];
   liderancaId?: string;
   atendimentoId?: string;
+  deleted?: boolean;
+  deletedAt?: string;
 }
 
 export interface CitizenService {
@@ -73,6 +77,8 @@ export interface CitizenService {
   dataAtendimento: Timestamp;
   atendidoPor: string;
   demandaId?: string;
+  deleted?: boolean;
+  deletedAt?: string;
 }
 
 export interface Leader {
@@ -85,6 +91,7 @@ export interface Leader {
   influencia: "BAIXA" | "MEDIA" | "ALTA";
   status: "ATIVO" | "PROSPECTO" | "INATIVO";
   dataCriacao?: Timestamp;
+  deleted?: boolean;
 }
 
 export interface LegislativeAction {
@@ -99,6 +106,7 @@ export interface LegislativeAction {
   linkOficial?: string;
   dataProtocolo?: Timestamp;
   demandaOrigemId?: string;
+  deleted?: boolean;
 }
 
 export interface Tramite {

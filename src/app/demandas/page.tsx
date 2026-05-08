@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
@@ -45,7 +46,6 @@ export default function DemandListPage() {
   const cabinetId = (profile as any)?.cabinetId;
   const isVereador = (profile as any)?.perfil === "ADMIN";
 
-  // Consulta filtrada por gabinete para LGPD (exceto SuperAdmin)
   const demandsQuery = useMemo(() => {
     if (!db || !user) return null;
     if (isMasterAdmin) return query(collection(db, "demandas"));
@@ -55,16 +55,15 @@ export default function DemandListPage() {
   
   const { data: allDemandsRaw = [], loading } = useCollection(demandsQuery);
 
-  // Ordenação manual e filtros no cliente
   const filteredDemands = useMemo(() => {
-    let result = [...allDemandsRaw].sort((a: any, b: any) => {
-      const dateA = a.dataAtualizacao?.toMillis() || 0;
-      const dateB = b.dataAtualizacao?.toMillis() || 0;
-      return dateB - dateA;
-    });
+    let result = [...allDemandsRaw]
+      .filter((d: any) => !d.deleted) // FILTRO DE SOFT DELETE
+      .sort((a: any, b: any) => {
+        const dateA = a.dataAtualizacao?.toMillis() || 0;
+        const dateB = b.dataAtualizacao?.toMillis() || 0;
+        return dateB - dateA;
+      });
 
-    // Se for Vereador ou tiver permissão, pode ver "TODAS" do gabinete.
-    // Senão, vê apenas as suas por padrão se não for master.
     if (filterType === "MINHAS" && user && !isMasterAdmin) {
       result = result.filter((d: Demand) => d.responsavelAtual === user.uid);
     }
