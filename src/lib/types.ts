@@ -11,6 +11,14 @@ export interface UserPermissions {
   reabrir_demandas: boolean;
 }
 
+export interface Cabinet {
+  id: string;
+  nome: string;
+  vereador: string;
+  ativo: boolean;
+  createdAt: Timestamp;
+}
+
 export interface Attachment {
   id: string;
   nome: string;
@@ -27,6 +35,7 @@ export interface UserProfile {
   nome: string;
   email: string;
   perfil: UserRole;
+  cabinetId: string;
   ativo: boolean;
   createdAt: Timestamp;
   permissoes: UserPermissions;
@@ -37,6 +46,7 @@ export type DemandPriority = "BAIXA" | "MEDIA" | "ALTA";
 
 export interface Demand {
   id: string;
+  cabinetId: string;
   titulo: string;
   descricao: string;
   criadoPor: string;
@@ -54,6 +64,7 @@ export interface Demand {
 
 export interface CitizenService {
   id: string;
+  cabinetId: string;
   municipeNome: string;
   municipeEndereco: string;
   municipeTituloEleitoral: string;
@@ -66,6 +77,7 @@ export interface CitizenService {
 
 export interface Leader {
   id: string;
+  cabinetId: string;
   nome: string;
   bairro: string;
   contato: string;
@@ -77,6 +89,7 @@ export interface Leader {
 
 export interface Territory {
   id: string;
+  cabinetId: string;
   bairro: string;
   metaVotos: number;
   votosAtuais: number;
@@ -104,4 +117,5 @@ export interface Notification {
 
 export interface GlobalConfig {
   metaVotos2026: number;
+  cabinetId?: string;
 }

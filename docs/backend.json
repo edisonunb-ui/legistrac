@@ -1,6 +1,19 @@
 
 {
   "entities": {
+    "Cabinet": {
+      "title": "Cabinet",
+      "description": "A political cabinet (Vereador)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "vereador": { "type": "string" },
+        "ativo": { "type": "boolean" },
+        "createdAt": { "type": "object" }
+      },
+      "required": ["nome", "vereador"]
+    },
     "UserProfile": {
       "title": "UserProfile",
       "description": "User profile data",
@@ -10,6 +23,7 @@
         "nome": { "type": "string" },
         "email": { "type": "string" },
         "perfil": { "type": "string", "enum": ["SUPER_ADMIN", "ADMIN", "ASSESSOR", "ESTAGIARIO"] },
+        "cabinetId": { "type": "string" },
         "ativo": { "type": "boolean" },
         "createdAt": { "type": "object" }
       },
@@ -21,15 +35,14 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "cabinetId": { "type": "string" },
         "titulo": { "type": "string" },
         "descricao": { "type": "string" },
         "criadoPor": { "type": "string" },
         "responsavelAtual": { "type": "string" },
         "status": { "type": "string", "enum": ["ABERTO", "EM_ANDAMENTO", "AGUARDANDO_VEREADORA", "FINALIZADO"] },
         "prazo": { "type": "string" },
-        "prioridade": { "type": "string", "enum": ["BAIXA", "MEDIA", "ALTA"] },
-        "liderancaId": { "type": "string" },
-        "atendimentoId": { "type": "string" }
+        "prioridade": { "type": "string", "enum": ["BAIXA", "MEDIA", "ALTA"] }
       }
     },
     "CitizenService": {
@@ -38,14 +51,11 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "cabinetId": { "type": "string" },
         "municipeNome": { "type": "string" },
         "municipeEndereco": { "type": "string" },
-        "municipeTituloEleitoral": { "type": "string" },
         "municipeTelefone": { "type": "string" },
-        "descricaoSolicitacao": { "type": "string" },
-        "dataAtendimento": { "type": "object" },
-        "atendidoPor": { "type": "string" },
-        "demandaId": { "type": "string" }
+        "descricaoSolicitacao": { "type": "string" }
       }
     },
     "Leader": {
@@ -54,31 +64,10 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "cabinetId": { "type": "string" },
         "nome": { "type": "string" },
         "bairro": { "type": "string" },
-        "contato": { "type": "string" },
-        "potencialVotos": { "type": "number" },
-        "influencia": { "type": "string", "enum": ["BAIXA", "MEDIA", "ALTA"] },
-        "status": { "type": "string", "enum": ["ATIVO", "PROSPECTO", "INATIVO"] }
-      }
-    },
-    "Territory": {
-      "title": "Territory",
-      "description": "Territorial base management",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "bairro": { "type": "string" },
-        "metaVotos": { "type": "number" },
-        "votosAtuais": { "type": "number" }
-      }
-    },
-    "GlobalConfig": {
-      "title": "GlobalConfig",
-      "description": "Global system configurations",
-      "type": "object",
-      "properties": {
-        "metaVotos2026": { "type": "number" }
+        "potencialVotos": { "type": "number" }
       }
     }
   },
@@ -86,6 +75,10 @@
     "providers": ["password"]
   },
   "firestore": {
+    "/gabinetes/{cabinetId}": {
+      "schema": "Cabinet",
+      "description": "Cabinets list"
+    },
     "/users/{userId}": {
       "schema": "UserProfile",
       "description": "User profiles"
@@ -101,14 +94,6 @@
     "/liderancas/{leaderId}": {
       "schema": "Leader",
       "description": "Political leaders"
-    },
-    "/territorios/{territoryId}": {
-      "schema": "Territory",
-      "description": "Territorial data"
-    },
-    "/config/{configId}": {
-      "schema": "GlobalConfig",
-      "description": "System settings"
     }
   }
 }

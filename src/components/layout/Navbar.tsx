@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useUser, useFirestore, useAuthInstance, useDoc } from "@/firebase";
+import { useUser, useFirestore, useAuthInstance, useDoc, useCollection } from "@/firebase";
 import { Button } from "@/components/ui/button";
-import { Bell, LogOut, User, LayoutDashboard, ListTodo, PlusCircle, Users, MapPin, Target, PhoneIncoming } from "lucide-react";
+import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, ShieldCheck } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useMemo } from "react";
 import { doc } from "firebase/firestore";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -29,11 +28,14 @@ export function Navbar() {
   const pathname = usePathname();
 
   const userEmail = user?.email?.toLowerCase().trim();
-  const userProfileQuery = useMemo(() => {
-    if (!db || !userEmail) return null;
-    return doc(db, "users", userEmail);
-  }, [db, userEmail]);
+  const userProfileQuery = useMemo(() => (db && userEmail) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(userProfileQuery);
+
+  const cabinetId = (profile as any)?.cabinetId;
+  const cabinetQuery = useMemo(() => (db && cabinetId) ? doc(db, "gabinetes", cabinetId) : null, [db, cabinetId]);
+  const { data: cabinet } = useDoc(cabinetQuery);
+
+  const isSuperAdmin = userEmail === "edisonunb@gmail.com";
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -56,7 +58,12 @@ export function Navbar() {
             <div className="p-1.5 bg-primary rounded text-primary-foreground">
               <Target size={20} />
             </div>
-            <span className="text-xl font-bold tracking-tight">GESTOR<span className="text-primary">2026</span></span>
+            <div className="flex flex-col leading-none">
+              <span className="text-lg font-bold tracking-tight">GESTOR<span className="text-primary">2026</span></span>
+              <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest">
+                {isSuperAdmin ? "Central SuperAdmin" : (cabinet as any)?.vereador || "Gabinete"}
+              </span>
+            </div>
           </Link>
 
           <div className="hidden md:flex items-center gap-1">
@@ -98,9 +105,14 @@ export function Navbar() {
               <DropdownMenuItem onClick={() => router.push("/usuarios")}>
                 Equipe do Gabinete
               </DropdownMenuItem>
+              {isSuperAdmin && (
+                <DropdownMenuItem onClick={() => router.push("/gabinetes")} className="text-primary font-bold">
+                  <Building2 size={14} className="mr-2" /> Gabinetes Isolados
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-destructive">
-                Sair do Sistema
+                <LogOut size={14} className="mr-2" /> Sair do Sistema
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
