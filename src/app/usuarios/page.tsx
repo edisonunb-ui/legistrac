@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Users, Loader2, Trash2, ChevronLeft, Building2, Edit2, ShieldCheck, Mail, AlertTriangle } from "lucide-react";
 import { provisionarMembro, excluirUsuario } from "@/app/actions/provisionamento";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -99,7 +100,6 @@ export default function UserManagementPage() {
   const { data: rawUsers = [], loading: usersLoading } = useCollection(usersQuery);
 
   const activeUsers = useMemo(() => {
-    // Mostra apenas os ativos, a menos que seja Master, para auditoria
     return rawUsers.filter((u: any) => !u.deleted || isMasterAdmin);
   }, [rawUsers, isMasterAdmin]);
 
