@@ -153,7 +153,6 @@ export default function UserManagementPage() {
     if (!db || !editingUser) return;
     setIsUpdating(true);
     try {
-      // Usamos o email (que é o ID do documento na coleção users)
       const userDocRef = doc(db, "users", editingUser.email);
       await updateDoc(userDocRef, {
         nome: editName,
@@ -319,7 +318,7 @@ export default function UserManagementPage() {
                         </DialogContent>
                       </Dialog>
 
-                      {isMasterAdmin && u.email !== "edisonunb@gmail.com" && (
+                      {isMasterAdmin && u.email?.toLowerCase() !== "edisonunb@gmail.com" && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="text-destructive">
