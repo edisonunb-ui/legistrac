@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useUser, useFirestore } from "@/firebase";
+import { useUser, useFirestore, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { collection, addDoc, serverTimestamp, doc, runTransaction, query } from "firebase/firestore";
+import { collection, serverTimestamp, doc, runTransaction, query } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +16,6 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription }
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, Save, Loader2, User, Phone, MapPin, ClipboardList, Send, AlertCircle } from "lucide-react";
 import Link from "next/link";
-import { useCollection } from "@/firebase";
 import { DemandPriority } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -68,12 +67,13 @@ export default function NewCitizenServicePage() {
             dataCriacao: serverTimestamp(),
             dataAtualizacao: serverTimestamp(),
             finalizada: false,
-            atendimentoId: atendimentoRef.id
+            atendimentoId: atendimentoRef.id,
+            anexos: []
           };
 
           transaction.set(demandaRef, demandData);
 
-          // Trâmite inicial da demanda
+          // Trâmite inicial
           const tramiteRef = doc(collection(db, "tramites"));
           transaction.set(tramiteRef, {
             demandaId: demandaId,
@@ -82,6 +82,7 @@ export default function NewCitizenServicePage() {
             acao: "ENVIO",
             observacao: "Demanda gerada automaticamente a partir de um atendimento ao munícipe.",
             data: serverTimestamp(),
+            anexos: []
           });
         }
 
@@ -97,7 +98,7 @@ export default function NewCitizenServicePage() {
         });
       });
 
-      toast({ title: "Atendimento Registrado!", description: "Os dados do munícipe e a demanda foram salvos." });
+      toast({ title: "Registro Completo!", description: "Os dados do munícipe foram salvos com sucesso." });
       router.push("/atendimentos");
     } catch (e: any) {
       console.error(e);
@@ -108,7 +109,7 @@ export default function NewCitizenServicePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <header className="mb-8">
@@ -123,9 +124,9 @@ export default function NewCitizenServicePage() {
             <Card className="bg-card border-primary/10 shadow-xl">
               <CardHeader>
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <User className="text-primary" size={20} /> Dados do Munícipe
+                  <User className="text-primary" size={20} /> Perfil do Cidadão
                 </CardTitle>
-                <CardDescription>Informações básicas para contato e controle eleitoral.</CardDescription>
+                <CardDescription>Preencha os dados básicos para o banco de dados do gabinete.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
@@ -135,49 +136,49 @@ export default function NewCitizenServicePage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">Telefone / WhatsApp</Label>
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">WhatsApp / Telefone</Label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
                       <Input required value={formData.municipeTelefone} onChange={e => setFormData(p => ({ ...p, municipeTelefone: e.target.value }))} className="pl-9 bg-background border-primary/10" placeholder="(00) 00000-0000" />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">Título de Eleitor (Opcional)</Label>
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">Título de Eleitor</Label>
                     <div className="relative">
                       <ClipboardList className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
-                      <Input value={formData.municipeTituloEleitoral} onChange={e => setFormData(p => ({ ...p, municipeTituloEleitoral: e.target.value }))} className="pl-9 bg-background border-primary/10" placeholder="0000 0000 0000" />
+                      <Input value={formData.municipeTituloEleitoral} onChange={e => setFormData(p => ({ ...p, municipeTituloEleitoral: e.target.value }))} className="pl-9 bg-background border-primary/10" placeholder="Opcional para controle de base" />
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Endereço Completo</Label>
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Endereço Residencial</Label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-3 text-muted-foreground" size={14} />
-                    <Textarea required value={formData.municipeEndereco} onChange={e => setFormData(p => ({ ...p, municipeEndereco: e.target.value }))} className="pl-9 bg-background border-primary/10 min-h-[80px]" placeholder="Rua, Número, Bairro, CEP..." />
+                    <Textarea required value={formData.municipeEndereco} onChange={e => setFormData(p => ({ ...p, municipeEndereco: e.target.value }))} className="pl-9 bg-background border-primary/10 min-h-[80px]" placeholder="Rua, Bairro, Ponto de referência..." />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Descrição da Solicitação / Problema</Label>
-                  <Textarea required value={formData.descricaoSolicitacao} onChange={e => setFormData(p => ({ ...p, descricaoSolicitacao: e.target.value }))} className="bg-background border-primary/10 min-h-[120px]" placeholder="Relate detalhadamente o que o munícipe solicitou..." />
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">O que o Munícipe solicita?</Label>
+                  <Textarea required value={formData.descricaoSolicitacao} onChange={e => setFormData(p => ({ ...p, descricaoSolicitacao: e.target.value }))} className="bg-background border-primary/10 min-h-[120px]" placeholder="Descreva aqui o pedido ou problema relatado..." />
                 </div>
               </CardContent>
             </Card>
           </div>
 
           <div className="space-y-6">
-            <Card className="bg-card border-primary/10 shadow-xl">
-              <CardHeader className="bg-primary/5 rounded-t-xl border-b border-primary/10">
+            <Card className="bg-card border-primary/10 shadow-xl overflow-hidden">
+              <CardHeader className="bg-primary/5 border-b border-primary/10">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <Send size={16} className="text-primary" /> Demanda Interna
+                    <Send size={16} className="text-primary" /> Gerar Demanda
                   </CardTitle>
                   <Switch checked={createInternalDemand} onCheckedChange={setCreateInternalDemand} />
                 </div>
-                <CardDescription className="text-[10px] mt-2">Se ativado, cria automaticamente um processo no sistema de demandas.</CardDescription>
+                <CardDescription className="text-[10px] mt-2">Cria automaticamente um processo no sistema de gestão.</CardDescription>
               </CardHeader>
-              <CardContent className={cn("pt-6 space-y-4", !createInternalDemand && "opacity-40 pointer-events-none")}>
+              <CardContent className={cn("pt-6 space-y-4 transition-opacity", !createInternalDemand && "opacity-20 pointer-events-none")}>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase text-muted-foreground">Prioridade</Label>
                   <Select value={formData.prioridadeDemanda} onValueChange={v => setFormData(p => ({ ...p, prioridadeDemanda: v as DemandPriority }))}>
@@ -185,36 +186,36 @@ export default function NewCitizenServicePage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ALTA">Alta</SelectItem>
-                      <SelectItem value="MEDIA">Média</SelectItem>
-                      <SelectItem value="BAIXA">Baixa</SelectItem>
+                      <SelectItem value="ALTA">Alta Urgência</SelectItem>
+                      <SelectItem value="MEDIA">Normal</SelectItem>
+                      <SelectItem value="BAIXA">Baixa Prioridade</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Responsável</Label>
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Atribuir ao Assessor</Label>
                   <Select value={formData.responsavelDemanda} onValueChange={v => setFormData(p => ({ ...p, responsavelDemanda: v }))}>
                     <SelectTrigger className="bg-background border-primary/10 h-9">
-                      <SelectValue placeholder="Selecione um assessor" />
+                      <SelectValue placeholder="Selecione um responsável" />
                     </SelectTrigger>
                     <SelectContent>
                       {allUsers.map((u: any) => (
-                        <SelectItem key={u.uid} value={u.uid || u.id}>{u.nome}</SelectItem>
+                        <SelectItem key={u.uid} value={u.uid || u.id}>{u.nome} ({u.perfil})</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Prazo Estimado</Label>
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Prazo de Resolução</Label>
                   <Input type="date" value={formData.prazoDemanda} onChange={e => setFormData(p => ({ ...p, prazoDemanda: e.target.value }))} className="bg-background border-primary/10 h-9" />
                 </div>
 
                 <div className="p-3 bg-primary/5 rounded-lg border border-primary/10 flex gap-2">
                   <AlertCircle size={14} className="text-primary shrink-0 mt-0.5" />
                   <p className="text-[9px] text-primary/80 leading-relaxed font-medium">
-                    A demanda será criada com o título e descrição baseados nos dados do munícipe.
+                    A demanda herdará os dados de contato e a descrição acima para facilitar o trabalho do assessor.
                   </p>
                 </div>
               </CardContent>

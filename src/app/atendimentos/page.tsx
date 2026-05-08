@@ -1,23 +1,54 @@
 
 "use client";
 
-import { useFirestore, useCollection, useUser } from "@/firebase";
+import { useFirestore, useCollection, useUser, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
-import { collection, query, orderBy } from "firebase/firestore";
+import { collection, query, orderBy, doc, deleteDoc } from "firebase/firestore";
 import { CitizenService } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, User, Phone, MapPin, ChevronRight, ChevronLeft, Calendar, ClipboardList } from "lucide-react";
+import { 
+  Search, 
+  Plus, 
+  User, 
+  Phone, 
+  MapPin, 
+  ChevronRight, 
+  ChevronLeft, 
+  Trash2, 
+  Loader2,
+  ClipboardList 
+} from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function CitizenServiceListPage() {
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const userEmail = user?.email?.toLowerCase().trim();
+  const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
+  const { data: profile } = useDoc(profileRef);
+
+  const isAdmin = (profile as any)?.perfil === "ADMIN" || (profile as any)?.perfil === "SUPER_ADMIN" || user?.email === "edisonunb@gmail.com";
 
   const servicesQuery = useMemo(() => db ? query(collection(db, "atendimentos"), orderBy("dataAtendimento", "desc")) : null, [db]);
   const { data: services = [], loading } = useCollection(servicesQuery);
@@ -30,8 +61,21 @@ export default function CitizenServiceListPage() {
     );
   }, [services, searchTerm]);
 
+  const handleDelete = async (id: string) => {
+    if (!db) return;
+    setDeletingId(id);
+    try {
+      await deleteDoc(doc(db, "atendimentos", id));
+      toast({ title: "Registro excluído", description: "O atendimento foi removido permanentemente." });
+    } catch (e) {
+      toast({ title: "Erro ao excluir", description: "Não foi possível remover o registro.", variant: "destructive" });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -72,17 +116,43 @@ export default function CitizenServiceListPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredServices.map((s: CitizenService) => (
-              <Card key={s.id} className="bg-card border-primary/10 hover:border-primary/30 transition-all group">
+              <Card key={s.id} className="bg-card border-primary/10 hover:border-primary/30 transition-all group overflow-hidden">
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <Badge variant="outline" className="text-[9px] font-bold tracking-widest uppercase border-primary/20 text-primary">
                       {s.dataAtendimento?.toDate().toLocaleDateString()}
                     </Badge>
-                    {s.demandaId && (
-                      <Badge className="bg-primary/20 text-primary text-[8px] font-bold uppercase">
-                        Demanda Gerada
-                      </Badge>
-                    )}
+                    <div className="flex gap-2">
+                      {s.demandaId && (
+                        <Badge className="bg-primary/20 text-primary text-[8px] font-bold uppercase">
+                          Demanda Ativa
+                        </Badge>
+                      )}
+                      {isAdmin && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive p-0">
+                              {deletingId === s.id ? <Loader2 className="animate-spin h-3 w-3" /> : <Trash2 size={14} />}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Excluir Atendimento?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação removerá o registro do munícipe <strong>{s.municipeNome}</strong> permanentemente. 
+                                A demanda vinculada (se houver) não será excluída automaticamente.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(s.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                Confirmar Exclusão
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
                   </div>
                   <CardTitle className="text-xl font-bold mt-2 group-hover:text-primary transition-colors">{s.municipeNome}</CardTitle>
                 </CardHeader>
@@ -96,7 +166,7 @@ export default function CitizenServiceListPage() {
                     </div>
                   </div>
                   
-                  <div className="p-3 bg-muted/30 rounded-lg text-xs line-clamp-2 border-l-2 border-primary/30 text-muted-foreground italic">
+                  <div className="p-3 bg-muted/30 rounded-lg text-xs line-clamp-3 border-l-2 border-primary/30 text-muted-foreground italic leading-relaxed">
                     "{s.descricaoSolicitacao}"
                   </div>
 
@@ -111,7 +181,7 @@ export default function CitizenServiceListPage() {
                         </Button>
                       </Link>
                     ) : (
-                      <ChevronRight size={18} className="text-muted-foreground group-hover:text-primary transition-transform" />
+                      <span className="text-[9px] text-muted-foreground font-bold uppercase">Sem Demanda</span>
                     )}
                   </div>
                 </CardContent>
