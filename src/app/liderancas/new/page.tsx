@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useUser, useFirestore } from "@/firebase";
+import { useUser, useFirestore, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,14 +31,23 @@ export default function NewLeaderPage() {
     status: "ATIVO"
   });
 
+  const userEmail = user?.email?.toLowerCase().trim();
+  const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
+  const { data: profile } = useDoc(profileRef);
+  const cabinetId = (profile as any)?.cabinetId;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db || !user) return;
+    if (!db || !user || !cabinetId) {
+      toast({ title: "Erro", description: "Dados de gabinete não identificados.", variant: "destructive" });
+      return;
+    }
     setSaving(true);
 
     try {
       await addDoc(collection(db, "liderancas"), {
         ...formData,
+        cabinetId: cabinetId,
         potencialVotos: Number(formData.potencialVotos) || 0,
         dataCriacao: serverTimestamp(),
         criadoPor: user.uid

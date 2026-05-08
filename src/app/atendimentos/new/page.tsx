@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useUser, useFirestore, useCollection } from "@/firebase";
+import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { collection, serverTimestamp, doc, runTransaction, query } from "firebase/firestore";
+import { collection, serverTimestamp, doc, runTransaction, query, where } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,12 +38,23 @@ export default function NewCitizenServicePage() {
     prazoDemanda: ""
   });
 
-  const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
+  const userEmail = user?.email?.toLowerCase().trim();
+  const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
+  const { data: profile } = useDoc(profileRef);
+  const cabinetId = (profile as any)?.cabinetId;
+
+  const usersQuery = useMemo(() => {
+    if (!db || !cabinetId) return null;
+    return query(collection(db, "users"), where("cabinetId", "==", cabinetId));
+  }, [db, cabinetId]);
   const { data: allUsers = [] } = useCollection(usersQuery);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db || !user) return;
+    if (!db || !user || !cabinetId) {
+      toast({ title: "Erro", description: "Dados de gabinete não identificados.", variant: "destructive" });
+      return;
+    }
     setSaving(true);
 
     try {
@@ -57,6 +68,7 @@ export default function NewCitizenServicePage() {
 
           const demandData = {
             id: demandaId,
+            cabinetId: cabinetId,
             titulo: `[ATENDIMENTO] ${formData.municipeNome}`,
             descricao: `SOLICITAÇÃO DO MUNÍCIPE: ${formData.municipeNome}\nTEL: ${formData.municipeTelefone}\nEND: ${formData.municipeEndereco}\n\nDESCRIÇÃO:\n${formData.descricaoSolicitacao}`,
             prazo: formData.prazoDemanda || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -73,10 +85,10 @@ export default function NewCitizenServicePage() {
 
           transaction.set(demandaRef, demandData);
 
-          // Trâmite inicial
           const tramiteRef = doc(collection(db, "tramites"));
           transaction.set(tramiteRef, {
             demandaId: demandaId,
+            cabinetId: cabinetId,
             de: user.uid,
             para: formData.responsavelDemanda || user.uid,
             acao: "ENVIO",
@@ -87,6 +99,7 @@ export default function NewCitizenServicePage() {
         }
 
         transaction.set(atendimentoRef, {
+          cabinetId: cabinetId,
           municipeNome: formData.municipeNome,
           municipeEndereco: formData.municipeEndereco,
           municipeTituloEleitoral: formData.municipeTituloEleitoral,

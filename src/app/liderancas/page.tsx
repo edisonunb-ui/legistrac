@@ -1,9 +1,10 @@
+
 "use client";
 
-import { useFirestore, useCollection, useUser } from "@/firebase";
+import { useFirestore, useCollection, useUser, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
-import { collection, query } from "firebase/firestore";
+import { collection, query, where, doc } from "firebase/firestore";
 import { Leader } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,7 +19,19 @@ export default function LeadersPage() {
   const db = useFirestore();
   const [searchTerm, setSearchTerm] = useState("");
 
-  const leadersQuery = useMemo(() => db ? query(collection(db, "liderancas")) : null, [db]);
+  const userEmail = user?.email?.toLowerCase().trim();
+  const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
+  const { data: profile } = useDoc(profileRef);
+  const cabinetId = (profile as any)?.cabinetId;
+  const isMasterAdmin = user?.email === "edisonunb@gmail.com";
+
+  const leadersQuery = useMemo(() => {
+    if (!db || !user) return null;
+    if (isMasterAdmin) return query(collection(db, "liderancas"));
+    if (cabinetId) return query(collection(db, "liderancas"), where("cabinetId", "==", cabinetId));
+    return null;
+  }, [db, user, isMasterAdmin, cabinetId]);
+
   const { data: leaders = [], loading } = useCollection(leadersQuery);
 
   const filteredLeaders = useMemo(() => {
@@ -29,7 +42,7 @@ export default function LeadersPage() {
   }, [leaders, searchTerm]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -60,6 +73,12 @@ export default function LeadersPage() {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map(i => <div key={i} className="h-40 bg-card rounded-xl animate-pulse border border-primary/5" />)}
+          </div>
+        ) : filteredLeaders.length === 0 ? (
+          <div className="text-center py-20 bg-card rounded-2xl border border-dashed border-primary/10">
+            <Users size={48} className="mx-auto text-muted-foreground mb-4 opacity-20" />
+            <h3 className="text-lg font-bold">Nenhum líder estratégico</h3>
+            <p className="text-muted-foreground text-sm">Inicie o mapeamento da sua base territorial.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

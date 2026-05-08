@@ -4,7 +4,7 @@
 import { useFirestore, useCollection, useUser, useDoc } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
-import { collection, query, orderBy, doc, deleteDoc } from "firebase/firestore";
+import { collection, query, orderBy, doc, deleteDoc, where } from "firebase/firestore";
 import { CitizenService } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -49,8 +49,16 @@ export default function CitizenServiceListPage() {
   const { data: profile } = useDoc(profileRef);
 
   const isAdmin = (profile as any)?.perfil === "ADMIN" || (profile as any)?.perfil === "SUPER_ADMIN" || user?.email === "edisonunb@gmail.com";
+  const isMasterAdmin = user?.email === "edisonunb@gmail.com";
+  const cabinetId = (profile as any)?.cabinetId;
 
-  const servicesQuery = useMemo(() => db ? query(collection(db, "atendimentos"), orderBy("dataAtendimento", "desc")) : null, [db]);
+  const servicesQuery = useMemo(() => {
+    if (!db || !user) return null;
+    if (isMasterAdmin) return query(collection(db, "atendimentos"), orderBy("dataAtendimento", "desc"));
+    if (cabinetId) return query(collection(db, "atendimentos"), where("cabinetId", "==", cabinetId), orderBy("dataAtendimento", "desc"));
+    return null;
+  }, [db, user, isMasterAdmin, cabinetId]);
+  
   const { data: services = [], loading } = useCollection(servicesQuery);
 
   const filteredServices = useMemo(() => {
