@@ -15,6 +15,7 @@ export function NotificationListener() {
   const router = useRouter();
   const { toast } = useToast();
   const alertedIds = useRef<Set<string>>(new Set());
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Consulta simplificada para evitar erros de índice composto no Firestore
   const notifQuery = (db && user) 
@@ -28,6 +29,10 @@ export function NotificationListener() {
   const { data: notifications } = useCollection<NotificationType>(notifQuery);
 
   useEffect(() => {
+    // Inicializar o áudio (som de notificação limpo e profissional)
+    audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+    audioRef.current.volume = 0.5;
+
     // Solicitar permissão de notificação no carregamento
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'default') {
@@ -42,6 +47,13 @@ export function NotificationListener() {
         // Evitar disparar o alerta mais de uma vez para o mesmo ID na mesma sessão
         if (!notif.id || alertedIds.current.has(notif.id)) return;
         alertedIds.current.add(notif.id);
+
+        // 0. TOCAR SOM (Respeitando regras de interação do navegador)
+        if (audioRef.current) {
+          audioRef.current.play().catch(e => {
+            console.warn("Áudio bloqueado pelo navegador. É necessária uma interação prévia do usuário com a página.");
+          });
+        }
 
         // 1. ALERTA INTERNO (Toast) - Aparece sempre que o sistema estiver aberto
         toast({
@@ -69,7 +81,7 @@ export function NotificationListener() {
           try {
             const n = new window.Notification('LegisTrac: Gabinete', {
               body: notif.mensagem,
-              silent: false,
+              silent: false, // O som nativo do sistema também pode tocar
             });
 
             n.onclick = async () => {
