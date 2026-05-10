@@ -48,25 +48,25 @@ export function NotificationListener() {
           audioRef.current.play().catch(e => console.warn("Áudio pendente de interação"));
         }
 
-        // ALERTA VISUAL MAXIMIZADO COM ANIMAÇÃO PISCANTE
+        // ALERTA VISUAL ESTABILIZADO (SEM PISCAR) E TAMANHO REDUZIDO
         toast({
-          title: "🔔 NOVA ATUALIZAÇÃO NO GABINETE",
+          title: "🔔 NOVA ATUALIZAÇÃO",
           description: (
-            <div className="flex flex-col gap-2 mt-2">
-              <p className="text-lg font-black leading-tight text-primary-foreground">
+            <div className="flex flex-col gap-1 mt-1">
+              <p className="text-sm font-bold leading-tight text-primary-foreground">
                 {notif.mensagem}
               </p>
-              <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
-                Toque no botão ao lado para abrir agora
+              <p className="text-[9px] font-bold uppercase tracking-widest opacity-70">
+                Toque para abrir a demanda
               </p>
             </div>
           ),
-          className: "bg-primary border-primary-foreground/20 text-primary-foreground shadow-2xl animate-alert-flash transition-all",
-          duration: 15000, // Aumentado para 15 segundos para garantir visibilidade
+          className: "bg-primary border-primary-foreground/20 text-primary-foreground shadow-2xl transition-all",
+          duration: 10000, 
           action: (
             <ToastAction 
               altText="Abrir Demanda"
-              className="bg-black text-white hover:bg-black/80 font-black border-none px-6 h-12"
+              className="bg-black text-white hover:bg-black/80 font-bold border-none px-4 h-9"
               onClick={async () => {
                 if (db && notif.id) {
                   await updateDoc(doc(db, "notificacoes", notif.id), { lida: true });
@@ -76,7 +76,7 @@ export function NotificationListener() {
                 }
               }}
             >
-              ABRIR AGORA
+              ABRIR
             </ToastAction>
           ),
         });
