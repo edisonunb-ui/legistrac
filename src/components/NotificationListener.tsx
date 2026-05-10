@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { Notification as NotificationType } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
+import { BellRing } from 'lucide-react';
 
 export function NotificationListener() {
   const { user } = useUser();
@@ -17,7 +18,6 @@ export function NotificationListener() {
   const alertedIds = useRef<Set<string>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Consulta simplificada para evitar erros de índice composto no Firestore
   const notifQuery = (db && user) 
     ? query(
         collection(db, "notificacoes"), 
@@ -29,11 +29,10 @@ export function NotificationListener() {
   const { data: notifications } = useCollection<NotificationType>(notifQuery);
 
   useEffect(() => {
-    // Inicializar o áudio (som de notificação limpo e profissional)
+    // Som de alerta tipo "Notificação de Sistema"
     audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
-    audioRef.current.volume = 0.5;
+    audioRef.current.volume = 0.7;
 
-    // Solicitar permissão de notificação no carregamento
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'default') {
         Notification.requestPermission();
@@ -44,24 +43,32 @@ export function NotificationListener() {
   useEffect(() => {
     if (notifications && notifications.length > 0) {
       notifications.forEach((notif) => {
-        // Evitar disparar o alerta mais de uma vez para o mesmo ID na mesma sessão
         if (!notif.id || alertedIds.current.has(notif.id)) return;
         alertedIds.current.add(notif.id);
 
-        // 0. TOCAR SOM (Respeitando regras de interação do navegador)
         if (audioRef.current) {
-          audioRef.current.play().catch(e => {
-            console.warn("Áudio bloqueado pelo navegador. É necessária uma interação prévia do usuário com a página.");
-          });
+          audioRef.current.play().catch(e => console.warn("Áudio pendente de interação"));
         }
 
-        // 1. ALERTA INTERNO (Toast) - Aparece sempre que o sistema estiver aberto
+        // ALERTA VISUAL MAXIMIZADO
         toast({
-          title: "Nova Atualização",
-          description: notif.mensagem,
+          title: "🔔 NOVA ATUALIZAÇÃO NO GABINETE",
+          description: (
+            <div className="flex flex-col gap-2 mt-2">
+              <p className="text-lg font-black leading-tight text-primary-foreground">
+                {notif.mensagem}
+              </p>
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
+                Toque no botão ao lado para abrir agora
+              </p>
+            </div>
+          ),
+          className: "bg-primary border-primary-foreground/20 text-primary-foreground shadow-2xl scale-105 transition-transform duration-500",
+          duration: 10000, // Fica 10 segundos na tela
           action: (
             <ToastAction 
-              altText="Ver agora"
+              altText="Abrir Demanda"
+              className="bg-black text-white hover:bg-black/80 font-black border-none px-6 h-12"
               onClick={async () => {
                 if (db && notif.id) {
                   await updateDoc(doc(db, "notificacoes", notif.id), { lida: true });
@@ -71,19 +78,17 @@ export function NotificationListener() {
                 }
               }}
             >
-              VER
+              ABRIR AGORA
             </ToastAction>
           ),
         });
 
-        // 2. ALERTA NATIVO (Navegador) - Aparece mesmo com a aba em segundo plano
         if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
           try {
             const n = new window.Notification('LegisTrac: Gabinete', {
               body: notif.mensagem,
-              silent: false, // O som nativo do sistema também pode tocar
+              icon: '/favicon.ico',
             });
-
             n.onclick = async () => {
               window.focus();
               if (db && notif.id) {
@@ -94,7 +99,7 @@ export function NotificationListener() {
               }
             };
           } catch (e) {
-            console.error("Erro ao disparar notificação nativa", e);
+            console.error(e);
           }
         }
       });
