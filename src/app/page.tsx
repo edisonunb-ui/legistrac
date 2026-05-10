@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useFirestore, useCollection, useUser, useDoc } from "@/firebase";
+import { useFirestore, useCollection, useUser, useDoc, useAuthInstance } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useMemo, useState, useEffect } from "react";
 import { collection, query, doc, setDoc, where } from "firebase/firestore";
@@ -16,7 +16,8 @@ import {
   ChevronRight,
   ClipboardList,
   Edit2,
-  AlertCircle
+  AlertCircle,
+  LogOut
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -34,10 +35,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { signOut } from "firebase/auth";
+import { useRouter } from "next/navigation";
+
+const MASTER_EMAIL = "edisonunb@gmail.com";
 
 export default function StrategicDashboard() {
   const { user, loading: authLoading } = useUser();
+  const auth = useAuthInstance();
   const db = useFirestore();
+  const router = useRouter();
   const { toast } = useToast();
 
   const [isEditingMeta, setIsEditingMeta] = useState(false);
@@ -45,10 +52,10 @@ export default function StrategicDashboard() {
 
   const userEmail = user?.email?.toLowerCase().trim();
   const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
-  const { data: profile } = useDoc(profileRef);
+  const { data: profile, loading: loadingProfile } = useDoc(profileRef);
 
   const cabinetId = (profile as any)?.cabinetId;
-  const isSuperAdmin = userEmail === "edisonunb@gmail.com";
+  const isSuperAdmin = userEmail === MASTER_EMAIL;
 
   const demandsQuery = useMemo(() => {
     if (!db || (!cabinetId && !isSuperAdmin)) return null;
@@ -67,7 +74,7 @@ export default function StrategicDashboard() {
   const { data: allLeaders = [], loading: loadingLeaders } = useCollection(leadersQuery);
 
   const configRef = useMemo(() => {
-    if (!db || !profile) return null;
+    if (!db || (!profile && !isSuperAdmin)) return null;
     if (isSuperAdmin) {
       return doc(db, "config", "global");
     } else if (cabinetId) {
@@ -85,7 +92,7 @@ export default function StrategicDashboard() {
     return {
       votosMapeados: totalVotosMapeados,
       totalLideres: allLeaders.length,
-      demandasAtivas: allDemands.filter((d: Demand) => d.status !== "FINALIZADO").length,
+      demandasAtivas: allDemands.filter((d: Demand) => d.status !== "FINALIZADO" && !d.deleted).length,
       progressoMeta: Math.min(progresso, 100),
       metaGeral
     };
@@ -118,7 +125,15 @@ export default function StrategicDashboard() {
     }
   };
 
-  if (authLoading || (profile && loadingDemands && loadingLeaders)) {
+  const handleLogout = async () => {
+    if (auth) {
+      await signOut(auth);
+      router.push("/login");
+    }
+  };
+
+  // Carregamento inicial: espera Auth e Perfil
+  if (authLoading || loadingProfile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background gap-4">
         <Loader2 className="animate-spin text-primary h-10 w-10" />
@@ -127,15 +142,22 @@ export default function StrategicDashboard() {
     );
   }
 
-  if (!authLoading && !profile && userEmail !== "edisonunb@gmail.com") {
+  // Se não estiver carregando, não tem perfil e NÃO é o SuperAdmin, bloqueia.
+  if (!profile && !isSuperAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="max-w-md w-full border-destructive/20 bg-destructive/5">
-          <CardContent className="pt-6 text-center space-y-4">
-            <AlertCircle size={48} className="mx-auto text-destructive" />
-            <h2 className="text-xl font-bold">Acesso não provisionado</h2>
-            <p className="text-sm text-muted-foreground">Seu e-mail não foi encontrado na base de usuários autorizados deste gabinete. Entre em contato com o administrador.</p>
-            <Button variant="outline" onClick={() => signOut(initializeFirebase().auth)}>Sair do Sistema</Button>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+        <Card className="max-w-md w-full border-destructive/20 bg-card shadow-2xl">
+          <CardContent className="pt-8 text-center space-y-6">
+            <div className="mx-auto w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center">
+              <AlertCircle size={32} className="text-destructive" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold">Acesso não provisionado</h2>
+              <p className="text-sm text-muted-foreground">Seu e-mail <b>{userEmail}</b> não foi encontrado na base de usuários autorizados. Entre em contato com o administrador do sistema.</p>
+            </div>
+            <Button variant="outline" onClick={handleLogout} className="w-full gap-2">
+              <LogOut size={16} /> Sair do Sistema
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -189,7 +211,7 @@ export default function StrategicDashboard() {
                 <div className="p-2 bg-primary/10 text-primary rounded-lg"><Users size={24} /></div>
               </div>
               <p className="text-[10px] text-muted-foreground mt-4 font-bold uppercase tracking-widest flex items-center gap-1">
-                <div className="w-2 h-2 bg-primary rounded-full animate-pulse" /> Territorial Ativa
+                <span className="w-2 h-2 bg-primary rounded-full animate-pulse" /> Territorial Ativa
               </p>
             </CardContent>
           </Card>
@@ -310,21 +332,21 @@ export default function StrategicDashboard() {
                     <div className="w-2 h-2 bg-blue-500 rounded-full" />
                     <span className="text-xs font-bold">Abertas</span>
                   </div>
-                  <span className="text-xs font-mono">{allDemands.filter(d => d.status === "ABERTO").length}</span>
+                  <span className="text-xs font-mono">{allDemands.filter(d => d.status === "ABERTO" && !d.deleted).length}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-purple-500 rounded-full" />
                     <span className="text-xs font-bold">Em Trâmite</span>
                   </div>
-                  <span className="text-xs font-mono">{allDemands.filter(d => d.status === "EM_ANDAMENTO").length}</span>
+                  <span className="text-xs font-mono">{allDemands.filter(d => d.status === "EM_ANDAMENTO" && !d.deleted).length}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full" />
                     <span className="text-xs font-bold">Finalizadas</span>
                   </div>
-                  <span className="text-xs font-mono">{allDemands.filter(d => d.status === "FINALIZADO").length}</span>
+                  <span className="text-xs font-mono">{allDemands.filter(d => d.status === "FINALIZADO" && !d.deleted).length}</span>
                 </div>
               </CardContent>
             </Card>
