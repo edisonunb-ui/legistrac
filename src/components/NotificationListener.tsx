@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -8,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import { Notification as NotificationType } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { BellRing } from 'lucide-react';
 
 export function NotificationListener() {
   const { user } = useUser();
@@ -50,7 +48,7 @@ export function NotificationListener() {
           audioRef.current.play().catch(e => console.warn("Áudio pendente de interação"));
         }
 
-        // ALERTA VISUAL MAXIMIZADO
+        // ALERTA VISUAL MAXIMIZADO COM ANIMAÇÃO PISCANTE
         toast({
           title: "🔔 NOVA ATUALIZAÇÃO NO GABINETE",
           description: (
@@ -63,8 +61,8 @@ export function NotificationListener() {
               </p>
             </div>
           ),
-          className: "bg-primary border-primary-foreground/20 text-primary-foreground shadow-2xl scale-105 transition-transform duration-500",
-          duration: 10000, // Fica 10 segundos na tela
+          className: "bg-primary border-primary-foreground/20 text-primary-foreground shadow-2xl animate-alert-flash transition-all",
+          duration: 15000, // Aumentado para 15 segundos para garantir visibilidade
           action: (
             <ToastAction 
               altText="Abrir Demanda"
