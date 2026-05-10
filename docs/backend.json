@@ -69,6 +69,19 @@
         "bairro": { "type": "string" },
         "potencialVotos": { "type": "number" }
       }
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Real-time user notification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "mensagem": { "type": "string" },
+        "demandaId": { "type": "string" },
+        "lida": { "type": "boolean" },
+        "data": { "type": "object" }
+      }
     }
   },
   "auth": {
@@ -94,6 +107,10 @@
     "/liderancas/{leaderId}": {
       "schema": "Leader",
       "description": "Political leaders"
+    },
+    "/notificacoes/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
     }
   }
 }
