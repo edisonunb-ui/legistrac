@@ -92,24 +92,38 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     });
   }, [tramitesRaw]);
 
-  const usersQuery = useMemo(() => (db && user) ? query(collection(db, "users")) : null, [db, user]);
+  const userEmail = user?.email?.toLowerCase().trim();
+  const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
+  const { data: profile } = useDoc(profileRef);
+
+  const cabinetId = (profile as any)?.cabinetId;
+  const isMasterAdmin = userEmail === "edisonunb@gmail.com";
+
+  // ISOLAMENTO DE USUÁRIOS: Filtra apenas membros do MESMO gabinete para tramitação
+  const usersQuery = useMemo(() => {
+    if (!db || !user) return null;
+    const targetCabinetId = cabinetId || (demand as any)?.cabinetId;
+    if (!targetCabinetId) return null;
+    
+    return query(
+      collection(db, "users"), 
+      where("cabinetId", "==", targetCabinetId),
+      where("deleted", "==", false)
+    );
+  }, [db, user, cabinetId, demand]);
+
   const { data: allUsersRaw = [] } = useCollection(usersQuery);
 
   const allUsers = useMemo(() => {
     return [...allUsersRaw].sort((a: any, b: any) => (a.nome || "").localeCompare(b.nome || ""));
   }, [allUsersRaw]);
 
-  const userEmail = user?.email?.toLowerCase().trim();
-  const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
-  const { data: profile } = useDoc(profileRef);
-
-  const cabinetId = (profile as any)?.cabinetId;
   const cabinetQuery = useMemo(() => (db && cabinetId) ? doc(db, "gabinetes", cabinetId) : null, [db, cabinetId]);
   const { data: cabinet } = useDoc(cabinetQuery);
 
   const hasPermission = (perm: keyof UserPermissions) => {
-    if (!profile && user?.email !== 'edisonunb@gmail.com') return false;
-    return (profile as any)?.permissoes?.[perm] || user?.email === 'edisonunb@gmail.com';
+    if (!profile && !isMasterAdmin) return false;
+    return (profile as any)?.permissoes?.[perm] || isMasterAdmin;
   };
 
   const allAttachments = useMemo(() => {
@@ -209,7 +223,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     const targetUser = allUsers.find((u: any) => u.uid === selectedUser || u.email === selectedUser);
     if (!targetUser) {
       setProcessing(false);
-      toast({ title: "Erro", description: "Usuário destino não encontrado.", variant: "destructive" });
+      toast({ title: "Erro", description: "Usuário destino não encontrado neste gabinete.", variant: "destructive" });
       return;
     }
     try {
@@ -271,6 +285,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   if (!demand) return <div className="p-20 text-center">Demanda não encontrada.</div>;
 
   const isResponsible = demand.responsavelAtual === user?.uid;
+  // Filtra colaboradores do gabinete, removendo o próprio usuário da lista de destino
   const filteredCollaborators = allUsers.filter(u => u.email?.toLowerCase() !== user?.email?.toLowerCase());
 
   return (
@@ -336,13 +351,14 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                   <DialogHeader><DialogTitle>Mover Demanda</DialogTitle></DialogHeader>
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                      <Label>Destinatário</Label>
+                      <Label>Destinatário (Membros do Gabinete)</Label>
                       <Select onValueChange={setSelectedUser} value={selectedUser}>
                         <SelectTrigger><SelectValue placeholder="Selecione um colaborador" /></SelectTrigger>
                         <SelectContent>
                           {filteredCollaborators.map((u: any) => (
                             <SelectItem key={u.email} value={u.uid || u.email}>{u.nome} ({u.perfil})</SelectItem>
                           ))}
+                          {filteredCollaborators.length === 0 && <p className="p-2 text-xs text-muted-foreground text-center">Nenhum outro membro no gabinete.</p>}
                         </SelectContent>
                       </Select>
                     </div>
