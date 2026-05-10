@@ -1,3 +1,4 @@
+
 import { 
   collection, 
   doc, 
@@ -84,6 +85,7 @@ export async function sendDemand(
 
   await runTransaction(db, async (transaction) => {
     const demandDoc = await transaction.get(demandRef);
+    const demandTitle = demandDoc.data()?.titulo || "Demanda";
     const existingAnexos = demandDoc.data()?.anexos || [];
     const cabinetId = demandDoc.data()?.cabinetId;
 
@@ -108,7 +110,7 @@ export async function sendDemand(
     transaction.set(notificationRef, {
       userId: para,
       cabinetId: cabinetId || null,
-      mensagem: `Você recebeu uma nova demanda para análise.`,
+      mensagem: `Nova demanda recebida: ${demandTitle}`,
       demandaId,
       lida: false,
       data: serverTimestamp(),
@@ -133,6 +135,7 @@ export async function returnDemand(
 
   await runTransaction(db, async (transaction) => {
     const demandDoc = await transaction.get(demandRef);
+    const demandTitle = demandDoc.data()?.titulo || "Demanda";
     const existingAnexos = demandDoc.data()?.anexos || [];
     const cabinetId = demandDoc.data()?.cabinetId;
 
@@ -157,7 +160,7 @@ export async function returnDemand(
     transaction.set(notificationRef, {
       userId: para,
       cabinetId: cabinetId || null,
-      mensagem: `Uma demanda foi devolvida para você.`,
+      mensagem: `Demanda devolvida: ${demandTitle}`,
       demandaId,
       lida: false,
       data: serverTimestamp(),
@@ -181,6 +184,7 @@ export async function finalizeDemand(
 
   await runTransaction(db, async (transaction) => {
     const demandDoc = await transaction.get(demandRef);
+    const demandTitle = demandDoc.data()?.titulo || "Demanda";
     const cabinetId = demandDoc.data()?.cabinetId;
 
     transaction.update(demandRef, {
@@ -202,7 +206,7 @@ export async function finalizeDemand(
     transaction.set(notificationRef, {
       userId: criadorId,
       cabinetId: cabinetId || null,
-      mensagem: `Sua demanda foi finalizada com sucesso.`,
+      mensagem: `Demanda finalizada: ${demandTitle}`,
       demandaId,
       lida: false,
       data: serverTimestamp(),
@@ -226,6 +230,7 @@ export async function reopenDemand(
 
   await runTransaction(db, async (transaction) => {
     const demandDoc = await transaction.get(demandRef);
+    const demandTitle = demandDoc.data()?.titulo || "Demanda";
     const cabinetId = demandDoc.data()?.cabinetId;
 
     transaction.update(demandRef, {
@@ -247,7 +252,7 @@ export async function reopenDemand(
     transaction.set(notificationRef, {
       userId: responsavelId,
       cabinetId: cabinetId || null,
-      mensagem: `Uma demanda foi reaberta para novos ajustes.`,
+      mensagem: `Demanda reaberta: ${demandTitle}`,
       demandaId,
       lida: false,
       data: serverTimestamp(),
