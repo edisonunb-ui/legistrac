@@ -57,6 +57,13 @@ export default function StrategicDashboard() {
   const cabinetId = (profile as any)?.cabinetId;
   const isSuperAdmin = userEmail === MASTER_EMAIL;
 
+  // Redirecionamento se não estiver logado
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, authLoading, router]);
+
   const demandsQuery = useMemo(() => {
     if (!db || (!cabinetId && !isSuperAdmin)) return null;
     return isSuperAdmin 
@@ -132,8 +139,8 @@ export default function StrategicDashboard() {
     }
   };
 
-  // Carregamento inicial: espera Auth e Perfil
-  if (authLoading || loadingProfile) {
+  // Carregamento inicial: espera Auth
+  if (authLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background gap-4">
         <Loader2 className="animate-spin text-primary h-10 w-10" />
@@ -142,7 +149,20 @@ export default function StrategicDashboard() {
     );
   }
 
-  // Se não estiver carregando, não tem perfil e NÃO é o SuperAdmin, bloqueia.
+  // Se não estiver logado, não renderiza nada (o useEffect cuida do redirect)
+  if (!user) return null;
+
+  // Se estiver logado, espera o perfil carregar para decidir se bloqueia ou mostra o dashboard
+  if (loadingProfile) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background gap-4">
+        <Loader2 className="animate-spin text-primary h-10 w-10" />
+        <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest animate-pulse">Validando Acesso...</p>
+      </div>
+    );
+  }
+
+  // Se não tem perfil e NÃO é o SuperAdmin, bloqueia.
   if (!profile && !isSuperAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
