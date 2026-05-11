@@ -19,15 +19,19 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
 
   useEffect(() => {
     if (!query) {
-      if (data.length > 0) setData([]);
+      if (data.length > 0) {
+        setData([]);
+        lastSerializedData.current = '';
+        activeQueryHash.current = null;
+      }
       return;
     }
 
-    // Geramos um hash simples da query para evitar reconexões se a query for logicamente a mesma
-    const currentHash = JSON.stringify((query as any)._query || query.toString());
-    if (activeQueryHash.current === currentHash) return;
-    activeQueryHash.current = currentHash;
+    // Usamos o toString() da query para uma referência estável de caminho/filtros
+    const queryId = query.toString();
+    if (activeQueryHash.current === queryId) return;
     
+    activeQueryHash.current = queryId;
     setLoading(true);
 
     const unsubscribe = onSnapshot(
@@ -53,7 +57,10 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      activeQueryHash.current = null;
+    };
   }, [query]);
 
   return { data, loading, error };

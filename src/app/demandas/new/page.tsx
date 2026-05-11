@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, Loader2, User as UserIcon, Paperclip, X, FileText, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, Save, Loader2, User as UserIcon, Paperclip, X, FileText, CheckCircle2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority, Attachment } from "@/lib/types";
 import { collection, query, Timestamp, doc, where } from "firebase/firestore";
@@ -25,6 +25,7 @@ export default function NewDemandPage() {
   const storage = useStorage();
   const router = useRouter();
   const { toast } = useToast();
+  
   const [saving, setSaving] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -62,7 +63,12 @@ export default function NewDemandPage() {
 
   const removeFile = useCallback((index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
-  }, []);
+    setUploadProgress(prev => {
+      const newProgress = { ...prev };
+      delete newProgress[files[index]?.name];
+      return newProgress;
+    });
+  }, [files]);
 
   const uploadFiles = async (): Promise<Attachment[]> => {
     const attachments: Attachment[] = [];
@@ -77,33 +83,37 @@ export default function NewDemandPage() {
       
       const uploadTask = uploadBytesResumable(storageRef, file);
 
-      const downloadUrl = await new Promise<string>((resolve, reject) => {
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
-          },
-          (error) => {
-            console.error("Upload error:", error);
-            reject(error);
-          },
-          async () => {
-            const url = await getDownloadURL(uploadTask.snapshot.ref);
-            resolve(url);
-          }
-        );
-      });
-      
-      attachments.push({
-        id: Math.random().toString(36).substring(7),
-        nome: file.name,
-        url: downloadUrl,
-        tipo: file.type,
-        tamanho: file.size,
-        data: Timestamp.now(),
-        enviadoPor: user?.uid || "anonimo"
-      });
+      try {
+        const downloadUrl = await new Promise<string>((resolve, reject) => {
+          uploadTask.on(
+            'state_changed',
+            (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
+            },
+            (error) => {
+              console.error("Upload task error:", error);
+              reject(error);
+            },
+            async () => {
+              const url = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(url);
+            }
+          );
+        });
+        
+        attachments.push({
+          id: Math.random().toString(36).substring(7),
+          nome: file.name,
+          url: downloadUrl,
+          tipo: file.type,
+          tamanho: file.size,
+          data: Timestamp.now(),
+          enviadoPor: user?.uid || "anonimo"
+        });
+      } catch (err: any) {
+        throw new Error(`Erro ao subir arquivo ${file.name}: ${err.message}`);
+      }
     }
 
     return attachments;
@@ -127,10 +137,10 @@ export default function NewDemandPage() {
       toast({ title: "Sucesso", description: "Demanda registrada com sucesso." });
       router.push(`/demandas/${demandId}`);
     } catch (error: any) {
-      console.error("Submit error:", error);
+      console.error("Submit error details:", error);
       toast({
-        title: "Erro no Envio",
-        description: "Falha ao processar a demanda. Verifique se o CORS foi configurado corretamente.",
+        title: "Erro no Processamento",
+        description: error.message || "Verifique sua conexão e se o CORS está liberado no Google Cloud.",
         variant: "destructive",
       });
       setSaving(false);
@@ -151,27 +161,27 @@ export default function NewDemandPage() {
           <h1 className="text-2xl font-bold tracking-tight">Registro de Demanda</h1>
         </header>
 
-        <Card className="max-w-3xl border-border bg-card shadow-none">
+        <Card className="max-w-3xl border-slate-900 bg-card shadow-none">
           <form onSubmit={handleSubmit}>
-            <CardHeader className="border-b">
+            <CardHeader className="border-b border-slate-900">
               <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Formulário Oficial</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
               <div className="space-y-2">
-                <Label htmlFor="titulo" className="text-[10px] font-bold uppercase">Título da Solicitação</Label>
-                <Input id="titulo" required value={formData.titulo} onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))} placeholder="Ex: Manutenção de iluminação pública" className="h-11" />
+                <Label htmlFor="titulo" className="text-[10px] font-bold uppercase text-muted-foreground">Título da Solicitação</Label>
+                <Input id="titulo" required value={formData.titulo} onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))} placeholder="Ex: Manutenção de iluminação pública" className="h-11 bg-slate-950 border-slate-900" />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="prazo" className="text-[10px] font-bold uppercase">Prazo Limite</Label>
-                  <Input id="prazo" type="date" required value={formData.prazo} onChange={(e) => setFormData(prev => ({ ...prev, prazo: e.target.value }))} className="h-11" />
+                  <Label htmlFor="prazo" className="text-[10px] font-bold uppercase text-muted-foreground">Prazo Limite</Label>
+                  <Input id="prazo" type="date" required value={formData.prazo} onChange={(e) => setFormData(prev => ({ ...prev, prazo: e.target.value }))} className="h-11 bg-slate-950 border-slate-900" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="prioridade" className="text-[10px] font-bold uppercase">Nível de Prioridade</Label>
+                  <Label htmlFor="prioridade" className="text-[10px] font-bold uppercase text-muted-foreground">Nível de Prioridade</Label>
                   <Select value={formData.prioridade} onValueChange={(v: DemandPriority) => setFormData(prev => ({ ...prev, prioridade: v }))}>
-                    <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-                    <SelectContent>
+                    <SelectTrigger className="h-11 bg-slate-950 border-slate-900"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-slate-950 border-slate-900">
                       <SelectItem value="BAIXA">Baixa</SelectItem>
                       <SelectItem value="MEDIA">Média</SelectItem>
                       <SelectItem value="ALTA">Alta</SelectItem>
@@ -181,12 +191,12 @@ export default function NewDemandPage() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase">Responsável Designado</Label>
+                <Label className="text-[10px] font-bold uppercase text-muted-foreground">Responsável Designado</Label>
                 <Select value={formData.responsavelId} onValueChange={(v) => setFormData(prev => ({ ...prev, responsavelId: v }))}>
-                  <SelectTrigger className="h-11">
+                  <SelectTrigger className="h-11 bg-slate-950 border-slate-900">
                     <div className="flex items-center gap-2"><UserIcon size={14} className="text-muted-foreground"/><SelectValue /></div>
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-slate-950 border-slate-900">
                     {user?.uid && <SelectItem value={user.uid}>Atribuir a mim</SelectItem>}
                     {allUsers.filter((u: any) => u.uid !== user?.uid).map((u: any) => (
                       <SelectItem key={u.uid} value={u.uid}>{u.nome} ({u.perfil})</SelectItem>
@@ -196,31 +206,31 @@ export default function NewDemandPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="descricao" className="text-[10px] font-bold uppercase">Detalhamento Técnico</Label>
-                <Textarea id="descricao" rows={6} required value={formData.descricao} onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))} placeholder="Descreva os detalhes da demanda, locais e contatos..." className="resize-none" />
+                <Label htmlFor="descricao" className="text-[10px] font-bold uppercase text-muted-foreground">Detalhamento Técnico</Label>
+                <Textarea id="descricao" rows={6} required value={formData.descricao} onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))} placeholder="Descreva os detalhes da demanda, locais e contatos..." className="resize-none bg-slate-950 border-slate-900" />
               </div>
 
-              <div className="space-y-4 p-6 bg-muted/30 rounded-lg border border-dashed">
+              <div className="space-y-4 p-6 bg-slate-950 rounded-lg border border-slate-900 border-dashed">
                 <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-2 font-bold text-[10px] uppercase">
-                    <Paperclip size={14} /> Anexar Documentação
+                  <Label className="flex items-center gap-2 font-bold text-[10px] uppercase text-muted-foreground">
+                    <Paperclip size={14} /> Anexar Documentação (PDF, Imagens)
                   </Label>
                 </div>
                 
-                <div className="p-4 bg-green-500/5 border border-green-500/20 rounded-md flex gap-3 mb-4">
-                   <CheckCircle2 size={16} className="text-green-600 shrink-0" />
-                   <p className="text-[10px] text-green-700 leading-tight">
-                     Status de Conexão: O sistema está pronto para receber arquivos grandes após a liberação do CORS.
+                <div className="p-4 bg-primary/5 border border-primary/20 rounded-md flex gap-3 mb-4">
+                   <AlertCircle size={16} className="text-primary shrink-0" />
+                   <p className="text-[10px] text-primary/80 leading-tight">
+                     O upload suporta arquivos maiores de 1MB se o CORS estiver configurado. Verifique o status do envio abaixo.
                    </p>
                 </div>
 
-                <Input type="file" multiple className="bg-background cursor-pointer h-10 pt-2" onChange={handleFileChange} disabled={saving} />
+                <Input type="file" multiple className="bg-slate-900 cursor-pointer h-10 pt-2 border-slate-800" onChange={handleFileChange} disabled={saving} />
                 
                 {files.length > 0 && (
                   <div className="space-y-2 mt-4">
                     {files.map((file, idx) => (
                       <div key={idx} className="space-y-1">
-                        <div className="flex items-center justify-between p-3 bg-background rounded border text-[11px]">
+                        <div className="flex items-center justify-between p-3 bg-slate-900 rounded border border-slate-800 text-[11px]">
                           <div className="flex items-center gap-3 truncate">
                             <FileText size={14} className="text-muted-foreground" />
                             <span className="truncate">{file.name}</span>
@@ -233,8 +243,8 @@ export default function NewDemandPage() {
                         </div>
                         {uploadProgress[file.name] !== undefined && (
                           <div className="px-1">
-                            <Progress value={uploadProgress[file.name]} className="h-1" />
-                            <p className="text-[9px] text-right mt-1 font-bold">{Math.round(uploadProgress[file.name])}%</p>
+                            <Progress value={uploadProgress[file.name]} className="h-1 bg-slate-800" />
+                            <p className="text-[9px] text-right mt-1 font-bold text-primary">{Math.round(uploadProgress[file.name])}%</p>
                           </div>
                         )}
                       </div>
@@ -243,9 +253,9 @@ export default function NewDemandPage() {
                 )}
               </div>
             </CardContent>
-            <CardFooter className="flex justify-end gap-3 border-t bg-muted/10 py-6">
+            <CardFooter className="flex justify-end gap-3 border-t border-slate-900 bg-slate-950/50 py-6">
               <Button type="button" variant="ghost" onClick={() => router.back()} disabled={saving} className="text-[10px] font-bold uppercase">Descartar</Button>
-              <Button type="submit" disabled={saving || formData.titulo === ""} className="min-w-[200px] text-[10px] font-bold uppercase tracking-widest">
+              <Button type="submit" disabled={saving || formData.titulo === ""} className="min-w-[200px] text-[10px] font-bold uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90">
                 {saving ? (
                   <>
                     <Loader2 className="animate-spin mr-2" size={14} />

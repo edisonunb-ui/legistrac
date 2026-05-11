@@ -21,7 +21,11 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
     const currentPath = ref?.path || null;
 
     if (!ref || !currentPath) {
-      if (data !== null) setData(null);
+      if (data !== null) {
+        setData(null);
+        lastSerializedData.current = '';
+        activePathRef.current = null;
+      }
       return;
     }
 
@@ -52,7 +56,10 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      activePathRef.current = null;
+    };
   }, [ref]);
 
   return { data, loading, error };
