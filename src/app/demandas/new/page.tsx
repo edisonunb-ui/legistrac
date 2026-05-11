@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useUser, useFirestore, useCollection, useDoc, useStorage, useMemoFirebase } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createDemand } from "@/lib/demand-service";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, Loader2, User as UserIcon, Paperclip, X, FileText, CheckCircle2, AlertCircle } from "lucide-react";
+import { ChevronLeft, Save, Loader2, User as UserIcon, Paperclip, X, FileText, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority, Attachment } from "@/lib/types";
 import { collection, query, Timestamp, doc, where } from "firebase/firestore";
@@ -42,9 +43,9 @@ export default function NewDemandPage() {
 
   const userEmail = useMemo(() => user?.email?.toLowerCase().trim() || null, [user?.email]);
   
+  // Memoização estável para evitar loops de renderização
   const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
-
   const cabinetId = (profile as any)?.cabinetId;
 
   const usersQuery = useMemoFirebase(() => {
@@ -63,12 +64,7 @@ export default function NewDemandPage() {
 
   const removeFile = useCallback((index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
-    setUploadProgress(prev => {
-      const newProgress = { ...prev };
-      delete newProgress[files[index]?.name];
-      return newProgress;
-    });
-  }, [files]);
+  }, []);
 
   const uploadFiles = async (): Promise<Attachment[]> => {
     const attachments: Attachment[] = [];
@@ -92,8 +88,8 @@ export default function NewDemandPage() {
               setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
             },
             (error) => {
-              console.error("Upload task error:", error);
-              reject(error);
+              console.error("Upload error for file", file.name, error);
+              reject(new Error(`Erro de CORS ou rede no arquivo ${file.name}. Verifique as instruções de CORS.`));
             },
             async () => {
               const url = await getDownloadURL(uploadTask.snapshot.ref);
@@ -112,7 +108,7 @@ export default function NewDemandPage() {
           enviadoPor: user?.uid || "anonimo"
         });
       } catch (err: any) {
-        throw new Error(`Erro ao subir arquivo ${file.name}: ${err.message}`);
+        throw err;
       }
     }
 
@@ -137,10 +133,10 @@ export default function NewDemandPage() {
       toast({ title: "Sucesso", description: "Demanda registrada com sucesso." });
       router.push(`/demandas/${demandId}`);
     } catch (error: any) {
-      console.error("Submit error details:", error);
+      console.error("Submit error:", error);
       toast({
-        title: "Erro no Processamento",
-        description: error.message || "Verifique sua conexão e se o CORS está liberado no Google Cloud.",
+        title: "Falha no Envio",
+        description: error.message || "Erro de conexão. Verifique se o CORS foi liberado.",
         variant: "destructive",
       });
       setSaving(false);
@@ -164,21 +160,21 @@ export default function NewDemandPage() {
         <Card className="max-w-3xl border-slate-900 bg-card shadow-none">
           <form onSubmit={handleSubmit}>
             <CardHeader className="border-b border-slate-900">
-              <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Formulário Oficial</CardTitle>
+              <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Protocolo Interno</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
               <div className="space-y-2">
-                <Label htmlFor="titulo" className="text-[10px] font-bold uppercase text-muted-foreground">Título da Solicitação</Label>
-                <Input id="titulo" required value={formData.titulo} onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))} placeholder="Ex: Manutenção de iluminação pública" className="h-11 bg-slate-950 border-slate-900" />
+                <Label htmlFor="titulo" className="text-[10px] font-bold uppercase text-muted-foreground">Título</Label>
+                <Input id="titulo" required value={formData.titulo} onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))} className="h-11 bg-slate-950 border-slate-900" />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="prazo" className="text-[10px] font-bold uppercase text-muted-foreground">Prazo Limite</Label>
+                  <Label htmlFor="prazo" className="text-[10px] font-bold uppercase text-muted-foreground">Prazo</Label>
                   <Input id="prazo" type="date" required value={formData.prazo} onChange={(e) => setFormData(prev => ({ ...prev, prazo: e.target.value }))} className="h-11 bg-slate-950 border-slate-900" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="prioridade" className="text-[10px] font-bold uppercase text-muted-foreground">Nível de Prioridade</Label>
+                  <Label htmlFor="prioridade" className="text-[10px] font-bold uppercase text-muted-foreground">Prioridade</Label>
                   <Select value={formData.prioridade} onValueChange={(v: DemandPriority) => setFormData(prev => ({ ...prev, prioridade: v }))}>
                     <SelectTrigger className="h-11 bg-slate-950 border-slate-900"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-slate-950 border-slate-900">
@@ -191,7 +187,7 @@ export default function NewDemandPage() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase text-muted-foreground">Responsável Designado</Label>
+                <Label className="text-[10px] font-bold uppercase text-muted-foreground">Responsável</Label>
                 <Select value={formData.responsavelId} onValueChange={(v) => setFormData(prev => ({ ...prev, responsavelId: v }))}>
                   <SelectTrigger className="h-11 bg-slate-950 border-slate-900">
                     <div className="flex items-center gap-2"><UserIcon size={14} className="text-muted-foreground"/><SelectValue /></div>
@@ -199,71 +195,67 @@ export default function NewDemandPage() {
                   <SelectContent className="bg-slate-950 border-slate-900">
                     {user?.uid && <SelectItem value={user.uid}>Atribuir a mim</SelectItem>}
                     {allUsers.filter((u: any) => u.uid !== user?.uid).map((u: any) => (
-                      <SelectItem key={u.uid} value={u.uid}>{u.nome} ({u.perfil})</SelectItem>
+                      <SelectItem key={u.uid} value={u.uid}>{u.nome}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="descricao" className="text-[10px] font-bold uppercase text-muted-foreground">Detalhamento Técnico</Label>
-                <Textarea id="descricao" rows={6} required value={formData.descricao} onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))} placeholder="Descreva os detalhes da demanda, locais e contatos..." className="resize-none bg-slate-950 border-slate-900" />
+                <Label htmlFor="descricao" className="text-[10px] font-bold uppercase text-muted-foreground">Descrição</Label>
+                <Textarea id="descricao" rows={6} required value={formData.descricao} onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))} className="resize-none bg-slate-950 border-slate-900" />
               </div>
 
               <div className="space-y-4 p-6 bg-slate-950 rounded-lg border border-slate-900 border-dashed">
                 <div className="flex items-center justify-between">
                   <Label className="flex items-center gap-2 font-bold text-[10px] uppercase text-muted-foreground">
-                    <Paperclip size={14} /> Anexar Documentação (PDF, Imagens)
+                    <Paperclip size={14} /> Documentação em PDF / Imagens
                   </Label>
                 </div>
                 
-                <div className="p-4 bg-primary/5 border border-primary/20 rounded-md flex gap-3 mb-4">
-                   <AlertCircle size={16} className="text-primary shrink-0" />
-                   <p className="text-[10px] text-primary/80 leading-tight">
-                     O upload suporta arquivos maiores de 1MB se o CORS estiver configurado. Verifique o status do envio abaixo.
-                   </p>
-                </div>
-
                 <Input type="file" multiple className="bg-slate-900 cursor-pointer h-10 pt-2 border-slate-800" onChange={handleFileChange} disabled={saving} />
                 
                 {files.length > 0 && (
-                  <div className="space-y-2 mt-4">
+                  <div className="space-y-3 mt-4">
                     {files.map((file, idx) => (
-                      <div key={idx} className="space-y-1">
-                        <div className="flex items-center justify-between p-3 bg-slate-900 rounded border border-slate-800 text-[11px]">
-                          <div className="flex items-center gap-3 truncate">
-                            <FileText size={14} className="text-muted-foreground" />
+                      <div key={idx} className="space-y-1 bg-slate-900 p-3 rounded border border-slate-800">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <div className="flex items-center gap-2 truncate">
+                            <FileText size={14} className="text-primary" />
                             <span className="truncate">{file.name}</span>
                           </div>
-                          {!saving && (
-                            <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0 hover:text-destructive" onClick={() => removeFile(idx)}>
-                              <X size={14} />
-                            </Button>
-                          )}
+                          {!saving && <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => removeFile(idx)}><X size={12} /></Button>}
                         </div>
                         {uploadProgress[file.name] !== undefined && (
-                          <div className="px-1">
-                            <Progress value={uploadProgress[file.name]} className="h-1 bg-slate-800" />
-                            <p className="text-[9px] text-right mt-1 font-bold text-primary">{Math.round(uploadProgress[file.name])}%</p>
+                          <div className="mt-2">
+                            <Progress value={uploadProgress[file.name]} className="h-1 bg-slate-950" />
+                            <p className="text-[9px] text-right mt-1 font-mono text-primary">{Math.round(uploadProgress[file.name])}%</p>
                           </div>
                         )}
                       </div>
                     ))}
                   </div>
                 )}
+
+                <div className="p-3 bg-primary/5 rounded border border-primary/20 flex gap-2">
+                  <AlertCircle size={14} className="text-primary shrink-0" />
+                  <p className="text-[9px] text-primary/80 font-bold uppercase leading-tight">
+                    Arquivos grandes (1MB+) requerem o comando CORS no Cloud Shell.
+                  </p>
+                </div>
               </div>
             </CardContent>
             <CardFooter className="flex justify-end gap-3 border-t border-slate-900 bg-slate-950/50 py-6">
-              <Button type="button" variant="ghost" onClick={() => router.back()} disabled={saving} className="text-[10px] font-bold uppercase">Descartar</Button>
-              <Button type="submit" disabled={saving || formData.titulo === ""} className="min-w-[200px] text-[10px] font-bold uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90">
+              <Button type="button" variant="ghost" onClick={() => router.back()} disabled={saving} className="text-[10px] font-bold uppercase">Cancelar</Button>
+              <Button type="submit" disabled={saving || formData.titulo === ""} className="min-w-[200px] text-[10px] font-bold uppercase tracking-widest bg-primary text-primary-foreground">
                 {saving ? (
                   <>
                     <Loader2 className="animate-spin mr-2" size={14} />
-                    {currentUploadingFile ? `Enviando ${currentUploadingFile}...` : "Processando..."}
+                    {currentUploadingFile ? `Subindo ${currentUploadingFile}...` : "Processando..."}
                   </>
                 ) : (
                   <>
-                    <Save className="mr-2" size={14} /> Salvar Demanda
+                    <Save className="mr-2" size={14} /> Finalizar Registro
                   </>
                 )}
               </Button>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -27,7 +28,7 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
       return;
     }
 
-    // Usamos o toString() da query para uma referência estável de caminho/filtros
+    // Usamos uma stringificação estável da query para evitar loops infinitos
     const queryId = query.toString();
     if (activeQueryHash.current === queryId) return;
     
@@ -61,7 +62,7 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
       unsubscribe();
       activeQueryHash.current = null;
     };
-  }, [query]);
+  }, [query, data.length]); // Dependência explícita do tamanho para segurança
 
   return { data, loading, error };
 }

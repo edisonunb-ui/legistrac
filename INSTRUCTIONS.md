@@ -15,7 +15,13 @@ Se o upload de anexos (PDFs, Imagens) ficar travado ou der erro, você precisa l
    ```bash
    gsutil cors set cors.json gs://legistrac.firebasestorage.app
    ```
-6. Aguarde 1 minuto e tente o upload novamente.
+
+### Como verificar se funcionou?
+No mesmo terminal, rode:
+```bash
+gsutil cors get gs://legistrac.firebasestorage.app
+```
+Deve aparecer o conteúdo do arquivo `cors.json` que você criou.
 
 ## 2. Ativar Autenticação no Firebase
 Se o login falhar com `auth/operation-not-allowed`:
