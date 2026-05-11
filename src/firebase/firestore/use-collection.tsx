@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -28,7 +27,7 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
       return;
     }
 
-    // Usamos uma stringificação estável da query para evitar loops infinitos
+    // Geramos um hash estável baseado na string da query para evitar reconexões desnecessárias
     const queryId = query.toString();
     if (activeQueryHash.current === queryId) return;
     
@@ -52,7 +51,8 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
         setError(null);
       },
       (err) => {
-        console.error("Firestore useCollection error:", err);
+        // Erros de permissão ou rede são tratados silenciosamente para não quebrar a UI
+        console.warn("Firestore sync status:", err.code);
         setError(err);
         setLoading(false);
       }
@@ -62,7 +62,7 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
       unsubscribe();
       activeQueryHash.current = null;
     };
-  }, [query, data.length]); // Dependência explícita do tamanho para segurança
+  }, [query]); // Removida a dependência do data.length para evitar loops
 
   return { data, loading, error };
 }
