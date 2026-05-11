@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useUser, useFirestore, useCollection } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Notification as NotificationType } from '@/lib/types';
@@ -16,18 +16,19 @@ export function NotificationListener() {
   const alertedIds = useRef<Set<string>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const notifQuery = (db && user) 
-    ? query(
-        collection(db, "notificacoes"), 
-        where("userId", "==", user.uid),
-        where("lida", "==", false)
-      ) 
-    : null;
+  // Consulta estabilizada para evitar loop infinito
+  const notifQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(
+      collection(db, "notificacoes"), 
+      where("userId", "==", user.uid),
+      where("lida", "==", false)
+    );
+  }, [db, user?.uid]);
 
   const { data: notifications } = useCollection<NotificationType>(notifQuery);
 
   useEffect(() => {
-    // Som de alerta tipo "Notificação de Sistema"
     audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
     audioRef.current.volume = 0.7;
 
@@ -45,10 +46,9 @@ export function NotificationListener() {
         alertedIds.current.add(notif.id);
 
         if (audioRef.current) {
-          audioRef.current.play().catch(e => console.warn("Áudio pendente de interação"));
+          audioRef.current.play().catch(() => {});
         }
 
-        // ALERTA VISUAL ESTABILIZADO (SEM PISCAR) E TAMANHO REDUZIDO
         toast({
           title: "🔔 NOVA ATUALIZAÇÃO",
           description: (
@@ -61,7 +61,7 @@ export function NotificationListener() {
               </p>
             </div>
           ),
-          className: "bg-primary border-primary-foreground/20 text-primary-foreground shadow-2xl transition-all",
+          className: "bg-primary border-primary-foreground/20 text-primary-foreground shadow-2xl",
           duration: 10000, 
           action: (
             <ToastAction 
@@ -80,26 +80,6 @@ export function NotificationListener() {
             </ToastAction>
           ),
         });
-
-        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-          try {
-            const n = new window.Notification('LegisTrac: Gabinete', {
-              body: notif.mensagem,
-              icon: '/favicon.ico',
-            });
-            n.onclick = async () => {
-              window.focus();
-              if (db && notif.id) {
-                await updateDoc(doc(db, "notificacoes", notif.id), { lida: true });
-              }
-              if (notif.demandaId) {
-                router.push(`/demandas/${notif.demandaId}`);
-              }
-            };
-          } catch (e) {
-            console.error(e);
-          }
-        }
       });
     }
   }, [notifications, db, router, toast]);
