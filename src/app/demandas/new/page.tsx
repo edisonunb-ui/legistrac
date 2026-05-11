@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useFirestore, useCollection, useDoc, useStorage, useMemoFirebase } from "@/firebase";
@@ -13,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, Loader2, Paperclip, X, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, Save, Loader2, Paperclip, X, AlertCircle, CheckCircle2, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority, Attachment } from "@/lib/types";
 import { collection, query, Timestamp, doc, where } from "firebase/firestore";
@@ -83,8 +82,12 @@ export default function NewDemandPage() {
             setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
           },
           (error: any) => {
-            console.error("Erro no Storage:", error);
-            reject(new Error(`Erro [${error.code}]: Verifique se as Regras de Storage foram publicadas no Console.`));
+            console.error("Erro detalhado no Storage:", error);
+            if (error.code === 'storage/unauthorized') {
+              reject(new Error("Acesso Negado: Vá ao Console do Firebase > Storage > Rules e clique em 'Publish'."));
+            } else {
+              reject(new Error(`Erro [${error.code}]: Falha na comunicação com o servidor.`));
+            }
           },
           async () => {
             const url = await getDownloadURL(uploadTask.snapshot.ref);
@@ -224,13 +227,13 @@ export default function NewDemandPage() {
                 )}
                 
                 <div className="flex items-start gap-3 p-4 bg-primary/5 rounded-lg border border-primary/10">
-                  <AlertCircle size={16} className="text-primary shrink-0 mt-0.5" />
+                  <ShieldAlert size={16} className="text-primary shrink-0 mt-0.5" />
                   <div className="space-y-1">
                     <p className="text-[10px] text-foreground font-bold uppercase leading-tight">
-                      Configuração CORS Aplicada
+                      Ação Necessária para Erro 403
                     </p>
                     <p className="text-[9px] text-muted-foreground uppercase leading-relaxed font-medium">
-                      O portal de arquivos está aberto. Se o upload falhar, verifique se as Regras de Storage foram publicadas no Console do Firebase.
+                      Se o upload falhar com "unauthorized", acesse o Console do Firebase, vá em Storage, aba Rules e clique no botão azul <strong>Publish</strong>.
                     </p>
                   </div>
                 </div>
