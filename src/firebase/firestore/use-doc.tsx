@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -15,30 +14,22 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
   const [loading, setLoading] = useState(!!ref);
   const [error, setError] = useState<FirestoreError | null>(null);
   
-  const unsubscribeRef = useRef<(() => void) | null>(null);
+  const lastSerializedRef = useRef<string | null>(null);
   const lastPathRef = useRef<string | null>(null);
 
   useEffect(() => {
     const currentPath = ref?.path || null;
 
     if (!ref || !currentPath) {
-      setData(prev => prev === null ? prev : null);
-      setLoading(prev => !prev ? prev : false);
-      lastPathRef.current = null;
+      if (lastPathRef.current !== null) {
+        setData(null);
+        setLoading(false);
+        setError(null);
+        lastPathRef.current = null;
+        lastSerializedRef.current = null;
+      }
       return;
     }
-
-    // Se o caminho for o mesmo, não reiniciamos o listener
-    if (lastPathRef.current === currentPath) {
-      return;
-    }
-
-    if (unsubscribeRef.current) {
-      unsubscribeRef.current();
-    }
-
-    lastPathRef.current = currentPath;
-    setLoading(prev => prev ? prev : true);
 
     const unsubscribe = onSnapshot(
       ref,
@@ -47,24 +38,23 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
           ? ({ ...snapshot.data()!, id: snapshot.id } as T & { id: string }) 
           : null;
         
-        setData(docData);
+        const serialized = JSON.stringify(docData);
+        if (serialized !== lastSerializedRef.current || currentPath !== lastPathRef.current) {
+          setData(docData);
+          lastSerializedRef.current = serialized;
+          lastPathRef.current = currentPath;
+        }
         setLoading(false);
+        setError(null);
       },
       (err) => {
-        console.error('Error fetching document:', err);
+        console.error('Firestore useDoc error:', err);
         setError(err);
         setLoading(false);
       }
     );
 
-    unsubscribeRef.current = unsubscribe;
-
-    return () => {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
-      }
-    };
+    return () => unsubscribe();
   }, [ref]);
 
   return { data, loading, error };

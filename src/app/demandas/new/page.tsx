@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser, useFirestore, useCollection, useDoc, useStorage } from "@/firebase";
+import { useUser, useFirestore, useCollection, useDoc, useStorage, useMemoFirebase } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -40,8 +40,7 @@ export default function NewDemandPage() {
 
   const userEmail = user?.email?.toLowerCase().trim() || null;
   
-  // Referência do perfil deve ser estável
-  const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
+  const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
   const cabinetId = (profile as any)?.cabinetId;
@@ -53,8 +52,7 @@ export default function NewDemandPage() {
     }
   }, [user?.uid]);
 
-  // Consulta de usuários deve ser estável baseada no cabinetId
-  const usersQuery = useMemo(() => {
+  const usersQuery = useMemoFirebase(() => {
     if (!db || !cabinetId) return null;
     return query(collection(db, "users"), where("cabinetId", "==", cabinetId));
   }, [db, cabinetId]);

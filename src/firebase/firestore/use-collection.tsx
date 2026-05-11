@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -15,31 +14,18 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [loading, setLoading] = useState(!!query);
   const [error, setError] = useState<FirestoreError | null>(null);
   
-  const unsubscribeRef = useRef<(() => void) | null>(null);
-  const lastQueryRef = useRef<Query<T> | null>(null);
+  const lastSerializedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Se não houver query, reseta o estado apenas se necessário
     if (!query) {
-      setData(prev => prev.length === 0 ? prev : []);
-      setLoading(prev => !prev ? prev : false);
-      lastQueryRef.current = null;
+      if (lastSerializedRef.current !== null) {
+        setData([]);
+        setLoading(false);
+        setError(null);
+        lastSerializedRef.current = null;
+      }
       return;
     }
-
-    // Compara a referência da query para evitar re-assinaturas desnecessárias
-    if (lastQueryRef.current === query) {
-      return;
-    }
-
-    // Limpa assinatura anterior
-    if (unsubscribeRef.current) {
-      unsubscribeRef.current();
-    }
-
-    lastQueryRef.current = query;
-    // Só define como loading se já não estiver
-    setLoading(prev => prev ? prev : true);
 
     const unsubscribe = onSnapshot(
       query,
@@ -49,24 +35,22 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
           id: doc.id,
         } as T & { id: string }));
         
-        setData(items);
+        const serialized = JSON.stringify(items);
+        if (serialized !== lastSerializedRef.current) {
+          setData(items);
+          lastSerializedRef.current = serialized;
+        }
         setLoading(false);
+        setError(null);
       },
       (err) => {
-        console.error('Error fetching collection:', err);
+        console.error('Firestore useCollection error:', err);
         setError(err);
         setLoading(false);
       }
     );
 
-    unsubscribeRef.current = unsubscribe;
-
-    return () => {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
-      }
-    };
+    return () => unsubscribe();
   }, [query]);
 
   return { data, loading, error };

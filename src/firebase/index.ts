@@ -1,6 +1,6 @@
-
 'use client';
 
+import { useMemo } from 'react';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
@@ -38,6 +38,13 @@ export function initializeFirebase() {
     db: dbInstance, 
     storage: storageInstance 
   };
+}
+
+/**
+ * Utilitário para estabilizar referências do Firebase (Queries e DocumentReferences).
+ */
+export function useMemoFirebase<T>(factory: () => T, deps: any[]): T {
+  return useMemo(factory, deps);
 }
 
 export { 
