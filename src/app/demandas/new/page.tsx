@@ -2,7 +2,7 @@
 
 import { useUser, useFirestore, useCollection, useDoc, useStorage, useMemoFirebase } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createDemand } from "@/lib/demand-service";
 import { Button } from "@/components/ui/button";
@@ -58,7 +58,10 @@ export default function NewDemandPage() {
 
   const removeFile = useCallback((index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
-  }, []);
+    const newProgress = { ...uploadProgress };
+    delete newProgress[files[index]?.name];
+    setUploadProgress(newProgress);
+  }, [files, uploadProgress]);
 
   const uploadFiles = async (): Promise<Attachment[]> => {
     const attachments: Attachment[] = [];
@@ -78,9 +81,8 @@ export default function NewDemandPage() {
             setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
           },
           (error: any) => {
-            console.error("Firebase Storage Error:", error);
-            // Retorna o erro real do Firebase para diagnóstico preciso
-            reject(new Error(`Erro [${error.code}]: ${error.message}`));
+            console.error("Erro no Firebase Storage:", error);
+            reject(new Error(`Erro [${error.code}]: Verifique se você fez o UPGRADE do plano no Console do Firebase.`));
           },
           async () => {
             const url = await getDownloadURL(uploadTask.snapshot.ref);
@@ -121,8 +123,8 @@ export default function NewDemandPage() {
     } catch (error: any) {
       setSaving(false);
       toast({
-        title: "Erro no Processamento",
-        description: error.message || "Verifique se as Regras de Storage foram publicadas.",
+        title: "Falha no Envio",
+        description: error.message,
         variant: "destructive",
       });
     }
@@ -186,7 +188,7 @@ export default function NewDemandPage() {
 
               <div className="p-6 bg-slate-950/50 rounded-xl border border-slate-900 border-dashed space-y-4">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
-                  <Paperclip size={14} /> Anexar PDF ou Imagens
+                  <Paperclip size={14} /> Anexar Documentos
                 </Label>
                 <Input type="file" multiple onChange={handleFileChange} disabled={saving} className="bg-slate-900 border-slate-800" />
                 
@@ -195,7 +197,7 @@ export default function NewDemandPage() {
                     {files.map((file, idx) => (
                       <div key={idx} className="bg-slate-900 p-3 rounded-lg border border-slate-800">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs truncate">{file.name}</span>
+                          <span className="text-xs truncate max-w-[200px]">{file.name}</span>
                           {!saving && <Button type="button" variant="ghost" size="sm" onClick={() => removeFile(idx)}><X size={14} /></Button>}
                         </div>
                         {uploadProgress[file.name] !== undefined && (
@@ -211,15 +213,20 @@ export default function NewDemandPage() {
                 
                 <div className="flex items-start gap-2 p-3 bg-primary/5 rounded border border-primary/10">
                   <AlertCircle size={14} className="text-primary mt-0.5" />
-                  <p className="text-[9px] text-muted-foreground uppercase leading-relaxed">
-                    SE O UPLOAD FALHAR, VÁ AO CONSOLE DO FIREBASE &gt; STORAGE &gt; RULES E CLIQUE EM "PUBLISH".
-                  </p>
+                  <div className="space-y-1">
+                    <p className="text-[9px] text-muted-foreground uppercase leading-relaxed font-bold">
+                      Atenção: Se o upload travar em 0%, você deve clicar em "Fazer upgrade do projeto" no Console do Firebase (Plano Blaze).
+                    </p>
+                    <p className="text-[9px] text-muted-foreground uppercase leading-relaxed">
+                      Lembre-se também de clicar em "Publish" na aba Storage &gt; Rules do Firebase.
+                    </p>
+                  </div>
                 </div>
               </div>
             </CardContent>
             <CardFooter className="bg-slate-900/30 border-t border-slate-900 p-8 flex justify-end gap-4">
               <Button type="submit" disabled={saving} className="bg-primary text-primary-foreground font-black uppercase text-[10px] tracking-widest px-10 h-12 shadow-xl shadow-primary/10">
-                {saving ? <><Loader2 className="animate-spin mr-2" /> Enviando...</> : <><Save className="mr-2" /> Salvar Protocolo</>}
+                {saving ? <><Loader2 className="animate-spin mr-2" /> Processando...</> : <><Save className="mr-2" /> Salvar Demanda</>}
               </Button>
             </CardFooter>
           </form>

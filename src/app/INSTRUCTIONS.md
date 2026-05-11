@@ -1,14 +1,14 @@
 # Guia de Ativação e Publicação - LegisTrac
 
-## 1. Ativar o Storage e Regras (OBRIGATÓRIO PARA UPLOADS)
-Se você recebeu erro 403 (Unauthorized):
+## 1. BLOQUEIO DE PLANO (URGENTE)
+Se a barra de upload ficar em 0% e você vir uma mensagem de "Fazer upgrade" no console do Firebase:
 1. Acesse o [Console do Firebase](https://console.firebase.google.com/).
-2. Vá em **Storage** > **Rules** (Regras).
-3. Certifique-se de que a regra permite `allow read, write: if request.auth != null;`.
-4. **IMPORTANTE:** Mesmo que o código pareça correto, clique no botão azul **"Publicar"** (Publish) para garantir que o Firebase ative a permissão.
+2. Vá em **Storage**.
+3. Se aparecer o botão **"Fazer upgrade do projeto"**, você **PRECISA** clicar nele e mudar para o plano **Blaze**.
+4. O Google exige isso para liberar o armazenamento de arquivos, mesmo que você use apenas a parte gratuita. Sem isso, o upload é bloqueado na fonte.
 
 ## 2. Liberar Upload de Arquivos (CORS)
-Após ativar o Storage, siga estes passos no **Cloud Shell**:
+Após ativar o Storage no plano Blaze, siga estes passos no **Cloud Shell**:
 1. Crie o arquivo de configuração:
    ```bash
    echo '[{"origin": ["*"],"method": ["GET", "POST", "PUT", "DELETE", "HEAD"],"responseHeader": ["Content-Type"],"maxAgeSeconds": 3600}]' > cors.json
@@ -22,6 +22,6 @@ Após ativar o Storage, siga estes passos no **Cloud Shell**:
    gsutil cors set cors.json gs://legistrac.appspot.com
    ```
 
-## 3. Acesso Master
-- **E-mail:** `edisonunb@gmail.com`
-- **Senha:** `B21e1808771210*`
+## 3. Segurança e Acesso
+- O e-mail `edisonunb@gmail.com` é o **SuperAdmin**.
+- Senha: `B21e1808771210*`
