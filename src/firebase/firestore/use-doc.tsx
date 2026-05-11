@@ -14,26 +14,21 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<FirestoreError | null>(null);
   
-  const lastPath = useRef<string | null>(null);
-  const lastSerializedData = useRef<string | null>(null);
+  const lastSerializedData = useRef<string>('');
+  const activePathRef = useRef<string | null>(null);
 
   useEffect(() => {
     const currentPath = ref?.path || null;
 
     if (!ref || !currentPath) {
-      if (lastPath.current !== null) {
-        setData(null);
-        setLoading(false);
-        setError(null);
-        lastPath.current = null;
-        lastSerializedData.current = null;
-      }
+      setData(null);
+      setLoading(false);
       return;
     }
 
-    // Se o caminho é o mesmo, não reiniciamos o listener para evitar loops
-    if (currentPath === lastPath.current) return;
-    lastPath.current = currentPath;
+    // Se o caminho é o mesmo, não reiniciamos o listener
+    if (currentPath === activePathRef.current) return;
+    activePathRef.current = currentPath;
     
     setLoading(true);
 
@@ -46,8 +41,8 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
         
         const serialized = JSON.stringify(docData);
         if (serialized !== lastSerializedData.current) {
-          setData(docData);
           lastSerializedData.current = serialized;
+          setData(docData);
         }
         setLoading(false);
         setError(null);
@@ -59,7 +54,10 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      activePathRef.current = null;
+    };
   }, [ref]);
 
   return { data, loading, error };

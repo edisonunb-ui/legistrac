@@ -14,26 +14,20 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<FirestoreError | null>(null);
   
-  const lastSerializedData = useRef<string | null>(null);
-  const lastQueryKey = useRef<string | null>(null);
+  // Usamos refs para rastrear a versão estável dos dados e evitar loops
+  const lastSerializedData = useRef<string>('');
+  const activeQueryRef = useRef<Query<T> | null>(null);
 
   useEffect(() => {
-    // Gerar uma chave única para a query baseada no seu estado interno se possível
-    // Aqui usamos uma técnica simples de estabilização
     if (!query) {
-      if (lastQueryKey.current !== null) {
-        setData([]);
-        setLoading(false);
-        setError(null);
-        lastQueryKey.current = null;
-        lastSerializedData.current = null;
-      }
+      setData([]);
+      setLoading(false);
       return;
     }
 
-    // Prevenção de loop: não reinicia se a query for "logicamente" a mesma
-    // O Firebase SDK não provê uma string de query estável facilmente no client
-    // então confiamos no uso de useMemoFirebase no componente pai.
+    // Se a query for a mesma referência (estabilizada com useMemoFirebase), não reiniciamos
+    if (activeQueryRef.current === query) return;
+    activeQueryRef.current = query;
     
     setLoading(true);
 
@@ -46,9 +40,10 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
         } as T & { id: string }));
         
         const serialized = JSON.stringify(items);
+        // Só atualiza o estado se os dados realmente mudarem
         if (serialized !== lastSerializedData.current) {
-          setData(items);
           lastSerializedData.current = serialized;
+          setData(items);
         }
         setLoading(false);
         setError(null);
@@ -60,7 +55,10 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      activeQueryRef.current = null;
+    };
   }, [query]);
 
   return { data, loading, error };

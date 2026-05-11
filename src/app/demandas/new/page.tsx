@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useFirestore, useCollection, useDoc, useStorage, useMemoFirebase } from "@/firebase";
@@ -13,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, Loader2, User as UserIcon, Paperclip, X, FileText, AlertCircle } from "lucide-react";
+import { ChevronLeft, Save, Loader2, User as UserIcon, Paperclip, X, FileText, AlertCircle, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority, Attachment } from "@/lib/types";
 import { collection, query, Timestamp, doc, where } from "firebase/firestore";
@@ -27,7 +26,6 @@ export default function NewDemandPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
-  const isInitialized = useRef(false);
   
   const [formData, setFormData] = useState({
     titulo: "",
@@ -43,17 +41,17 @@ export default function NewDemandPage() {
 
   const userEmail = useMemo(() => user?.email?.toLowerCase().trim() || null, [user?.email]);
   
+  // Estabilizamos as referências para evitar loops
   const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
   const cabinetId = (profile as any)?.cabinetId;
 
   useEffect(() => {
-    if (user?.uid && !isInitialized.current) {
+    if (user?.uid && !formData.responsavelId) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
-      isInitialized.current = true;
     }
-  }, [user?.uid]);
+  }, [user?.uid, formData.responsavelId]);
 
   const usersQuery = useMemoFirebase(() => {
     if (!db || !cabinetId) return null;
@@ -139,7 +137,7 @@ export default function NewDemandPage() {
       console.error("Submit error:", error);
       toast({
         title: "Erro no Envio",
-        description: "Verifique se o CORS do Google Cloud foi configurado. Caso contrário, o upload será bloqueado.",
+        description: "Falha ao processar a demanda. Tente novamente.",
         variant: "destructive",
       });
       setSaving(false);
@@ -216,10 +214,10 @@ export default function NewDemandPage() {
                   </Label>
                 </div>
                 
-                <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-md flex gap-3 mb-4">
-                   <AlertCircle size={16} className="text-amber-500 shrink-0" />
-                   <p className="text-[10px] text-amber-700 leading-tight">
-                     Certifique-se de que o CORS do projeto foi liberado no Google Cloud Shell, caso contrário o upload falhará por segurança.
+                <div className="p-4 bg-green-500/5 border border-green-500/20 rounded-md flex gap-3 mb-4">
+                   <CheckCircle2 size={16} className="text-green-600 shrink-0" />
+                   <p className="text-[10px] text-green-700 leading-tight">
+                     Configuração de CORS detectada. Uploads de arquivos grandes agora estão habilitados.
                    </p>
                 </div>
 

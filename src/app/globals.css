@@ -4,33 +4,33 @@
 
 @layer base {
   :root {
-    --background: 220 15% 3%;
-    --foreground: 220 10% 98%;
+    --background: 222 47% 3%;
+    --foreground: 210 40% 98%;
     
-    --card: 220 15% 5%;
-    --card-foreground: 220 10% 98%;
+    --card: 222 47% 4%;
+    --card-foreground: 210 40% 98%;
     
-    --popover: 220 15% 3%;
-    --popover-foreground: 220 10% 98%;
+    --popover: 222 47% 3%;
+    --popover-foreground: 210 40% 98%;
     
-    --primary: 220 10% 98%;
-    --primary-foreground: 220 15% 3%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222 47% 3%;
     
-    --secondary: 220 15% 10%;
-    --secondary-foreground: 220 10% 98%;
+    --secondary: 222 47% 8%;
+    --secondary-foreground: 210 40% 98%;
     
-    --muted: 220 15% 10%;
-    --muted-foreground: 220 10% 65%;
+    --muted: 222 47% 10%;
+    --muted-foreground: 215 20% 65%;
     
-    --accent: 220 15% 15%;
-    --accent-foreground: 220 10% 98%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 210 40% 98%;
     
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     
-    --border: 220 15% 12%;
-    --input: 220 15% 12%;
-    --ring: 220 10% 80%;
+    --border: 222 47% 12%;
+    --input: 222 47% 12%;
+    --ring: 210 40% 80%;
     
     --radius: 0.5rem;
   }
@@ -41,29 +41,32 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased selection:bg-white selection:text-black;
+    @apply bg-background text-foreground antialiased selection:bg-primary selection:text-primary-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-/* Redução de ruído visual para ambiente profissional */
 .glass {
-  background: rgba(10, 12, 16, 0.8);
+  background: rgba(2, 6, 23, 0.8);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 ::-webkit-scrollbar {
-  width: 5px;
+  width: 6px;
 }
 ::-webkit-scrollbar-track {
   @apply bg-transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
+  @apply bg-muted-foreground/10 rounded-full hover:bg-muted-foreground/30 transition-colors;
 }
 
-/* Estilo para inputs sóbrios */
 input, textarea, select {
-  @apply transition-all duration-200 focus:ring-1 focus:ring-primary/20 !important;
+  @apply transition-all duration-200 focus:ring-1 focus:ring-primary/10 !important;
+}
+
+/* Redução de animações para sobriedade */
+.animate-in {
+  animation-duration: 200ms !important;
 }
