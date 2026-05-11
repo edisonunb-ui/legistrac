@@ -1,7 +1,6 @@
 rules_version = '2';
 
-// Regras de acesso ao Storage - ATUALIZADAS PARA FORÇAR SINCRONIZAÇÃO
-// Permite que qualquer usuário autenticado faça upload e leitura.
+// Regras de acesso ao Storage - LIBERAÇÃO PARA USUÁRIOS LOGADOS
 service firebase.storage {
   match /b/{bucket}/o {
     match /{allPaths=**} {

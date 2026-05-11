@@ -82,11 +82,11 @@ export default function NewDemandPage() {
             setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
           },
           (error: any) => {
-            console.error("Erro detalhado no Storage:", error);
+            console.error("Erro no Storage:", error);
             if (error.code === 'storage/unauthorized') {
-              reject(new Error("Acesso Negado: Vá ao Console do Firebase > Storage > Rules e clique em 'Publish'."));
+              reject(new Error("Acesso Negado: Vá ao Console do Firebase > Storage > Regras e clique em Publicar."));
             } else {
-              reject(new Error(`Erro [${error.code}]: Falha na comunicação com o servidor.`));
+              reject(new Error(`Erro: O serviço de arquivos ainda não está liberado.`));
             }
           },
           async () => {
@@ -139,7 +139,7 @@ export default function NewDemandPage() {
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <header className="mb-8">
@@ -149,23 +149,23 @@ export default function NewDemandPage() {
           <h1 className="text-3xl font-black uppercase tracking-tighter">Nova <span className="text-primary">Demanda</span></h1>
         </header>
 
-        <Card className="max-w-4xl border-slate-900 bg-card shadow-2xl overflow-hidden">
+        <Card className="max-w-4xl border-primary/10 bg-card shadow-2xl overflow-hidden">
           <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-6 pt-8">
+            <CardContent className="space-y-6 pt-8 text-foreground">
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Título do Protocolo</Label>
-                <Input required value={formData.titulo} onChange={(e) => setFormData(p => ({ ...p, titulo: e.target.value }))} className="h-12 bg-slate-950 border-slate-800 focus:border-primary/50" placeholder="Ex: Solicitação de Pavimentação - Bairro Centro" />
+                <Input required value={formData.titulo} onChange={(e) => setFormData(p => ({ ...p, titulo: e.target.value }))} className="h-12 bg-background border-primary/10 focus:border-primary/50" placeholder="Ex: Solicitação de Pavimentação - Bairro Centro" />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Prazo Limite</Label>
-                  <Input type="date" required value={formData.prazo} onChange={(e) => setFormData(p => ({ ...p, prazo: e.target.value }))} className="h-12 bg-slate-950 border-slate-800" />
+                  <Input type="date" required value={formData.prazo} onChange={(e) => setFormData(p => ({ ...p, prazo: e.target.value }))} className="h-12 bg-background border-primary/10" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Prioridade</Label>
                   <Select value={formData.prioridade} onValueChange={(v: DemandPriority) => setFormData(p => ({ ...p, prioridade: v }))}>
-                    <SelectTrigger className="h-12 bg-slate-950 border-slate-800"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-12 bg-background border-primary/10"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="BAIXA">Baixa</SelectItem>
                       <SelectItem value="MEDIA">Média</SelectItem>
@@ -176,7 +176,7 @@ export default function NewDemandPage() {
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Responsável</Label>
                   <Select value={formData.responsavelId} onValueChange={(v) => setFormData(p => ({ ...p, responsavelId: v }))}>
-                    <SelectTrigger className="h-12 bg-slate-950 border-slate-800"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectTrigger className="h-12 bg-background border-primary/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value={user?.uid || ""}>Manter comigo</SelectItem>
                       {allUsers.filter((u: any) => u.uid !== user?.uid).map((u: any) => (
@@ -189,10 +189,10 @@ export default function NewDemandPage() {
 
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Descrição Detalhada</Label>
-                <Textarea required rows={6} value={formData.descricao} onChange={(e) => setFormData(p => ({ ...p, descricao: e.target.value }))} className="bg-slate-950 border-slate-800 focus:border-primary/50 resize-none" placeholder="Descreva os detalhes da demanda..." />
+                <Textarea required rows={6} value={formData.descricao} onChange={(e) => setFormData(p => ({ ...p, descricao: e.target.value }))} className="bg-background border-primary/10 focus:border-primary/50 resize-none" placeholder="Descreva os detalhes da demanda..." />
               </div>
 
-              <div className="p-6 bg-slate-950/50 rounded-xl border border-slate-800 border-dashed space-y-4">
+              <div className="p-6 bg-primary/5 rounded-xl border border-primary/10 border-dashed space-y-4">
                 <div className="flex items-center justify-between">
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                     <Paperclip size={14} /> Documentos Anexos (PDF/Imagens)
@@ -201,20 +201,20 @@ export default function NewDemandPage() {
                 </div>
                 
                 <div className="relative group">
-                  <Input type="file" multiple onChange={handleFileChange} disabled={saving} className="bg-slate-900 border-slate-800 h-14 cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90" />
+                  <Input type="file" multiple onChange={handleFileChange} disabled={saving} className="bg-background border-primary/10 h-14 cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90" />
                 </div>
                 
                 {files.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                     {files.map((file, idx) => (
-                      <div key={idx} className="bg-slate-900 p-3 rounded-lg border border-slate-800 flex flex-col gap-2">
+                      <div key={idx} className="bg-background p-3 rounded-lg border border-primary/10 flex flex-col gap-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold truncate max-w-[150px] uppercase text-slate-400">{file.name}</span>
+                          <span className="text-[10px] font-bold truncate max-w-[150px] uppercase text-muted-foreground">{file.name}</span>
                           {!saving && <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive" onClick={() => removeFile(idx)}><X size={14} /></Button>}
                         </div>
                         {uploadProgress[file.name] !== undefined && (
                           <div className="space-y-1">
-                            <Progress value={uploadProgress[file.name]} className="h-1 bg-slate-800" />
+                            <Progress value={uploadProgress[file.name]} className="h-1" />
                             <div className="flex justify-between items-center">
                               <span className="text-[8px] font-black text-primary uppercase">{Math.round(uploadProgress[file.name])}%</span>
                               {uploadProgress[file.name] === 100 && <CheckCircle2 size={10} className="text-green-500" />}
@@ -227,19 +227,14 @@ export default function NewDemandPage() {
                 )}
                 
                 <div className="flex items-start gap-3 p-4 bg-primary/5 rounded-lg border border-primary/10">
-                  <ShieldAlert size={16} className="text-primary shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="text-[10px] text-foreground font-bold uppercase leading-tight">
-                      Ação Necessária para Erro 403
-                    </p>
-                    <p className="text-[9px] text-muted-foreground uppercase leading-relaxed font-medium">
-                      Se o upload falhar com "unauthorized", acesse o Console do Firebase, vá em Storage, aba Rules e clique no botão azul <strong>Publish</strong>.
-                    </p>
-                  </div>
+                  <AlertCircle size={14} className="text-primary mt-0.5" />
+                  <p className="text-[9px] text-muted-foreground uppercase leading-relaxed">
+                    Se o upload falhar, v&aacute; ao Console do Firebase &gt; Storage &gt; Regras e clique em "Publicar".
+                  </p>
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-slate-900/30 border-t border-slate-900 p-8 flex justify-end items-center gap-6">
+            <CardFooter className="bg-muted/30 border-t border-primary/10 p-8 flex justify-end items-center gap-6">
               {saving && !isFinished && (
                 <div className="flex items-center gap-3 text-muted-foreground">
                   <Loader2 className="animate-spin" size={16} />
