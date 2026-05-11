@@ -4,35 +4,35 @@
 
 @layer base {
   :root {
-    --background: 0 0% 3%;
-    --foreground: 0 0% 98%;
+    --background: 220 15% 3%;
+    --foreground: 220 10% 98%;
     
-    --card: 0 0% 5%;
-    --card-foreground: 0 0% 98%;
+    --card: 220 15% 5%;
+    --card-foreground: 220 10% 98%;
     
-    --popover: 0 0% 3%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 220 15% 3%;
+    --popover-foreground: 220 10% 98%;
     
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 3%;
+    --primary: 220 10% 98%;
+    --primary-foreground: 220 15% 3%;
     
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 220 15% 10%;
+    --secondary-foreground: 220 10% 98%;
     
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 65%;
+    --muted: 220 15% 10%;
+    --muted-foreground: 220 10% 65%;
     
-    --accent: 0 0% 15%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 220 15% 15%;
+    --accent-foreground: 220 10% 98%;
     
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     
-    --border: 0 0% 12%;
-    --input: 0 0% 12%;
-    --ring: 0 0% 80%;
+    --border: 220 15% 12%;
+    --input: 220 15% 12%;
+    --ring: 220 10% 80%;
     
-    --radius: 0.3rem;
+    --radius: 0.5rem;
   }
 }
 
@@ -46,18 +46,24 @@
   }
 }
 
+/* Redução de ruído visual para ambiente profissional */
 .glass {
-  background: rgba(10, 10, 10, 0.8);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(10, 12, 16, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 5px;
 }
 ::-webkit-scrollbar-track {
   @apply bg-transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-muted-foreground/10 rounded-full;
+  @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
+}
+
+/* Estilo para inputs sóbrios */
+input, textarea, select {
+  @apply transition-all duration-200 focus:ring-1 focus:ring-primary/20 !important;
 }

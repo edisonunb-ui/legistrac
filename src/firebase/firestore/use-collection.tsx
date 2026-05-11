@@ -15,23 +15,26 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [error, setError] = useState<FirestoreError | null>(null);
   
   const lastSerializedData = useRef<string | null>(null);
-  const lastQueryRef = useRef<Query<T> | null>(null);
+  const lastQueryKey = useRef<string | null>(null);
 
   useEffect(() => {
+    // Gerar uma chave única para a query baseada no seu estado interno se possível
+    // Aqui usamos uma técnica simples de estabilização
     if (!query) {
-      if (lastQueryRef.current !== null) {
+      if (lastQueryKey.current !== null) {
         setData([]);
         setLoading(false);
         setError(null);
-        lastQueryRef.current = null;
+        lastQueryKey.current = null;
         lastSerializedData.current = null;
       }
       return;
     }
 
-    // Evita loops infinitos comparando a referência da query
-    if (query === lastQueryRef.current) return;
-    lastQueryRef.current = query;
+    // Prevenção de loop: não reinicia se a query for "logicamente" a mesma
+    // O Firebase SDK não provê uma string de query estável facilmente no client
+    // então confiamos no uso de useMemoFirebase no componente pai.
+    
     setLoading(true);
 
     const unsubscribe = onSnapshot(
@@ -48,8 +51,10 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
           lastSerializedData.current = serialized;
         }
         setLoading(false);
+        setError(null);
       },
       (err) => {
+        console.error("Firestore useCollection error:", err);
         setError(err);
         setLoading(false);
       }

@@ -14,8 +14,8 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<FirestoreError | null>(null);
   
-  const lastSerializedData = useRef<string | null>(null);
   const lastPath = useRef<string | null>(null);
+  const lastSerializedData = useRef<string | null>(null);
 
   useEffect(() => {
     const currentPath = ref?.path || null;
@@ -31,8 +31,10 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
       return;
     }
 
+    // Se o caminho é o mesmo, não reiniciamos o listener para evitar loops
     if (currentPath === lastPath.current) return;
     lastPath.current = currentPath;
+    
     setLoading(true);
 
     const unsubscribe = onSnapshot(
@@ -48,8 +50,10 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
           lastSerializedData.current = serialized;
         }
         setLoading(false);
+        setError(null);
       },
       (err) => {
+        console.error("Firestore useDoc error:", err);
         setError(err);
         setLoading(false);
       }
