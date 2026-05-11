@@ -1,33 +1,27 @@
-# Guia de Configuração - LegisTrac
+# Guia de Ativação e Publicação - LegisTrac
 
-## 1. Liberar Upload de Arquivos (CORS) - OBRIGATÓRIO
-Se você receber erro no upload (o progresso não anda ou dá erro de rede), o Google Cloud está bloqueando o acesso.
+## 1. Ativar o Storage (OBRIGATÓRIO PARA UPLOADS)
+Se você recebeu o erro `BucketNotFoundException: 404`, é porque o Storage ainda não foi criado.
+1. Acesse o [Console do Firebase](https://console.firebase.google.com/).
+2. No menu lateral, clique em **Storage**.
+3. Clique no botão laranja **"Começar"** (Get Started).
+4. Clique em "Próximo" e "Concluir" usando as configurações padrão.
 
-### Como encontrar o nome do seu Balde (Bucket)?
-1. No menu lateral que você enviou na foto, clique em **"Bancos de dados e ar..."**
-2. Clique em **"Storage"**.
-3. No topo da lista, você verá algo como `gs://legistrac.appspot.com`. **Anote o nome após o gs://**.
+## 2. Liberar Upload de Arquivos (CORS)
+Após ativar o Storage, siga estes passos no **Cloud Shell** (ícone `>_` no Google Cloud):
+1. Crie o arquivo de configuração:
+   ```bash
+   echo '[{"origin": ["*"],"method": ["GET", "POST", "PUT", "DELETE", "HEAD"],"responseHeader": ["Content-Type"],"maxAgeSeconds": 3600}]' > cors.json
+   ```
+2. Aplique a regra ao seu bucket (Verifique o nome no topo da tela do Storage):
+   ```bash
+   # Tente este primeiro:
+   gsutil cors set cors.json gs://legistrac.firebasestorage.app
+   
+   # Se der erro 404, tente este:
+   gsutil cors set cors.json gs://legistrac.appspot.com
+   ```
 
-### Comandos no Cloud Shell (Google Cloud)
-Abra o Cloud Shell (ícone `>_` no topo direito) e cole estes comandos:
-
-**Passo A: Criar o arquivo de regra (Copie e cole tudo):**
-```bash
-echo '[{"origin": ["*"],"method": ["GET", "POST", "PUT", "DELETE", "HEAD"],"responseHeader": ["Content-Type"],"maxAgeSeconds": 3600}]' > cors.json
-```
-
-**Passo B: Aplicar a regra (Tente um de cada vez usando o nome que você anotou):**
-
-*Se o nome for .firebasestorage.app:*
-```bash
-gsutil cors set cors.json gs://legistrac.firebasestorage.app
-```
-
-*Se o nome for .appspot.com:*
-```bash
-gsutil cors set cors.json gs://legistrac.appspot.com
-```
-
-## 2. Acesso Master
+## 3. Acesso Master
 - **E-mail:** `edisonunb@gmail.com`
 - **Senha:** `B21e1808771210*`

@@ -14,7 +14,6 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<FirestoreError | null>(null);
   
-  // Usamos uma referência para o hash da consulta para evitar loops infinitos
   const queryHash = useRef<string | null>(null);
 
   useEffect(() => {
@@ -24,7 +23,7 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
       return;
     }
 
-    // Criamos uma "assinatura" da consulta para comparar se ela mudou de fato
+    // Estabilização por stringificação da query interna para evitar loops de referência
     const currentHash = JSON.stringify((query as any)._query || query.toString());
     if (currentHash === queryHash.current) return;
     
@@ -44,7 +43,10 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
         setError(null);
       },
       (err) => {
-        console.warn("Firestore Sync Error:", err.code);
+        // Silenciamos erros repetitivos no console para não travar a UI
+        if (err.code !== 'permission-denied') {
+          console.warn("Firestore Sync Status:", err.code);
+        }
         setError(err);
         setLoading(false);
       }

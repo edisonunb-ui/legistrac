@@ -41,7 +41,9 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
         setError(null);
       },
       (err) => {
-        console.warn("Firestore Doc Error:", err.code);
+        if (err.code !== 'permission-denied') {
+          console.warn("Firestore Doc Status:", err.code);
+        }
         setError(err);
         setLoading(false);
       }
