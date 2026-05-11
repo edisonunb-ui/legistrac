@@ -11,14 +11,13 @@ import {
 
 export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [data, setData] = useState<T[]>([]);
-  const [loading, setLoading] = useState(!!query);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<FirestoreError | null>(null);
   
   const lastSerializedData = useRef<string | null>(null);
   const lastQueryRef = useRef<Query<T> | null>(null);
 
   useEffect(() => {
-    // Se a query for nula, reseta o estado e sai
     if (!query) {
       if (lastQueryRef.current !== null) {
         setData([]);
@@ -30,9 +29,10 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
       return;
     }
 
-    // Evita re-inscrição se a referência da query for a mesma
+    // Evita loops infinitos comparando a referência da query
     if (query === lastQueryRef.current) return;
     lastQueryRef.current = query;
+    setLoading(true);
 
     const unsubscribe = onSnapshot(
       query,
@@ -50,16 +50,13 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
         setLoading(false);
       },
       (err) => {
-        // Só atualiza o erro se ele for diferente do atual para evitar loops
-        if (error?.code !== err.code) {
-          setError(err);
-          setLoading(false);
-        }
+        setError(err);
+        setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [query, error?.code]);
+  }, [query]);
 
   return { data, loading, error };
 }

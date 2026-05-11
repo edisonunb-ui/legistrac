@@ -11,7 +11,7 @@ import {
 
 export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
   const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(!!ref);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<FirestoreError | null>(null);
   
   const lastSerializedData = useRef<string | null>(null);
@@ -31,9 +31,9 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
       return;
     }
 
-    // Se o caminho não mudou, não reinicia o listener
     if (currentPath === lastPath.current) return;
     lastPath.current = currentPath;
+    setLoading(true);
 
     const unsubscribe = onSnapshot(
       ref,
@@ -50,15 +50,13 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
         setLoading(false);
       },
       (err) => {
-        if (error?.code !== err.code) {
-          setError(err);
-          setLoading(false);
-        }
+        setError(err);
+        setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [ref, error?.code]);
+  }, [ref]);
 
   return { data, loading, error };
 }

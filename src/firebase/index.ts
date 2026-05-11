@@ -39,9 +39,6 @@ export function initializeFirebase() {
   };
 }
 
-/**
- * Utilitário para estabilizar referências do Firebase (Queries e DocumentReferences).
- */
 export function useMemoFirebase<T>(factory: () => T, deps: any[]): T {
   return useMemo(factory, deps);
 }

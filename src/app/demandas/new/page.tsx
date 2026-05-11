@@ -2,7 +2,7 @@
 
 import { useUser, useFirestore, useCollection, useDoc, useStorage, useMemoFirebase } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createDemand } from "@/lib/demand-service";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, Loader2, User as UserIcon, Paperclip, X, FileText, AlertCircle } from "lucide-react";
+import { ChevronLeft, Save, Loader2, User as UserIcon, Paperclip, X, FileText } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority, Attachment } from "@/lib/types";
 import { collection, query, Timestamp, doc, where } from "firebase/firestore";
@@ -26,7 +26,7 @@ export default function NewDemandPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
-  const hasInitialized = useRef(false);
+  const isInitialized = useRef(false);
   
   const [formData, setFormData] = useState({
     titulo: "",
@@ -40,7 +40,7 @@ export default function NewDemandPage() {
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
   const [currentUploadingFile, setCurrentUploadingFile] = useState<string | null>(null);
 
-  const userEmail = user?.email?.toLowerCase().trim() || null;
+  const userEmail = useMemo(() => user?.email?.toLowerCase().trim() || null, [user?.email]);
   
   const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
@@ -48,9 +48,9 @@ export default function NewDemandPage() {
   const cabinetId = (profile as any)?.cabinetId;
 
   useEffect(() => {
-    if (user?.uid && !hasInitialized.current) {
+    if (user?.uid && !isInitialized.current) {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
-      hasInitialized.current = true;
+      isInitialized.current = true;
     }
   }, [user?.uid]);
 
@@ -61,16 +61,16 @@ export default function NewDemandPage() {
   
   const { data: allUsers = [] } = useCollection(usersQuery);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files);
       setFiles(prev => [...prev, ...selectedFiles]);
     }
-  };
+  }, []);
 
-  const removeFile = (index: number) => {
+  const removeFile = useCallback((index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
-  };
+  }, []);
 
   const uploadFiles = async (): Promise<Attachment[]> => {
     const attachments: Attachment[] = [];
@@ -119,10 +119,7 @@ export default function NewDemandPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db || !cabinetId) {
-      toast({ title: "Erro", description: "Dados do gabinete não carregados.", variant: "destructive" });
-      return;
-    }
+    if (!user || !db || !cabinetId || saving) return;
     
     setSaving(true);
     try {
@@ -135,13 +132,13 @@ export default function NewDemandPage() {
         anexos: attachments
       });
       
-      toast({ title: "Sucesso!", description: "Demanda registrada com sucesso." });
+      toast({ title: "Sucesso", description: "Demanda registrada com sucesso." });
       router.push(`/demandas/${demandId}`);
     } catch (error: any) {
       console.error("Submit error:", error);
       toast({
-        title: "Falha no Envio",
-        description: "Verifique sua conexão e se o arquivo não excede os limites.",
+        title: "Erro no Envio",
+        description: "Falha ao processar arquivos ou dados.",
         variant: "destructive",
       });
       setSaving(false);
@@ -149,39 +146,39 @@ export default function NewDemandPage() {
     }
   };
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin text-primary" /></div>;
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-muted-foreground" /></div>;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <header className="mb-8">
-          <Link href="/demandas" className="flex items-center gap-2 text-muted-foreground hover:text-primary mb-4 w-fit text-sm font-medium">
-            <ChevronLeft size={16} /> Voltar para lista
+          <Link href="/demandas" className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 w-fit text-xs font-bold uppercase tracking-wider">
+            <ChevronLeft size={14} /> Lista de Demandas
           </Link>
-          <h1 className="text-3xl font-bold tracking-tight">Nova Demanda</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Registro de Demanda</h1>
         </header>
 
-        <Card className="max-w-3xl border-primary/10 shadow-xl overflow-hidden">
+        <Card className="max-w-3xl border-border bg-card shadow-none">
           <form onSubmit={handleSubmit}>
-            <CardHeader className="bg-primary/5">
-              <CardTitle className="text-lg font-bold">Dados da Solicitação</CardTitle>
+            <CardHeader className="border-b">
+              <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Formulário Oficial</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
               <div className="space-y-2">
-                <Label htmlFor="titulo">Título</Label>
-                <Input id="titulo" required value={formData.titulo} onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))} placeholder="Resumo curto da demanda" />
+                <Label htmlFor="titulo" className="text-[10px] font-bold uppercase">Título da Solicitação</Label>
+                <Input id="titulo" required value={formData.titulo} onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))} placeholder="Ex: Manutenção de iluminação pública" className="h-11" />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="prazo">Prazo Fatal</Label>
-                  <Input id="prazo" type="date" required value={formData.prazo} onChange={(e) => setFormData(prev => ({ ...prev, prazo: e.target.value }))} />
+                  <Label htmlFor="prazo" className="text-[10px] font-bold uppercase">Prazo Limite</Label>
+                  <Input id="prazo" type="date" required value={formData.prazo} onChange={(e) => setFormData(prev => ({ ...prev, prazo: e.target.value }))} className="h-11" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="prioridade">Prioridade</Label>
+                  <Label htmlFor="prioridade" className="text-[10px] font-bold uppercase">Nível de Prioridade</Label>
                   <Select value={formData.prioridade} onValueChange={(v: DemandPriority) => setFormData(prev => ({ ...prev, prioridade: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="BAIXA">Baixa</SelectItem>
                       <SelectItem value="MEDIA">Média</SelectItem>
@@ -192,64 +189,52 @@ export default function NewDemandPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Responsável Atual</Label>
+                <Label className="text-[10px] font-bold uppercase">Responsável Designado</Label>
                 <Select value={formData.responsavelId} onValueChange={(v) => setFormData(prev => ({ ...prev, responsavelId: v }))}>
-                  <SelectTrigger>
-                    <div className="flex items-center gap-2"><UserIcon size={14} className="text-primary"/><SelectValue /></div>
+                  <SelectTrigger className="h-11">
+                    <div className="flex items-center gap-2"><UserIcon size={14} className="text-muted-foreground"/><SelectValue /></div>
                   </SelectTrigger>
                   <SelectContent>
                     {user?.uid && <SelectItem value={user.uid}>Atribuir a mim</SelectItem>}
-                    {allUsers.filter((u: any) => (u.uid || u.id) && (u.uid || u.id) !== user?.uid).map((u: any) => (
-                      <SelectItem key={u.uid || u.id} value={u.uid || u.id}>{u.nome} ({u.perfil})</SelectItem>
+                    {allUsers.filter((u: any) => u.uid !== user?.uid).map((u: any) => (
+                      <SelectItem key={u.uid} value={u.uid}>{u.nome} ({u.perfil})</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="descricao">Descrição Detalhada</Label>
-                <Textarea id="descricao" rows={4} required value={formData.descricao} onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))} placeholder="Explique detalhadamente o que precisa ser feito..." />
+                <Label htmlFor="descricao" className="text-[10px] font-bold uppercase">Detalhamento Técnico</Label>
+                <Textarea id="descricao" rows={6} required value={formData.descricao} onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))} placeholder="Descreva os detalhes da demanda, locais e contatos..." className="resize-none" />
               </div>
 
-              <div className="space-y-4 p-4 bg-primary/5 rounded-xl border-2 border-dashed border-primary/20">
+              <div className="space-y-4 p-6 bg-muted/30 rounded-lg border border-dashed">
                 <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-2 text-primary font-bold text-xs uppercase">
-                    <Paperclip size={14} /> Anexos (Fotos e Documentos)
+                  <Label className="flex items-center gap-2 font-bold text-[10px] uppercase">
+                    <Paperclip size={14} /> Anexar Documentação
                   </Label>
-                  <span className="text-[10px] text-muted-foreground uppercase">PDF, PNG, JPG até 5MB</span>
                 </div>
-                <Input 
-                  type="file" 
-                  multiple 
-                  className="bg-background cursor-pointer h-9 text-xs" 
-                  onChange={handleFileChange}
-                />
+                <Input type="file" multiple className="bg-background cursor-pointer h-10 pt-2" onChange={handleFileChange} disabled={saving} />
                 
                 {files.length > 0 && (
                   <div className="space-y-2 mt-4">
                     {files.map((file, idx) => (
                       <div key={idx} className="space-y-1">
-                        <div className="flex items-center justify-between p-2 bg-background rounded-lg border border-primary/10 text-[10px]">
-                          <div className="flex items-center gap-2 truncate">
-                            <FileText size={12} className="text-primary" />
-                            <span className="truncate font-medium">{file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                        <div className="flex items-center justify-between p-3 bg-background rounded border text-[11px]">
+                          <div className="flex items-center gap-3 truncate">
+                            <FileText size={14} className="text-muted-foreground" />
+                            <span className="truncate">{file.name}</span>
                           </div>
                           {!saving && (
-                            <Button 
-                              type="button" 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-5 w-5 p-0 text-destructive hover:bg-destructive/10"
-                              onClick={() => removeFile(idx)}
-                            >
-                              <X size={12} />
+                            <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0 hover:text-destructive" onClick={() => removeFile(idx)}>
+                              <X size={14} />
                             </Button>
                           )}
                         </div>
                         {saving && uploadProgress[file.name] !== undefined && (
                           <div className="px-1">
                             <Progress value={uploadProgress[file.name]} className="h-1" />
-                            <p className="text-[8px] text-right mt-1 font-bold text-primary">{Math.round(uploadProgress[file.name])}%</p>
+                            <p className="text-[9px] text-right mt-1 font-bold">{Math.round(uploadProgress[file.name])}%</p>
                           </div>
                         )}
                       </div>
@@ -258,44 +243,23 @@ export default function NewDemandPage() {
                 )}
               </div>
             </CardContent>
-            <CardFooter className="flex justify-end gap-3 bg-muted/20 pt-6">
-              <Button type="button" variant="ghost" onClick={() => router.back()} disabled={saving}>Cancelar</Button>
-              <Button type="submit" disabled={saving || formData.titulo === ""} className="min-w-[160px] font-bold shadow-lg shadow-primary/10">
+            <CardFooter className="flex justify-end gap-3 border-t bg-muted/10 py-6">
+              <Button type="button" variant="ghost" onClick={() => router.back()} disabled={saving} className="text-[10px] font-bold uppercase">Descartar</Button>
+              <Button type="submit" disabled={saving || formData.titulo === ""} className="min-w-[200px] text-[10px] font-bold uppercase tracking-widest">
                 {saving ? (
                   <>
-                    <Loader2 className="animate-spin mr-2" />
-                    {currentUploadingFile ? `Enviando ${currentUploadingFile.substring(0, 10)}...` : "Salvando..."}
+                    <Loader2 className="animate-spin mr-2" size={14} />
+                    {currentUploadingFile ? "Enviando arquivos..." : "Processando..."}
                   </>
                 ) : (
                   <>
-                    <Save className="mr-2" size={18} /> Registrar Demanda
+                    <Save className="mr-2" size={14} /> Salvar Demanda
                   </>
                 )}
               </Button>
             </CardFooter>
           </form>
         </Card>
-
-        {saving && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <Card className="max-w-xs w-full">
-              <CardContent className="pt-6 text-center space-y-4">
-                <Loader2 className="animate-spin h-8 w-8 mx-auto text-primary" />
-                <div className="space-y-1">
-                  <h3 className="font-bold">Processando Demanda</h3>
-                  <p className="text-xs text-muted-foreground">Estamos enviando seus arquivos para a pasta digital do gabinete.</p>
-                </div>
-                {currentUploadingFile && (
-                  <div className="p-3 bg-muted rounded-lg text-left">
-                    <p className="text-[10px] font-bold uppercase mb-1">Enviando:</p>
-                    <p className="text-xs truncate font-mono">{currentUploadingFile}</p>
-                    <Progress value={uploadProgress[currentUploadingFile] || 0} className="h-1 mt-2" />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        )}
       </main>
     </div>
   );
