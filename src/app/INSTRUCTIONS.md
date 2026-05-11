@@ -4,7 +4,7 @@
 O upload foi testado com sucesso! Agora o sistema está protegido.
 
 ## 🔒 Passo Final: Segurança de Domínio
-Se o upload parar de funcionar com erro 403, siga isto uma única vez:
+Se o upload parar de funcionar com erro 403 após você mudar as regras para "autenticado", siga isto uma única vez:
 1. Acesse o [Console do Firebase](https://console.firebase.google.com/).
 2. Vá em **Authentication** > **Settings** > **Authorized domains**.
 3. Clique em **Add domain** e cole o domínio que aparece na barra de endereços do seu navegador (ex: `*-firebase-studio.google`).
