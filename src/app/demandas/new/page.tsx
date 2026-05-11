@@ -79,7 +79,7 @@ export default function NewDemandPage() {
           },
           (error) => {
             console.error("Upload Error:", error);
-            reject(new Error(`Erro ao enviar ${file.name}. Verifique as permissões de Storage.`));
+            reject(new Error(`Erro ao enviar ${file.name}. Verifique se as Regras de Storage foram publicadas.`));
           },
           async () => {
             const url = await getDownloadURL(uploadTask.snapshot.ref);
@@ -120,8 +120,8 @@ export default function NewDemandPage() {
     } catch (error: any) {
       setSaving(false);
       toast({
-        title: "Erro no Upload",
-        description: error.message || "Verifique se você ativou as Regras de Storage no Console.",
+        title: "Erro no Processamento",
+        description: error.message || "Verifique sua conexão e se as regras de Storage foram publicadas.",
         variant: "destructive",
       });
     }
@@ -211,7 +211,7 @@ export default function NewDemandPage() {
                 <div className="flex items-start gap-2 p-3 bg-primary/5 rounded border border-primary/10">
                   <AlertCircle size={14} className="text-primary mt-0.5" />
                   <p className="text-[9px] text-muted-foreground uppercase leading-relaxed">
-                    Se o upload falhar, vá ao Console do Firebase > Storage > Rules e clique em "Publish".
+                    Se o upload falhar, vá ao Console do Firebase {' > '} Storage {' > '} Rules e clique em "Publish".
                   </p>
                 </div>
               </div>
