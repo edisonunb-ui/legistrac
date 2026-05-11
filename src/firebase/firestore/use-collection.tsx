@@ -14,18 +14,25 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [loading, setLoading] = useState(!!query);
   const [error, setError] = useState<FirestoreError | null>(null);
   
-  const lastSerializedRef = useRef<string | null>(null);
+  const lastSerializedData = useRef<string | null>(null);
+  const lastQueryRef = useRef<Query<T> | null>(null);
 
   useEffect(() => {
+    // Se a query for nula, reseta o estado e sai
     if (!query) {
-      if (lastSerializedRef.current !== null) {
+      if (lastQueryRef.current !== null) {
         setData([]);
         setLoading(false);
         setError(null);
-        lastSerializedRef.current = null;
+        lastQueryRef.current = null;
+        lastSerializedData.current = null;
       }
       return;
     }
+
+    // Evita re-inscrição se a referência da query for a mesma
+    if (query === lastQueryRef.current) return;
+    lastQueryRef.current = query;
 
     const unsubscribe = onSnapshot(
       query,
@@ -36,23 +43,23 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
         } as T & { id: string }));
         
         const serialized = JSON.stringify(items);
-        if (serialized !== lastSerializedRef.current) {
+        if (serialized !== lastSerializedData.current) {
           setData(items);
-          lastSerializedRef.current = serialized;
+          lastSerializedData.current = serialized;
         }
-        // Use functional updates to avoid dependency on the state itself
-        setLoading(prev => prev ? false : prev);
-        setError(prev => prev ? null : prev);
+        setLoading(false);
       },
       (err) => {
-        console.error('Firestore useCollection error:', err);
-        setError(err);
-        setLoading(false);
+        // Só atualiza o erro se ele for diferente do atual para evitar loops
+        if (error?.code !== err.code) {
+          setError(err);
+          setLoading(false);
+        }
       }
     );
 
     return () => unsubscribe();
-  }, [query]);
+  }, [query, error?.code]);
 
   return { data, loading, error };
 }

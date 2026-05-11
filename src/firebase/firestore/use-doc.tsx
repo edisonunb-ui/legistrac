@@ -14,22 +14,26 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
   const [loading, setLoading] = useState(!!ref);
   const [error, setError] = useState<FirestoreError | null>(null);
   
-  const lastSerializedRef = useRef<string | null>(null);
-  const lastPathRef = useRef<string | null>(null);
+  const lastSerializedData = useRef<string | null>(null);
+  const lastPath = useRef<string | null>(null);
 
   useEffect(() => {
     const currentPath = ref?.path || null;
 
     if (!ref || !currentPath) {
-      if (lastPathRef.current !== null) {
+      if (lastPath.current !== null) {
         setData(null);
         setLoading(false);
         setError(null);
-        lastPathRef.current = null;
-        lastSerializedRef.current = null;
+        lastPath.current = null;
+        lastSerializedData.current = null;
       }
       return;
     }
+
+    // Se o caminho não mudou, não reinicia o listener
+    if (currentPath === lastPath.current) return;
+    lastPath.current = currentPath;
 
     const unsubscribe = onSnapshot(
       ref,
@@ -39,23 +43,22 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
           : null;
         
         const serialized = JSON.stringify(docData);
-        if (serialized !== lastSerializedRef.current || currentPath !== lastPathRef.current) {
+        if (serialized !== lastSerializedData.current) {
           setData(docData);
-          lastSerializedRef.current = serialized;
-          lastPathRef.current = currentPath;
+          lastSerializedData.current = serialized;
         }
-        setLoading(prev => prev ? false : prev);
-        setError(prev => prev ? null : prev);
+        setLoading(false);
       },
       (err) => {
-        console.error('Firestore useDoc error:', err);
-        setError(err);
-        setLoading(false);
+        if (error?.code !== err.code) {
+          setError(err);
+          setLoading(false);
+        }
       }
     );
 
     return () => unsubscribe();
-  }, [ref]);
+  }, [ref, error?.code]);
 
   return { data, loading, error };
 }

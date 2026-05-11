@@ -29,6 +29,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental: {
+    // Mantendo vazio para evitar erros de versão do Next.js 15
+  }
 };
 
 export default nextConfig;
