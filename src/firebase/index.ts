@@ -13,7 +13,6 @@ const firebaseConfig = {
   storageBucket: "legistrac.firebasestorage.app",
   messagingSenderId: "736970891304",
   appId: "1:736970891304:web:0cb8d3fad5bb3c9e38951d"
-  // Removido measurementId para evitar erros de Analytics no console
 };
 
 let appInstance: FirebaseApp;
@@ -32,6 +31,7 @@ export function initializeFirebase() {
   if (!dbInstance) dbInstance = getFirestore(appInstance);
   if (!storageInstance) storageInstance = getStorage(appInstance);
   
+  // Garantir que Analytics não seja inicializado em ambiente de Studio/Cloud
   return { 
     app: appInstance, 
     auth: authInstance, 

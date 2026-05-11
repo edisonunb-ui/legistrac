@@ -14,20 +14,22 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<FirestoreError | null>(null);
   
-  const queryHash = useRef<string | null>(null);
+  // Referência estável para a query baseada no seu conteúdo stringificado
+  const queryKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (!query) {
       setData([]);
-      queryHash.current = null;
+      queryKey.current = null;
       return;
     }
 
-    // Estabilização por stringificação da query interna para evitar loops de referência
-    const currentHash = JSON.stringify((query as any)._query || query.toString());
-    if (currentHash === queryHash.current) return;
+    const currentKey = JSON.stringify((query as any)._query || query.toString());
     
-    queryHash.current = currentHash;
+    // Se a query for logicamente a mesma, não reinicia o listener
+    if (queryKey.current === currentKey) return;
+    
+    queryKey.current = currentKey;
     setLoading(true);
 
     const unsubscribe = onSnapshot(
@@ -43,9 +45,9 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
         setError(null);
       },
       (err) => {
-        // Silenciamos erros repetitivos no console para não travar a UI
+        // Silenciamos permissões negadas comuns durante o desenvolvimento
         if (err.code !== 'permission-denied') {
-          console.warn("Firestore Sync Status:", err.code);
+          console.warn("Firestore Sync:", err.code);
         }
         setError(err);
         setLoading(false);
