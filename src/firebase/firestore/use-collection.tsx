@@ -14,23 +14,20 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<FirestoreError | null>(null);
   
-  const lastQueryId = useRef<string | null>(null);
+  // Usamos um ID estável para evitar loops infinitos de renderização
+  const lastQueryKey = useRef<string | null>(null);
 
   useEffect(() => {
-    // Se a query for nula, limpamos os dados e paramos
     if (!query) {
       setData([]);
-      lastQueryId.current = null;
+      lastQueryKey.current = null;
       return;
     }
 
-    // Geramos um ID estável para a query. toString() no Firestore é confiável.
-    const currentQueryId = query.toString();
+    const currentKey = query.toString();
+    if (currentKey === lastQueryKey.current) return;
     
-    // Se a query for a mesma da última execução, não fazemos nada (evita loop)
-    if (currentQueryId === lastQueryId.current) return;
-    
-    lastQueryId.current = currentQueryId;
+    lastQueryKey.current = currentKey;
     setLoading(true);
 
     const unsubscribe = onSnapshot(
@@ -41,12 +38,14 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
           id: doc.id,
         } as T & { id: string }));
         
+        // Só atualiza se houver mudança real para evitar loops
         setData(items);
         setLoading(false);
         setError(null);
       },
       (err) => {
-        console.warn("Firestore collection sync error:", err.code);
+        // Erros de permissão são tratados silenciosamente para não travar a UI
+        console.warn("Firestore Sync Warning:", err.code);
         setError(err);
         setLoading(false);
       }

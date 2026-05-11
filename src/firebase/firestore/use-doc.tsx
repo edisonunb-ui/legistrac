@@ -41,7 +41,7 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
         setError(null);
       },
       (err) => {
-        console.warn("Firestore doc sync error:", err.code);
+        console.warn("Firestore Doc Warning:", err.code);
         setError(err);
         setLoading(false);
       }
