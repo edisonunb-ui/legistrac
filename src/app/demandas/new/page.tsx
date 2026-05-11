@@ -75,33 +75,39 @@ export default function NewDemandPage() {
       
       const uploadTask = uploadBytesResumable(storageRef, file);
 
-      const downloadUrl = await new Promise<string>((resolve, reject) => {
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
-          },
-          (error: any) => {
-            console.error("Erro no Storage:", error);
-            reject(new Error("Erro de Permissão: Verifique se clicou em 'Publicar' nas regras do Firebase."));
-          },
-          async () => {
-            const url = await getDownloadURL(uploadTask.snapshot.ref);
-            resolve(url);
-          }
-        );
-      });
-      
-      attachments.push({
-        id: Math.random().toString(36).substring(7),
-        nome: file.name,
-        url: downloadUrl,
-        tipo: file.type,
-        tamanho: file.size,
-        data: Timestamp.now(),
-        enviadoPor: user?.uid || "anonimo"
-      });
+      try {
+        const downloadUrl = await new Promise<string>((resolve, reject) => {
+          uploadTask.on(
+            'state_changed',
+            (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
+            },
+            (error: any) => {
+              console.error("Erro no Storage:", error);
+              reject(new Error(error.code === 'storage/unauthorized' 
+                ? "Erro de Permissão: Clique em 'Publicar' nas regras de Storage no Firebase." 
+                : "Erro no upload do arquivo. Verifique sua conexão."));
+            },
+            async () => {
+              const url = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(url);
+            }
+          );
+        });
+        
+        attachments.push({
+          id: Math.random().toString(36).substring(7),
+          nome: file.name,
+          url: downloadUrl,
+          tipo: file.type,
+          tamanho: file.size,
+          data: Timestamp.now(),
+          enviadoPor: user?.uid || "anonimo"
+        });
+      } catch (err: any) {
+        throw err;
+      }
     }
     return attachments;
   };
@@ -226,7 +232,7 @@ export default function NewDemandPage() {
                 <div className="flex items-start gap-3 p-4 bg-primary/5 rounded-lg border border-primary/10">
                   <AlertCircle size={14} className="text-primary mt-0.5" />
                   <p className="text-[9px] text-muted-foreground uppercase leading-relaxed">
-                    Se o upload travar em 0%, confirme se as Regras de Storage foram Publicadas no Firebase.
+                    Se o upload falhar, vá ao Console do Firebase, em Storage, e clique em "Publicar" nas Regras.
                   </p>
                 </div>
               </div>

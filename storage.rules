@@ -1,10 +1,11 @@
 rules_version = '2';
 
-// Regras de acesso ao Storage - LIBERAÇÃO PARA USUÁRIOS LOGADOS
+// Regras de acesso ao Storage - LIBERAÇÃO TEMPORÁRIA PARA TESTE DE PROTÓTIPO
+// Nota: Em produção, o domínio deve ser autorizado no Console do Firebase > Auth
 service firebase.storage {
   match /b/{bucket}/o {
     match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
   }
 }
