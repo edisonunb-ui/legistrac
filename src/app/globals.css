@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    --background: 240 10% 4%; /* Quase preto */
+    --background: 222 47% 11%; /* Navy Dark (Padrão Firebase Console) */
     --foreground: 0 0% 98%;
-    --card: 240 10% 6%;
+    --card: 222 47% 13%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 10% 4%;
+    --popover: 222 47% 11%;
     --popover-foreground: 0 0% 98%;
-    --primary: 84 80% 60%; /* Lime Green como na imagem */
-    --primary-foreground: 240 10% 4%;
-    --secondary: 240 5% 15%;
+    --primary: 217 91% 60%; /* Azul Firebase */
+    --primary-foreground: 222 47% 11%;
+    --secondary: 222 47% 20%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 5% 12%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 84 80% 60%;
-    --accent-foreground: 240 10% 4%;
+    --muted: 222 47% 15%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 47 100% 50%; /* Âmbar/Laranja Firebase */
+    --accent-foreground: 222 47% 11%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5% 15%;
-    --input: 240 5% 15%;
-    --ring: 84 80% 60%;
+    --border: 217 91% 20%;
+    --input: 217 91% 20%;
+    --ring: 217 91% 60%;
     --radius: 0.5rem;
   }
 }
