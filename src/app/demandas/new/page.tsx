@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useCollection, useDoc, useStorage, useMemoFirebase } from "@/firebase";
@@ -12,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, Loader2, Paperclip, X, AlertCircle, CheckCircle2, ShieldAlert } from "lucide-react";
+import { ChevronLeft, Save, Loader2, Paperclip, X, AlertCircle, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority, Attachment } from "@/lib/types";
 import { collection, query, Timestamp, doc, where } from "firebase/firestore";
@@ -83,11 +84,7 @@ export default function NewDemandPage() {
           },
           (error: any) => {
             console.error("Erro no Storage:", error);
-            if (error.code === 'storage/unauthorized') {
-              reject(new Error("Acesso Negado: Vá ao Console do Firebase > Storage > Regras e clique em Publicar."));
-            } else {
-              reject(new Error(`Erro: O serviço de arquivos ainda não está liberado.`));
-            }
+            reject(new Error("Erro de Permissão: Verifique se clicou em 'Publicar' nas regras do Firebase."));
           },
           async () => {
             const url = await getDownloadURL(uploadTask.snapshot.ref);
@@ -229,7 +226,7 @@ export default function NewDemandPage() {
                 <div className="flex items-start gap-3 p-4 bg-primary/5 rounded-lg border border-primary/10">
                   <AlertCircle size={14} className="text-primary mt-0.5" />
                   <p className="text-[9px] text-muted-foreground uppercase leading-relaxed">
-                    Se o upload falhar, v&aacute; ao Console do Firebase &gt; Storage &gt; Regras e clique em "Publicar".
+                    Se o upload travar em 0%, confirme se as Regras de Storage foram Publicadas no Firebase.
                   </p>
                 </div>
               </div>
