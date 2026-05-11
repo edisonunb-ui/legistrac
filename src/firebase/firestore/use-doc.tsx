@@ -14,21 +14,28 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<FirestoreError | null>(null);
   
-  const pathRef = useRef<string | null>(null);
-  const currentPath = ref?.path || null;
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+  const lastPathRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!ref) {
+    const currentPath = ref?.path || null;
+
+    if (!ref || !currentPath) {
       setData(null);
       setLoading(false);
       return;
     }
 
-    if (pathRef.current === currentPath) {
+    // Se o caminho for o mesmo, não reiniciamos o listener
+    if (lastPathRef.current === currentPath) {
       return;
     }
 
-    pathRef.current = currentPath;
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+    }
+
+    lastPathRef.current = currentPath;
     setLoading(true);
 
     const unsubscribe = onSnapshot(
@@ -44,11 +51,16 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
       }
     );
 
+    unsubscribeRef.current = unsubscribe;
+
     return () => {
-      unsubscribe();
-      pathRef.current = null;
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+      lastPathRef.current = null;
     };
-  }, [ref, currentPath]);
+  }, [ref]); // Estabilizado apenas pela referência
 
   return { data, loading, error };
 }

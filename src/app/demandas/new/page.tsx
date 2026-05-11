@@ -39,6 +39,8 @@ export default function NewDemandPage() {
   const [uploadStatus, setUploadStatus] = useState<{ current: number, total: number } | null>(null);
 
   const userEmail = user?.email?.toLowerCase().trim() || null;
+  
+  // Referência do perfil deve ser estável
   const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
@@ -51,6 +53,7 @@ export default function NewDemandPage() {
     }
   }, [user?.uid]);
 
+  // Consulta de usuários deve ser estável baseada no cabinetId
   const usersQuery = useMemo(() => {
     if (!db || !cabinetId) return null;
     return query(collection(db, "users"), where("cabinetId", "==", cabinetId));

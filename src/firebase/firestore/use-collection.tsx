@@ -14,10 +14,9 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<FirestoreError | null>(null);
   
-  // Usamos um ref para rastrear a consulta atual e evitar re-assinaturas desnecessárias
-  // Já que objetos de Query do Firebase mudam a referência frequentemente
-  const queryRef = useRef<string | null>(null);
-  const queryString = query ? JSON.stringify((query as any)._query || query) : null;
+  // Usamos um ref para evitar re-assinaturas se o objeto de query mudar mas for logicamente o mesmo
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+  const lastQueryRef = useRef<Query<T> | null>(null);
 
   useEffect(() => {
     if (!query) {
@@ -26,12 +25,17 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
       return;
     }
 
-    // Se a consulta (em string) for a mesma, não reiniciamos o listener
-    if (queryRef.current === queryString) {
+    // Evita re-assinar se a query for a mesma referência (ou se já estiver carregando a mesma)
+    if (lastQueryRef.current === query) {
       return;
     }
-    
-    queryRef.current = queryString;
+
+    // Limpa assinatura anterior se houver
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+    }
+
+    lastQueryRef.current = query;
     setLoading(true);
 
     const unsubscribe = onSnapshot(
@@ -41,6 +45,7 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
           ...doc.data(),
           id: doc.id,
         } as T & { id: string }));
+        
         setData(items);
         setLoading(false);
       },
@@ -51,11 +56,16 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
       }
     );
 
+    unsubscribeRef.current = unsubscribe;
+
     return () => {
-      unsubscribe();
-      queryRef.current = null;
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+      lastQueryRef.current = null;
     };
-  }, [query, queryString]);
+  }, [query]); // Removido queryString instável
 
   return { data, loading, error };
 }
