@@ -38,7 +38,7 @@ export default function NewDemandPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [uploadStatus, setUploadStatus] = useState<{ current: number, total: number } | null>(null);
 
-  const userEmail = user?.email?.toLowerCase().trim();
+  const userEmail = user?.email?.toLowerCase().trim() || null;
   const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
@@ -49,7 +49,7 @@ export default function NewDemandPage() {
       setFormData(prev => ({ ...prev, responsavelId: user.uid }));
       hasInitialized.current = true;
     }
-  }, [user]);
+  }, [user?.uid]);
 
   const usersQuery = useMemo(() => {
     if (!db || !cabinetId) return null;
@@ -71,7 +71,7 @@ export default function NewDemandPage() {
 
   const uploadFiles = async (): Promise<Attachment[]> => {
     const attachments: Attachment[] = [];
-    if (files.length === 0) return [];
+    if (files.length === 0 || !storage) return [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -133,7 +133,7 @@ export default function NewDemandPage() {
     }
   };
 
-  if (authLoading || !profile) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin text-primary" /></div>;
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin text-primary" /></div>;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -183,8 +183,8 @@ export default function NewDemandPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {user?.uid && <SelectItem value={user.uid}>Atribuir a mim</SelectItem>}
-                    {allUsers.filter((u: any) => u.uid && u.uid !== user?.uid).map((u: any) => (
-                      <SelectItem key={u.uid} value={u.uid}>{u.nome} ({u.perfil})</SelectItem>
+                    {allUsers.filter((u: any) => (u.uid || u.id) && (u.uid || u.id) !== user?.uid).map((u: any) => (
+                      <SelectItem key={u.uid || u.id} value={u.uid || u.id}>{u.nome} ({u.perfil})</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

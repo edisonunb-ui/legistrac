@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { 
   DocumentReference, 
   onSnapshot, 
@@ -13,18 +13,28 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<FirestoreError | null>(null);
+  
+  const pathRef = useRef<string | null>(null);
+  const currentPath = ref?.path || null;
 
   useEffect(() => {
     if (!ref) {
+      setData(null);
       setLoading(false);
       return;
     }
 
+    if (pathRef.current === currentPath) {
+      return;
+    }
+
+    pathRef.current = currentPath;
     setLoading(true);
+
     const unsubscribe = onSnapshot(
       ref,
       (snapshot: DocumentSnapshot<T>) => {
-        setData(snapshot.exists() ? { ...snapshot.data()!, id: snapshot.id } : null);
+        setData(snapshot.exists() ? ({ ...snapshot.data()!, id: snapshot.id } as T & { id: string }) : null);
         setLoading(false);
       },
       (err) => {
@@ -34,8 +44,11 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
       }
     );
 
-    return () => unsubscribe();
-  }, [ref]);
+    return () => {
+      unsubscribe();
+      pathRef.current = null;
+    };
+  }, [ref, currentPath]);
 
   return { data, loading, error };
 }
