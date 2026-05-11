@@ -10,7 +10,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyBh9hcARIT6NNLM0T583mn9Ts5RqC2AgfI",
   authDomain: "legistrac.firebaseapp.com",
   projectId: "legistrac",
-  storageBucket: "legistrac.firebasestorage.app",
+  storageBucket: "pesquisa-62831355-9c7d1.firebasestorage.app",
   messagingSenderId: "736970891304",
   appId: "1:736970891304:web:0cb8d3fad5bb3c9e38951d"
 };
@@ -31,7 +31,6 @@ export function initializeFirebase() {
   if (!dbInstance) dbInstance = getFirestore(appInstance);
   if (!storageInstance) storageInstance = getStorage(appInstance);
   
-  // Garantir que Analytics não seja inicializado em ambiente de Studio/Cloud
   return { 
     app: appInstance, 
     auth: authInstance, 
