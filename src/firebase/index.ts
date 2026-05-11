@@ -13,6 +13,7 @@ const firebaseConfig = {
   storageBucket: "legistrac.firebasestorage.app",
   messagingSenderId: "736970891304",
   appId: "1:736970891304:web:0cb8d3fad5bb3c9e38951d"
+  // Removido measurementId para evitar erros de Analytics no console
 };
 
 let appInstance: FirebaseApp;

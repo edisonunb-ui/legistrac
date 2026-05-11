@@ -14,20 +14,21 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<FirestoreError | null>(null);
   
-  // Usamos um ID estável para evitar loops infinitos de renderização
-  const lastQueryKey = useRef<string | null>(null);
+  // Usamos uma referência para o hash da consulta para evitar loops infinitos
+  const queryHash = useRef<string | null>(null);
 
   useEffect(() => {
     if (!query) {
       setData([]);
-      lastQueryKey.current = null;
+      queryHash.current = null;
       return;
     }
 
-    const currentKey = query.toString();
-    if (currentKey === lastQueryKey.current) return;
+    // Criamos uma "assinatura" da consulta para comparar se ela mudou de fato
+    const currentHash = JSON.stringify((query as any)._query || query.toString());
+    if (currentHash === queryHash.current) return;
     
-    lastQueryKey.current = currentKey;
+    queryHash.current = currentHash;
     setLoading(true);
 
     const unsubscribe = onSnapshot(
@@ -38,14 +39,12 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
           id: doc.id,
         } as T & { id: string }));
         
-        // Só atualiza se houver mudança real para evitar loops
         setData(items);
         setLoading(false);
         setError(null);
       },
       (err) => {
-        // Erros de permissão são tratados silenciosamente para não travar a UI
-        console.warn("Firestore Sync Warning:", err.code);
+        console.warn("Firestore Sync Error:", err.code);
         setError(err);
         setLoading(false);
       }
