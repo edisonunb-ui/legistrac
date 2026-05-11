@@ -84,7 +84,7 @@ export default function NewDemandPage() {
           },
           (error: any) => {
             console.error("Erro no Storage:", error);
-            reject(new Error(`Erro [${error.code}]: Certifique-se de que o Plano Blaze está ativo e o comando CORS foi executado.`));
+            reject(new Error(`Erro [${error.code}]: Verifique se as Regras de Storage foram publicadas no Console.`));
           },
           async () => {
             const url = await getDownloadURL(uploadTask.snapshot.ref);
@@ -227,10 +227,10 @@ export default function NewDemandPage() {
                   <AlertCircle size={16} className="text-primary shrink-0 mt-0.5" />
                   <div className="space-y-1">
                     <p className="text-[10px] text-foreground font-bold uppercase leading-tight">
-                      Verificação de Infraestrutura
+                      Configuração CORS Aplicada
                     </p>
                     <p className="text-[9px] text-muted-foreground uppercase leading-relaxed font-medium">
-                      O Plano Blaze deve estar ativo no Firebase para que o upload funcione. Se encontrar erros, verifique o comando CORS no Cloud Shell.
+                      O portal de arquivos está aberto. Se o upload falhar, verifique se as Regras de Storage foram publicadas no Console do Firebase.
                     </p>
                   </div>
                 </div>
