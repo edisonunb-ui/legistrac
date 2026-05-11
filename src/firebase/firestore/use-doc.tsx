@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -11,7 +12,7 @@ import {
 
 export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
   const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!!ref);
   const [error, setError] = useState<FirestoreError | null>(null);
   
   const unsubscribeRef = useRef<(() => void) | null>(null);
@@ -21,8 +22,9 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
     const currentPath = ref?.path || null;
 
     if (!ref || !currentPath) {
-      setData(null);
-      setLoading(false);
+      setData(prev => prev === null ? prev : null);
+      setLoading(prev => !prev ? prev : false);
+      lastPathRef.current = null;
       return;
     }
 
@@ -36,12 +38,16 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
     }
 
     lastPathRef.current = currentPath;
-    setLoading(true);
+    setLoading(prev => prev ? prev : true);
 
     const unsubscribe = onSnapshot(
       ref,
       (snapshot: DocumentSnapshot<T>) => {
-        setData(snapshot.exists() ? ({ ...snapshot.data()!, id: snapshot.id } as T & { id: string }) : null);
+        const docData = snapshot.exists() 
+          ? ({ ...snapshot.data()!, id: snapshot.id } as T & { id: string }) 
+          : null;
+        
+        setData(docData);
         setLoading(false);
       },
       (err) => {
@@ -58,9 +64,8 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
         unsubscribeRef.current();
         unsubscribeRef.current = null;
       }
-      lastPathRef.current = null;
     };
-  }, [ref]); // Estabilizado apenas pela referência
+  }, [ref]);
 
   return { data, loading, error };
 }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -11,32 +12,34 @@ import {
 
 export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [data, setData] = useState<T[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!!query);
   const [error, setError] = useState<FirestoreError | null>(null);
   
-  // Usamos um ref para evitar re-assinaturas se o objeto de query mudar mas for logicamente o mesmo
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const lastQueryRef = useRef<Query<T> | null>(null);
 
   useEffect(() => {
+    // Se não houver query, reseta o estado apenas se necessário
     if (!query) {
-      setData([]);
-      setLoading(false);
+      setData(prev => prev.length === 0 ? prev : []);
+      setLoading(prev => !prev ? prev : false);
+      lastQueryRef.current = null;
       return;
     }
 
-    // Evita re-assinar se a query for a mesma referência (ou se já estiver carregando a mesma)
+    // Compara a referência da query para evitar re-assinaturas desnecessárias
     if (lastQueryRef.current === query) {
       return;
     }
 
-    // Limpa assinatura anterior se houver
+    // Limpa assinatura anterior
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
     }
 
     lastQueryRef.current = query;
-    setLoading(true);
+    // Só define como loading se já não estiver
+    setLoading(prev => prev ? prev : true);
 
     const unsubscribe = onSnapshot(
       query,
@@ -63,9 +66,8 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
         unsubscribeRef.current();
         unsubscribeRef.current = null;
       }
-      lastQueryRef.current = null;
     };
-  }, [query]); // Removido queryString instável
+  }, [query]);
 
   return { data, loading, error };
 }
