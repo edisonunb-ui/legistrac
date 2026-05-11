@@ -44,8 +44,8 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
           lastSerializedRef.current = serialized;
           lastPathRef.current = currentPath;
         }
-        setLoading(false);
-        setError(null);
+        setLoading(prev => prev ? false : prev);
+        setError(prev => prev ? null : prev);
       },
       (err) => {
         console.error('Firestore useDoc error:', err);

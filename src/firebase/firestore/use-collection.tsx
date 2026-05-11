@@ -40,8 +40,9 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
           setData(items);
           lastSerializedRef.current = serialized;
         }
-        setLoading(false);
-        setError(null);
+        // Use functional updates to avoid dependency on the state itself
+        setLoading(prev => prev ? false : prev);
+        setError(prev => prev ? null : prev);
       },
       (err) => {
         console.error('Firestore useCollection error:', err);
