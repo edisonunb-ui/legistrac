@@ -1,7 +1,7 @@
 rules_version = '2';
 
-// Regras de Segurança para o Firebase Storage
-// Permite que qualquer usuário autenticado no sistema possa ler e escrever arquivos.
+// Regras simplificadas para garantir o funcionamento do upload.
+// Permite leitura e escrita para qualquer usuário autenticado.
 service firebase.storage {
   match /b/{bucket}/o {
     match /{allPaths=**} {
