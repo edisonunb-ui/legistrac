@@ -21,12 +21,10 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
     const currentPath = ref?.path || null;
 
     if (!ref || !currentPath) {
-      setData(null);
-      setLoading(false);
+      if (data !== null) setData(null);
       return;
     }
 
-    // Se o caminho é o mesmo, não reiniciamos o listener
     if (currentPath === activePathRef.current) return;
     activePathRef.current = currentPath;
     
@@ -54,10 +52,7 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
       }
     );
 
-    return () => {
-      unsubscribe();
-      activePathRef.current = null;
-    };
+    return () => unsubscribe();
   }, [ref]);
 
   return { data, loading, error };

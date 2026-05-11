@@ -14,20 +14,19 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<FirestoreError | null>(null);
   
-  // Usamos refs para rastrear a versão estável dos dados e evitar loops
   const lastSerializedData = useRef<string>('');
-  const activeQueryRef = useRef<Query<T> | null>(null);
+  const activeQueryHash = useRef<string | null>(null);
 
   useEffect(() => {
     if (!query) {
-      setData([]);
-      setLoading(false);
+      if (data.length > 0) setData([]);
       return;
     }
 
-    // Se a query for a mesma referência (estabilizada com useMemoFirebase), não reiniciamos
-    if (activeQueryRef.current === query) return;
-    activeQueryRef.current = query;
+    // Geramos um hash simples da query para evitar reconexões se a query for logicamente a mesma
+    const currentHash = JSON.stringify((query as any)._query || query.toString());
+    if (activeQueryHash.current === currentHash) return;
+    activeQueryHash.current = currentHash;
     
     setLoading(true);
 
@@ -40,7 +39,6 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
         } as T & { id: string }));
         
         const serialized = JSON.stringify(items);
-        // Só atualiza o estado se os dados realmente mudarem
         if (serialized !== lastSerializedData.current) {
           lastSerializedData.current = serialized;
           setData(items);
@@ -55,10 +53,7 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
       }
     );
 
-    return () => {
-      unsubscribe();
-      activeQueryRef.current = null;
-    };
+    return () => unsubscribe();
   }, [query]);
 
   return { data, loading, error };

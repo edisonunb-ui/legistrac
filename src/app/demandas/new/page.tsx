@@ -2,7 +2,7 @@
 
 import { useUser, useFirestore, useCollection, useDoc, useStorage, useMemoFirebase } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createDemand } from "@/lib/demand-service";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, Loader2, User as UserIcon, Paperclip, X, FileText, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, Save, Loader2, User as UserIcon, Paperclip, X, FileText, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority, Attachment } from "@/lib/types";
 import { collection, query, Timestamp, doc, where } from "firebase/firestore";
@@ -41,17 +41,10 @@ export default function NewDemandPage() {
 
   const userEmail = useMemo(() => user?.email?.toLowerCase().trim() || null, [user?.email]);
   
-  // Estabilizamos as referências para evitar loops
   const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
   const cabinetId = (profile as any)?.cabinetId;
-
-  useEffect(() => {
-    if (user?.uid && !formData.responsavelId) {
-      setFormData(prev => ({ ...prev, responsavelId: user.uid }));
-    }
-  }, [user?.uid, formData.responsavelId]);
 
   const usersQuery = useMemoFirebase(() => {
     if (!db || !cabinetId) return null;
@@ -137,7 +130,7 @@ export default function NewDemandPage() {
       console.error("Submit error:", error);
       toast({
         title: "Erro no Envio",
-        description: "Falha ao processar a demanda. Tente novamente.",
+        description: "Falha ao processar a demanda. Verifique se o CORS foi configurado corretamente.",
         variant: "destructive",
       });
       setSaving(false);
@@ -217,7 +210,7 @@ export default function NewDemandPage() {
                 <div className="p-4 bg-green-500/5 border border-green-500/20 rounded-md flex gap-3 mb-4">
                    <CheckCircle2 size={16} className="text-green-600 shrink-0" />
                    <p className="text-[10px] text-green-700 leading-tight">
-                     Configuração de CORS detectada. Uploads de arquivos grandes agora estão habilitados.
+                     Status de Conexão: O sistema está pronto para receber arquivos grandes após a liberação do CORS.
                    </p>
                 </div>
 
@@ -238,7 +231,7 @@ export default function NewDemandPage() {
                             </Button>
                           )}
                         </div>
-                        {saving && uploadProgress[file.name] !== undefined && (
+                        {uploadProgress[file.name] !== undefined && (
                           <div className="px-1">
                             <Progress value={uploadProgress[file.name]} className="h-1" />
                             <p className="text-[9px] text-right mt-1 font-bold">{Math.round(uploadProgress[file.name])}%</p>
@@ -256,7 +249,7 @@ export default function NewDemandPage() {
                 {saving ? (
                   <>
                     <Loader2 className="animate-spin mr-2" size={14} />
-                    {currentUploadingFile ? "Enviando arquivos..." : "Processando..."}
+                    {currentUploadingFile ? `Enviando ${currentUploadingFile}...` : "Processando..."}
                   </>
                 ) : (
                   <>
