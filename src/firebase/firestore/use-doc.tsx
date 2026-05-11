@@ -14,24 +14,19 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<FirestoreError | null>(null);
   
-  const lastSerializedData = useRef<string>('');
-  const activePathRef = useRef<string | null>(null);
+  const lastPath = useRef<string | null>(null);
 
   useEffect(() => {
-    const currentPath = ref?.path || null;
-
-    if (!ref || !currentPath) {
-      if (data !== null) {
-        setData(null);
-        lastSerializedData.current = '';
-        activePathRef.current = null;
-      }
+    if (!ref) {
+      setData(null);
+      lastPath.current = null;
       return;
     }
 
-    if (currentPath === activePathRef.current) return;
-    activePathRef.current = currentPath;
+    const currentPath = ref.path;
+    if (currentPath === lastPath.current) return;
     
+    lastPath.current = currentPath;
     setLoading(true);
 
     const unsubscribe = onSnapshot(
@@ -41,25 +36,18 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
           ? ({ ...snapshot.data()!, id: snapshot.id } as T & { id: string }) 
           : null;
         
-        const serialized = JSON.stringify(docData);
-        if (serialized !== lastSerializedData.current) {
-          lastSerializedData.current = serialized;
-          setData(docData);
-        }
+        setData(docData);
         setLoading(false);
         setError(null);
       },
       (err) => {
-        console.warn("Firestore doc sync status:", err.code);
+        console.warn("Firestore doc sync error:", err.code);
         setError(err);
         setLoading(false);
       }
     );
 
-    return () => {
-      unsubscribe();
-      activePathRef.current = null;
-    };
+    return () => unsubscribe();
   }, [ref]);
 
   return { data, loading, error };

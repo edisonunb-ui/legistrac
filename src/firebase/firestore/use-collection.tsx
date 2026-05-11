@@ -14,24 +14,23 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<FirestoreError | null>(null);
   
-  const lastSerializedData = useRef<string>('');
-  const activeQueryHash = useRef<string | null>(null);
+  const lastQueryId = useRef<string | null>(null);
 
   useEffect(() => {
+    // Se a query for nula, limpamos os dados e paramos
     if (!query) {
-      if (data.length > 0) {
-        setData([]);
-        lastSerializedData.current = '';
-        activeQueryHash.current = null;
-      }
+      setData([]);
+      lastQueryId.current = null;
       return;
     }
 
-    // Geramos um hash estável baseado na string da query para evitar reconexões desnecessárias
-    const queryId = query.toString();
-    if (activeQueryHash.current === queryId) return;
+    // Geramos um ID estável para a query. toString() no Firestore é confiável.
+    const currentQueryId = query.toString();
     
-    activeQueryHash.current = queryId;
+    // Se a query for a mesma da última execução, não fazemos nada (evita loop)
+    if (currentQueryId === lastQueryId.current) return;
+    
+    lastQueryId.current = currentQueryId;
     setLoading(true);
 
     const unsubscribe = onSnapshot(
@@ -42,27 +41,19 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
           id: doc.id,
         } as T & { id: string }));
         
-        const serialized = JSON.stringify(items);
-        if (serialized !== lastSerializedData.current) {
-          lastSerializedData.current = serialized;
-          setData(items);
-        }
+        setData(items);
         setLoading(false);
         setError(null);
       },
       (err) => {
-        // Erros de permissão ou rede são tratados silenciosamente para não quebrar a UI
-        console.warn("Firestore sync status:", err.code);
+        console.warn("Firestore collection sync error:", err.code);
         setError(err);
         setLoading(false);
       }
     );
 
-    return () => {
-      unsubscribe();
-      activeQueryHash.current = null;
-    };
-  }, [query]); // Removida a dependência do data.length para evitar loops
+    return () => unsubscribe();
+  }, [query]);
 
   return { data, loading, error };
 }
