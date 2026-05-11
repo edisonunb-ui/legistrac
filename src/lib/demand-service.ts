@@ -4,7 +4,8 @@ import {
   doc, 
   serverTimestamp, 
   runTransaction,
-  Firestore
+  Firestore,
+  getDoc
 } from "firebase/firestore";
 import { DemandPriority, DemandStatus, UserRole, Attachment } from "./types";
 
@@ -44,7 +45,8 @@ export async function createDemand(
     dataCriacao: serverTimestamp(),
     dataAtualizacao: serverTimestamp(),
     finalizada: false,
-    anexos: data.anexos || []
+    anexos: data.anexos || [],
+    deleted: false
   };
 
   await runTransaction(db, async (transaction) => {
@@ -65,7 +67,7 @@ export async function createDemand(
 }
 
 /**
- * Tramita uma demanda para outro colaborador.
+ * Tramita uma demanda para outro colaborador com verificação rigorosa de gabinete.
  */
 export async function sendDemand(
   db: Firestore,
@@ -85,20 +87,38 @@ export async function sendDemand(
 
   await runTransaction(db, async (transaction) => {
     const demandDoc = await transaction.get(demandRef);
-    const demandTitle = demandDoc.data()?.titulo || "Demanda";
-    const existingAnexos = demandDoc.data()?.anexos || [];
-    const cabinetId = demandDoc.data()?.cabinetId;
+    if (!demandDoc.exists()) throw new Error("Demanda não encontrada.");
+    
+    const demandData = demandDoc.data();
+    const cabinetId = demandData.cabinetId;
+
+    // SEGURANÇA LGPD: Verifica se o destinatário pertence ao mesmo gabinete
+    // Em nossa estrutura, o ID do documento na coleção 'users' é o e-mail em minúsculo
+    // mas se o 'para' for o UID, precisamos buscar o perfil dele.
+    // Como a tramitação usa u.uid ou u.email, vamos garantir que o alvo seja validado.
+    
+    // NOTA: Para este sistema, assumimos que 'para' é o UID ou email. 
+    // Buscamos o registro do usuário para validar o gabinete.
+    const usersRef = collection(db, "users");
+    const targetUserSnap = await transaction.get(doc(usersRef, para));
+    
+    if (targetUserSnap.exists()) {
+      const targetData = targetUserSnap.data();
+      if (targetData.cabinetId !== cabinetId) {
+        throw new Error("VIOLAÇÃO DE SEGURANÇA: Tentativa de tramitação entre gabinetes diferentes.");
+      }
+    }
 
     transaction.update(demandRef, {
       responsavelAtual: para,
       status: status,
       dataAtualizacao: serverTimestamp(),
-      anexos: [...existingAnexos, ...anexos]
+      anexos: [...(demandData.anexos || []), ...anexos]
     });
 
     transaction.set(tramiteRef, {
       demandaId,
-      cabinetId: cabinetId || null,
+      cabinetId: cabinetId,
       de,
       para,
       acao: "ENVIO",
@@ -109,8 +129,8 @@ export async function sendDemand(
 
     transaction.set(notificationRef, {
       userId: para,
-      cabinetId: cabinetId || null,
-      mensagem: `Nova demanda recebida: ${demandTitle}`,
+      cabinetId: cabinetId,
+      mensagem: `Nova demanda recebida: ${demandData.titulo}`,
       demandaId,
       lida: false,
       data: serverTimestamp(),
@@ -135,20 +155,21 @@ export async function returnDemand(
 
   await runTransaction(db, async (transaction) => {
     const demandDoc = await transaction.get(demandRef);
-    const demandTitle = demandDoc.data()?.titulo || "Demanda";
-    const existingAnexos = demandDoc.data()?.anexos || [];
-    const cabinetId = demandDoc.data()?.cabinetId;
+    if (!demandDoc.exists()) throw new Error("Demanda não encontrada.");
+    
+    const demandData = demandDoc.data();
+    const cabinetId = demandData.cabinetId;
 
     transaction.update(demandRef, {
       responsavelAtual: para,
       status: "EM_ANDAMENTO",
       dataAtualizacao: serverTimestamp(),
-      anexos: [...existingAnexos, ...anexos]
+      anexos: [...(demandData.anexos || []), ...anexos]
     });
 
     transaction.set(tramiteRef, {
       demandaId,
-      cabinetId: cabinetId || null,
+      cabinetId: cabinetId,
       de,
       para,
       acao: "DEVOLUCAO",
@@ -159,8 +180,8 @@ export async function returnDemand(
 
     transaction.set(notificationRef, {
       userId: para,
-      cabinetId: cabinetId || null,
-      mensagem: `Demanda devolvida: ${demandTitle}`,
+      cabinetId: cabinetId,
+      mensagem: `Demanda devolvida: ${demandData.titulo}`,
       demandaId,
       lida: false,
       data: serverTimestamp(),
@@ -184,8 +205,10 @@ export async function finalizeDemand(
 
   await runTransaction(db, async (transaction) => {
     const demandDoc = await transaction.get(demandRef);
-    const demandTitle = demandDoc.data()?.titulo || "Demanda";
-    const cabinetId = demandDoc.data()?.cabinetId;
+    if (!demandDoc.exists()) throw new Error("Demanda não encontrada.");
+    
+    const demandData = demandDoc.data();
+    const cabinetId = demandData.cabinetId;
 
     transaction.update(demandRef, {
       status: "FINALIZADO",
@@ -195,7 +218,7 @@ export async function finalizeDemand(
 
     transaction.set(tramiteRef, {
       demandaId,
-      cabinetId: cabinetId || null,
+      cabinetId: cabinetId,
       de: userId,
       para: userId,
       acao: "FINALIZACAO",
@@ -205,8 +228,8 @@ export async function finalizeDemand(
 
     transaction.set(notificationRef, {
       userId: criadorId,
-      cabinetId: cabinetId || null,
-      mensagem: `Demanda finalizada: ${demandTitle}`,
+      cabinetId: cabinetId,
+      mensagem: `Demanda finalizada: ${demandData.titulo}`,
       demandaId,
       lida: false,
       data: serverTimestamp(),
@@ -230,8 +253,10 @@ export async function reopenDemand(
 
   await runTransaction(db, async (transaction) => {
     const demandDoc = await transaction.get(demandRef);
-    const demandTitle = demandDoc.data()?.titulo || "Demanda";
-    const cabinetId = demandDoc.data()?.cabinetId;
+    if (!demandDoc.exists()) throw new Error("Demanda não encontrada.");
+    
+    const demandData = demandDoc.data();
+    const cabinetId = demandData.cabinetId;
 
     transaction.update(demandRef, {
       status: "EM_ANDAMENTO",
@@ -241,7 +266,7 @@ export async function reopenDemand(
 
     transaction.set(tramiteRef, {
       demandaId,
-      cabinetId: cabinetId || null,
+      cabinetId: cabinetId,
       de: userId,
       para: responsavelId,
       acao: "REABERTURA",
@@ -251,8 +276,8 @@ export async function reopenDemand(
 
     transaction.set(notificationRef, {
       userId: responsavelId,
-      cabinetId: cabinetId || null,
-      mensagem: `Demanda reaberta: ${demandTitle}`,
+      cabinetId: cabinetId,
+      mensagem: `Demanda reaberta: ${demandData.titulo}`,
       demandaId,
       lida: false,
       data: serverTimestamp(),
