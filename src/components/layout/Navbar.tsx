@@ -70,13 +70,13 @@ export function Navbar() {
                   <Menu size={24} />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[280px] p-0 border-r border-accent/20">
+              <SheetContent side="left" className="w-[280px] p-0 border-r border-primary/20">
                 <SheetHeader className="p-6 border-b text-left">
                   <SheetTitle className="flex items-center gap-2">
-                    <div className="p-1 bg-firebase-gradient rounded">
+                    <div className="p-1 bg-cabinet-gradient rounded">
                        <Target className="text-white" size={20} />
                     </div>
-                    <span className="font-bold tracking-tight">GESTOR<span className="text-accent">2026</span></span>
+                    <span className="font-bold tracking-tight">LEGIS<span className="text-primary">TRAC</span></span>
                   </SheetTitle>
                 </SheetHeader>
                 <div className="flex flex-col py-4">
@@ -88,11 +88,11 @@ export function Navbar() {
                       className={cn(
                         "flex items-center gap-3 px-6 py-4 text-sm font-bold transition-colors",
                         pathname === item.href 
-                          ? "text-accent bg-accent/10 border-r-4 border-accent" 
+                          ? "text-primary bg-primary/10 border-r-4 border-primary" 
                           : "text-muted-foreground hover:bg-muted"
                       )}
                     >
-                      <item.icon size={18} className={pathname === item.href ? "text-accent" : ""} />
+                      <item.icon size={18} className={pathname === item.href ? "text-primary" : ""} />
                       {item.label}
                     </Link>
                   ))}
@@ -102,12 +102,12 @@ export function Navbar() {
           </div>
 
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="p-1.5 bg-firebase-gradient rounded text-white shadow-lg shadow-accent/20 group-hover:scale-105 transition-transform">
+            <div className="p-1.5 bg-cabinet-gradient rounded text-white shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
               <Target size={20} />
             </div>
             <div className="flex flex-col leading-none">
-              <span className="text-lg font-black tracking-tighter">GESTOR<span className="text-accent">2026</span></span>
-              <span className="text-[9px] text-accent/70 font-bold uppercase tracking-widest truncate max-w-[120px] sm:max-w-none">
+              <span className="text-lg font-black tracking-tighter">LEGIS<span className="text-primary">TRAC</span></span>
+              <span className="text-[9px] text-primary/70 font-bold uppercase tracking-widest truncate max-w-[120px] sm:max-w-none">
                 {isSuperAdmin ? "Central SuperAdmin" : (cabinet as any)?.vereador || "Gabinete"}
               </span>
             </div>
@@ -120,10 +120,10 @@ export function Navbar() {
                 href={item.href}
                 className={cn(
                   "px-3 py-2 rounded-md text-sm font-bold transition-colors flex items-center gap-2",
-                  pathname === item.href ? "text-accent bg-accent/10" : "text-muted-foreground hover:text-accent hover:bg-accent/5"
+                  pathname === item.href ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
                 )}
               >
-                <item.icon size={16} className={cn(pathname === item.href ? "text-accent" : "text-muted-foreground")} />
+                <item.icon size={16} className={cn(pathname === item.href ? "text-primary" : "text-muted-foreground")} />
                 {item.label}
               </Link>
             ))}
@@ -133,31 +133,31 @@ export function Navbar() {
         <div className="flex items-center gap-2 sm:gap-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-10 w-10 rounded-full border-2 border-accent/50 p-0 overflow-hidden hover:border-accent transition-colors">
+              <Button variant="ghost" className="relative h-10 w-10 rounded-full border-2 border-primary/50 p-0 overflow-hidden hover:border-primary transition-colors">
                 <Avatar className="h-full w-full">
-                  <AvatarFallback className="bg-accent text-accent-foreground font-black">
+                  <AvatarFallback className="bg-primary text-primary-foreground font-black">
                     {(profile as any)?.nome?.[0] || "U"}
                   </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 bg-card border-accent/20" align="end">
+            <DropdownMenuContent className="w-56 bg-card border-primary/20" align="end">
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-bold truncate">{(profile as any)?.nome}</p>
-                  <p className="text-[10px] text-accent font-bold truncate uppercase">{(profile as any)?.perfil}</p>
+                  <p className="text-[10px] text-primary font-bold truncate uppercase">{(profile as any)?.perfil}</p>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-accent/10" />
-              <DropdownMenuItem onClick={() => router.push("/usuarios")} className="hover:bg-accent/10 focus:bg-accent/10">
-                <Users size={14} className="mr-2 text-accent" /> Equipe do Gabinete
+              <DropdownMenuSeparator className="bg-primary/10" />
+              <DropdownMenuItem onClick={() => router.push("/usuarios")} className="hover:bg-primary/10 focus:bg-primary/10">
+                <Users size={14} className="mr-2 text-primary" /> Equipe do Gabinete
               </DropdownMenuItem>
               {isSuperAdmin && (
-                <DropdownMenuItem onClick={() => router.push("/gabinetes")} className="text-accent font-bold hover:bg-accent/10 focus:bg-accent/10">
+                <DropdownMenuItem onClick={() => router.push("/gabinetes")} className="text-primary font-bold hover:bg-primary/10 focus:bg-primary/10">
                   <Building2 size={14} className="mr-2" /> Gabinetes Isolados
                 </DropdownMenuItem>
               )}
-              <DropdownMenuSeparator className="bg-accent/10" />
+              <DropdownMenuSeparator className="bg-primary/10" />
               <DropdownMenuItem onClick={handleLogout} className="text-destructive hover:bg-destructive/10 focus:bg-destructive/10">
                 <LogOut size={14} className="mr-2" /> Sair do Sistema
               </DropdownMenuItem>
