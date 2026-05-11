@@ -6,7 +6,7 @@ O sistema de arquivos foi liberado para o seu protótipo.
 ## Como fazer o PDF de 1MB subir agora:
 
 1. **Regras de Acesso**: Já mudei o arquivo `storage.rules` para o modo de teste (`if true`). 
-   - **IMPORTANTE**: Vá ao [Console do Firebase](https://console.firebase.google.com/) > **Storage** > **Rules** e clique no botão azul **"Publicar"** (Publish) para confirmar essa mudança.
+   - **IMPORTANTE**: Vá ao [Console do Firebase](https://console.firebase.google.com/) > **Storage** > **Rules** e clique no botão azul **"Publicar"** (Publish) para confirmar essa mudança. O botão "Executar" é apenas um teste, não serve para salvar.
 
 2. **CORS (Caso ainda falhe em 0%)**: 
    - Se a barra de progresso não mexer, rode este comando final no Cloud Shell para garantir que o navegador possa falar com o seu novo balde:
