@@ -15,21 +15,24 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [error, setError] = useState<FirestoreError | null>(null);
   
   // Referência estável para a query baseada no seu conteúdo stringificado
-  const queryKey = useRef<string | null>(null);
+  // Isso interrompe o loop infinito de re-renders
+  const lastQueryKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (!query) {
       setData([]);
-      queryKey.current = null;
+      lastQueryKey.current = null;
       return;
     }
 
-    const currentKey = JSON.stringify((query as any)._query || query.toString());
+    // Criamos uma chave única para a query para evitar loops
+    const currentQueryKey = JSON.stringify((query as any)._query || query.toString());
     
-    // Se a query for logicamente a mesma, não reinicia o listener
-    if (queryKey.current === currentKey) return;
+    if (lastQueryKey.current === currentQueryKey) {
+      return;
+    }
     
-    queryKey.current = currentKey;
+    lastQueryKey.current = currentQueryKey;
     setLoading(true);
 
     const unsubscribe = onSnapshot(
@@ -45,9 +48,8 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
         setError(null);
       },
       (err) => {
-        // Silenciamos permissões negadas comuns durante o desenvolvimento
         if (err.code !== 'permission-denied') {
-          console.warn("Firestore Sync:", err.code);
+          console.error("Firestore Error:", err);
         }
         setError(err);
         setLoading(false);

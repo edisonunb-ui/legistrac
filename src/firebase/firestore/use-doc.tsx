@@ -24,7 +24,9 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
     }
 
     const currentPath = ref.path;
-    if (currentPath === lastPath.current) return;
+    if (currentPath === lastPath.current) {
+      return;
+    }
     
     lastPath.current = currentPath;
     setLoading(true);
@@ -42,7 +44,7 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
       },
       (err) => {
         if (err.code !== 'permission-denied') {
-          console.warn("Firestore Doc Sync:", err.code);
+          console.error("Firestore Doc Error:", err);
         }
         setError(err);
         setLoading(false);

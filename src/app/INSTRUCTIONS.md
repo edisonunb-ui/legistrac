@@ -5,7 +5,7 @@ Se você recebeu erro 403 (Unauthorized):
 1. Acesse o [Console do Firebase](https://console.firebase.google.com/).
 2. Vá em **Storage** > **Rules** (Regras).
 3. Certifique-se de que a regra permite `allow read, write: if request.auth != null;`.
-4. Clique em **Publicar** (Publish).
+4. **IMPORTANTE:** Mesmo que o código pareça correto, clique no botão azul **"Publicar"** (Publish) para garantir que o Firebase ative a permissão.
 
 ## 2. Liberar Upload de Arquivos (CORS)
 Após ativar o Storage, siga estes passos no **Cloud Shell**:
