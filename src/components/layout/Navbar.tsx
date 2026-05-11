@@ -76,7 +76,7 @@ export function Navbar() {
                     <div className="p-1 bg-cabinet-gradient rounded">
                        <Target className="text-white" size={20} />
                     </div>
-                    <span className="font-bold tracking-tight">LEGIS<span className="text-primary">TRAC</span></span>
+                    <span className="font-bold tracking-tight text-foreground">LEGIS<span className="text-primary">TRAC</span></span>
                   </SheetTitle>
                 </SheetHeader>
                 <div className="flex flex-col py-4">
@@ -106,7 +106,7 @@ export function Navbar() {
               <Target size={20} />
             </div>
             <div className="flex flex-col leading-none">
-              <span className="text-lg font-black tracking-tighter">LEGIS<span className="text-primary">TRAC</span></span>
+              <span className="text-lg font-black tracking-tighter text-foreground">LEGIS<span className="text-primary">TRAC</span></span>
               <span className="text-[9px] text-primary/70 font-bold uppercase tracking-widest truncate max-w-[120px] sm:max-w-none">
                 {isSuperAdmin ? "Central SuperAdmin" : (cabinet as any)?.vereador || "Gabinete"}
               </span>

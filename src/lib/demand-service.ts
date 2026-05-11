@@ -1,4 +1,3 @@
-
 import { 
   collection, 
   doc, 
@@ -92,13 +91,7 @@ export async function sendDemand(
     const demandData = demandDoc.data();
     const cabinetId = demandData.cabinetId;
 
-    // SEGURANÇA LGPD: Verifica se o destinatário pertence ao mesmo gabinete
-    // Em nossa estrutura, o ID do documento na coleção 'users' é o e-mail em minúsculo
-    // mas se o 'para' for o UID, precisamos buscar o perfil dele.
-    // Como a tramitação usa u.uid ou u.email, vamos garantir que o alvo seja validado.
-    
-    // NOTA: Para este sistema, assumimos que 'para' é o UID ou email. 
-    // Buscamos o registro do usuário para validar o gabinete.
+    // SEGURANÇA: Busca o registro do usuário para validar o gabinete.
     const usersRef = collection(db, "users");
     const targetUserSnap = await transaction.get(doc(usersRef, para));
     
