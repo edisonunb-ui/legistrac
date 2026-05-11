@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useCollection, useDoc, useStorage, useMemoFirebase } from "@/firebase";
@@ -12,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, Loader2, User as UserIcon, Paperclip, X, FileText } from "lucide-react";
+import { ChevronLeft, Save, Loader2, User as UserIcon, Paperclip, X, FileText, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority, Attachment } from "@/lib/types";
 import { collection, query, Timestamp, doc, where } from "firebase/firestore";
@@ -138,7 +139,7 @@ export default function NewDemandPage() {
       console.error("Submit error:", error);
       toast({
         title: "Erro no Envio",
-        description: "Falha ao processar arquivos ou dados.",
+        description: "Verifique se o CORS do Google Cloud foi configurado. Caso contrário, o upload será bloqueado.",
         variant: "destructive",
       });
       setSaving(false);
@@ -214,6 +215,14 @@ export default function NewDemandPage() {
                     <Paperclip size={14} /> Anexar Documentação
                   </Label>
                 </div>
+                
+                <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-md flex gap-3 mb-4">
+                   <AlertCircle size={16} className="text-amber-500 shrink-0" />
+                   <p className="text-[10px] text-amber-700 leading-tight">
+                     Certifique-se de que o CORS do projeto foi liberado no Google Cloud Shell, caso contrário o upload falhará por segurança.
+                   </p>
+                </div>
+
                 <Input type="file" multiple className="bg-background cursor-pointer h-10 pt-2" onChange={handleFileChange} disabled={saving} />
                 
                 {files.length > 0 && (
