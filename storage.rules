@@ -1,13 +1,12 @@
 
 rules_version = '2';
 
-// Modo de Emergência: Permite acesso total para destravar o projeto do usuário.
-// IMPORTANTE: Para segurança real, o usuário deve autorizar o domínio no Firebase Auth
-// e mudar para 'if request.auth != null;'
+// SOLUÇÃO DEFINITIVA: Apenas usuários logados podem ler e escrever.
+// Requer que o domínio do site esteja na lista de "Authorized Domains" no Firebase Auth.
 service firebase.storage {
   match /b/{bucket}/o {
     match /{allPaths=**} {
-      allow read, write: if true;
+      allow read, write: if request.auth != null;
     }
   }
 }

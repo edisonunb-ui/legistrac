@@ -1,23 +1,24 @@
 
-# 🚨 GUIA DE EMERGÊNCIA - ERRO [storage/unauthorized]
+# 🚀 GUIA DA SOLUÇÃO DEFINITIVA (ERRO 403)
 
-Se você está vendo o erro "User does not have permission", o Firebase está bloqueando o seu site por segurança. Siga estes 2 passos para resolver agora:
+Se o seu upload continua dando erro mesmo com o Plano Blaze ativo, o problema é a **Autorização de Domínio**. O Firebase só aceita arquivos de sites que ele "conhece".
 
-## 1. O "Atalho" (Funciona na hora, mas é menos seguro)
-Vá no [Console do Firebase](https://console.firebase.google.com/) > **Storage** > **Rules** e mude a linha 5 para:
-`allow read, write: if true;`
-Depois clique em **Publicar**. Isso vai liberar o upload imediatamente.
+## 1. Como arrumar agora (Definitivo e Seguro)
+1. No seu navegador, copie o link do site (ex: `https://...-firebase-studio.google`).
+2. Acesse o [Console do Firebase](https://console.firebase.google.com/).
+3. Vá em **Authentication** > **Settings** > **Authorized domains**.
+4. Clique em **Add domain** e cole o link.
+5. Volte no **Storage** > **Rules** e garanta que está assim:
+   `allow read, write: if request.auth != null;`
+6. Clique em **Publicar**.
 
-## 2. A Solução Definitiva (Segura)
-Se quiser manter o cadeado trancado (`if request.auth != null`), você PRECISA autorizar o domínio:
-1. Acesse: **Authentication** > **Settings** > **Authorized domains**.
-2. Clique em **Add domain**.
-3. Copie o endereço que aparece no seu navegador agora (ex: `https://...-firebase-studio.google`) e cole lá.
-4. Salve. 
+## 2. Por que isso acontece?
+É uma proteção do Google. Ele impede que outros sites usem o seu "estoque" de arquivos sem permissão. Ao adicionar o domínio, você está dando o "crachá de acesso" para o seu site.
 
 ---
 
-### Status Atual:
-- **CORS**: OK (Configurado ontem).
-- **Plano Blaze**: OK (Ativo).
-- **Regras**: Pendente sua publicação no painel do Firebase.
+### Verificação de Status:
+- **Plano Blaze**: ✅ Ativo
+- **CORS (gsutil)**: ✅ Configurado
+- **Regras de Segurança**: 🔒 Protegidas (Requer Autenticação)
+- **Domínio Autorizado**: ⏳ Pendente seu clique no Firebase

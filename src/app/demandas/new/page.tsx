@@ -13,12 +13,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, Loader2, Paperclip, X, CheckCircle2, AlertCircle, ShieldAlert } from "lucide-react";
+import { ChevronLeft, Save, Loader2, Paperclip, X, CheckCircle2, AlertCircle, ShieldAlert, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority, Attachment } from "@/lib/types";
 import { collection, query, Timestamp, doc, where } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function NewDemandPage() {
   const { user, loading: authLoading } = useUser();
@@ -87,7 +88,7 @@ export default function NewDemandPage() {
             },
             (error: any) => {
               console.error("Erro no Storage:", error.code);
-              reject(new Error(`Erro [${error.code}]: ${error.message}`));
+              reject(new Error(error.code));
             },
             async () => {
               const url = await getDownloadURL(uploadTask.snapshot.ref);
@@ -133,11 +134,6 @@ export default function NewDemandPage() {
     } catch (error: any) {
       setSaving(false);
       setLastError(error.message);
-      toast({
-        title: "Erro no Protocolo",
-        description: error.message,
-        variant: "destructive",
-      });
     }
   };
 
@@ -154,21 +150,25 @@ export default function NewDemandPage() {
           <h1 className="text-3xl font-black uppercase tracking-tighter">Nova <span className="text-primary">Demanda</span></h1>
         </header>
 
-        {lastError?.includes('storage/unauthorized') && (
-          <Card className="mb-6 border-destructive bg-destructive/10">
-            <CardContent className="pt-6 flex gap-4">
-              <ShieldAlert className="text-destructive shrink-0" size={24} />
-              <div className="space-y-2">
-                <h3 className="font-bold text-destructive uppercase text-sm">Acesso Negado ao Storage</h3>
-                <p className="text-xs leading-relaxed">
-                  O Firebase está bloqueando o seu site por segurança. Para resolver: <br />
-                  1. Vá em <b>Authentication > Settings > Authorized Domains</b> no Firebase.<br />
-                  2. Adicione este domínio: <b>{typeof window !== 'undefined' ? window.location.hostname : 'seu-site'}</b><br />
-                  3. Ou mude as Rules do Storage para <b>if true;</b> temporariamente.
-                </p>
+        {lastError === 'storage/unauthorized' && (
+          <Alert variant="destructive" className="mb-6 bg-destructive/10 border-destructive">
+            <ShieldAlert className="h-5 w-5" />
+            <AlertTitle className="font-bold uppercase text-xs">Acesso Negado (Domínio não autorizado)</AlertTitle>
+            <AlertDescription className="text-[11px] mt-2 space-y-2">
+              <p>O Firebase bloqueou o upload porque este site ainda não está na sua lista de permissões.</p>
+              <div className="p-3 bg-black/20 rounded font-mono break-all text-[10px]">
+                Link para copiar: <b>{typeof window !== 'undefined' ? window.location.origin : '...'}</b>
               </div>
-            </CardContent>
-          </Card>
+              <p>
+                <b>Como arrumar:</b> Vá no Console do Firebase > Authentication > Settings > Authorized Domains e adicione o link acima.
+              </p>
+              <Button size="sm" variant="outline" className="h-7 text-[9px] font-bold mt-2" asChild>
+                <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer">
+                  Abrir Console do Firebase <ExternalLink size={10} className="ml-1" />
+                </a>
+              </Button>
+            </AlertDescription>
+          </Alert>
         )}
 
         <Card className="max-w-4xl border-primary/10 bg-card shadow-2xl overflow-hidden">
