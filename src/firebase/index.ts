@@ -7,14 +7,17 @@ import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 
-// Configurações sincronizadas com o projeto exibido no console do usuário
+/**
+ * Configurações mestre restauradas para o projeto "legistrac".
+ * Este é o projeto que contém os dados originais da equipe e demandas.
+ */
 const firebaseConfig = {
   apiKey: "AIzaSyBh9hcARIT6NNLM0T583mn9Ts5RqC2AgfI",
-  authDomain: "pesquisa-62831355-9c7d1.firebaseapp.com",
-  projectId: "pesquisa-62831355-9c7d1",
-  storageBucket: "pesquisa-62831355-9c7d1.firebasestorage.app",
-  messagingSenderId: "736970891304",
-  appId: "1:736970891304:web:0cb8d3fad5bb3c9e38951d"
+  authDomain: "legistrac.firebaseapp.com",
+  projectId: "legistrac",
+  storageBucket: "legistrac.firebasestorage.app",
+  messagingSenderId: "372698262234",
+  appId: "1:372698262234:web:c25797ba44250fa93813e3"
 };
 
 let appInstance: FirebaseApp;

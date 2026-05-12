@@ -160,10 +160,7 @@ export default function NewDemandPage() {
                 Domínio atual: <b>{typeof window !== 'undefined' ? window.location.origin : '...'}</b>
               </div>
               <p>
-                <b>Solução 1:</b> Vá no Firebase &gt; Authentication &gt; Settings &gt; Authorized Domains e adicione o link acima.
-              </p>
-              <p>
-                <b>Solução 2:</b> Se estiver com pressa, vá no Storage &gt; Rules e mude temporariamente para <b>allow read, write: if true;</b>
+                <b>Como arrumar:</b> Vá no Console do Firebase &gt; Authentication &gt; Settings &gt; Authorized Domains e adicione o link acima.
               </p>
               <Button size="sm" variant="outline" className="h-7 text-[9px] font-bold mt-2" asChild>
                 <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer">
