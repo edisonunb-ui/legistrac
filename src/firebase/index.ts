@@ -7,7 +7,8 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 /**
- * Configurações oficiais do projeto LegisTrac.
+ * CONFIGURAÇÃO OFICIAL E ÚNICA DO PROJETO LEGISTRAC
+ * Mantendo o ID 'legistrac' para recuperar usuários e dados originais.
  */
 const firebaseConfig = {
   apiKey: "AIzaSyBh9hcARIT6NNLM0T583mn9Ts5RqC2AgfI",

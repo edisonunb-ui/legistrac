@@ -153,14 +153,14 @@ export default function NewDemandPage() {
         {lastError && (
           <Alert variant="destructive" className="mb-6 bg-destructive/10 border-destructive">
             <ShieldAlert className="h-5 w-5" />
-            <AlertTitle className="font-bold uppercase text-xs">Erro no Processamento</AlertTitle>
+            <AlertTitle className="font-bold uppercase text-xs">Erro de Permissão</AlertTitle>
             <AlertDescription className="text-[11px] mt-2 space-y-2">
-              <p>Ocorreu uma falha ao tentar enviar os arquivos para o servidor.</p>
+              <p>O Firebase Storage bloqueou o seu upload devido às regras de segurança.</p>
               <div className="p-3 bg-black/20 rounded font-mono break-all text-[10px]">
                 Código do Erro: <b>{lastError}</b>
               </div>
               <p>
-                <b>Dica:</b> Vá na aba <b>Rules</b> do Storage no Firebase, certifique-se que as regras estão publicadas como <b>if true;</b> e tente novamente.
+                <b>Ação Necessária:</b> Vá no Console do Firebase em Storage, aba Rules, e clique em PUBLICAR para ativar as novas regras de acesso.
               </p>
               <Button size="sm" variant="outline" className="h-7 text-[9px] font-bold mt-2" asChild>
                 <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer">

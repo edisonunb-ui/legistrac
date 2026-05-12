@@ -1,7 +1,8 @@
 rules_version = '2';
 
-// MODO DE TESTE: Permite upload imediato ignorando erros de Authorized Domains.
-// Recomendado apenas durante a fase de desenvolvimento no Studio.
+// MODO DE DESENVOLVIMENTO SÊNIOR: 
+// Permite acesso total para contornar problemas de Authorized Domains no Studio.
+// Isso garante que o upload funcione agora.
 service firebase.storage {
   match /b/{bucket}/o {
     match /{allPaths=**} {
