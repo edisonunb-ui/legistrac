@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useFirestore, useAuthInstance, useDoc } from "@/firebase";
@@ -45,19 +44,10 @@ export function Navbar() {
   const [time, setTime] = useState<string | null>(null);
   const [fullDate, setFullDate] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [mounted, setMounted] = useState(false);
 
-  const userEmail = user?.email?.toLowerCase().trim();
-  const isSuperAdmin = useMemo(() => userEmail === MASTER_EMAIL, [userEmail]);
-
-  const userProfileQuery = useMemo(() => (db && userEmail) ? doc(db, "users", userEmail) : null, [db, userEmail]);
-  const { data: profile } = useDoc(userProfileQuery);
-
-  const cabinetId = (profile as any)?.cabinetId;
-  const cabinetQuery = useMemo(() => (db && cabinetId) ? doc(db, "gabinetes", cabinetId) : null, [db, cabinetId]);
-  const { data: cabinet } = useDoc(cabinetQuery);
-
-  // Relógio em tempo real - Brasília
   useEffect(() => {
+    setMounted(true);
     const updateTime = () => {
       const now = new Date();
       setCurrentDate(now);
@@ -83,6 +73,16 @@ export function Navbar() {
     return () => clearInterval(interval);
   }, []);
 
+  const userEmail = user?.email?.toLowerCase().trim();
+  const isSuperAdmin = useMemo(() => userEmail === MASTER_EMAIL, [userEmail]);
+
+  const userProfileQuery = useMemo(() => (db && userEmail) ? doc(db, "users", userEmail) : null, [db, userEmail]);
+  const { data: profile } = useDoc(userProfileQuery);
+
+  const cabinetId = (profile as any)?.cabinetId;
+  const cabinetQuery = useMemo(() => (db && cabinetId) ? doc(db, "gabinetes", cabinetId) : null, [db, cabinetId]);
+  const { data: cabinet } = useDoc(cabinetQuery);
+
   const handleLogout = async () => {
     if (!auth) return;
     await signOut(auth);
@@ -96,6 +96,8 @@ export function Navbar() {
     { label: "Legislativo", icon: Gavel, href: "/legislativo" },
     { label: "Lideranças", icon: Users, href: "/liderancas" },
   ];
+
+  if (!mounted) return null;
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-2 sm:px-0">
@@ -172,18 +174,16 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Relógio Global Expansível - Estilo Windows Modern */}
           {time && (
             <Popover>
               <PopoverTrigger asChild>
-                <button className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-900/50 hover:bg-slate-900 rounded-lg border border-slate-800 text-[10px] font-black uppercase tracking-widest text-muted-foreground transition-all active:scale-95 group">
+                <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-900/50 hover:bg-slate-900 rounded-lg border border-slate-800 text-[10px] font-black uppercase tracking-widest text-muted-foreground transition-all active:scale-95 group">
                   <Clock size={12} className="text-primary/50 group-hover:text-primary transition-colors" />
                   <span className="font-mono">{time.substring(0, 5)}</span>
                   <ChevronDown size={10} className="opacity-50" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-[320px] p-0 bg-[#05070a] border-slate-800 shadow-2xl overflow-hidden animate-in slide-in-from-top-2" align="end">
-                {/* Header Estilo Exemplo */}
+              <PopoverContent className="w-[320px] p-0 bg-[#05070a] border-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95" align="end">
                 <div className="p-6 bg-[#0c1120] border-b border-white/5">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">{fullDate}</span>
@@ -192,7 +192,6 @@ export function Navbar() {
                   <h2 className="text-4xl font-black font-mono tracking-tighter text-white leading-none">{time}</h2>
                 </div>
                 
-                {/* Calendário Estilo Exemplo */}
                 <div className="p-6">
                   <div className="mb-6 text-center">
                     <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/40">
@@ -210,7 +209,7 @@ export function Navbar() {
                       head_row: "flex w-full justify-between mb-4",
                       head_cell: "text-white font-black text-[10px] uppercase w-9 text-center",
                       row: "flex w-full justify-between mt-2",
-                      cell: "h-9 w-9 text-center text-xs p-0 relative focus-within:relative focus-within:z-20",
+                      cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
                       day: cn(
                         "h-9 w-9 p-0 font-bold text-white/50 hover:bg-white/10 hover:text-white rounded-none transition-all"
                       ),
