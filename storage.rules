@@ -2,7 +2,7 @@ rules_version = '2';
 
 // MODO DE DESENVOLVIMENTO SÊNIOR: 
 // Permite acesso total para contornar problemas de Authorized Domains no Studio.
-// Isso garante que o upload funcione agora.
+// IMPORTANTE: Aplique isso no projeto "legistrac" no console do Firebase.
 service firebase.storage {
   match /b/{bucket}/o {
     match /{allPaths=**} {

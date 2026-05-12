@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, Loader2, Paperclip, X, CheckCircle2, ShieldAlert, ExternalLink } from "lucide-react";
+import { ChevronLeft, Save, Loader2, Paperclip, X, CheckCircle2, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority, Attachment } from "@/lib/types";
 import { collection, query, Timestamp, doc, where } from "firebase/firestore";
@@ -131,7 +131,7 @@ export default function NewDemandPage() {
       setTimeout(() => router.push(`/demandas/${demandId}`), 1500);
     } catch (error: any) {
       setSaving(false);
-      setLastError(error.message || "Erro desconhecido");
+      setLastError(error.message || "Falha na conexão com o servidor de arquivos.");
     }
   };
 
@@ -151,17 +151,12 @@ export default function NewDemandPage() {
         {lastError && (
           <Alert variant="destructive" className="mb-6 bg-destructive/10 border-destructive">
             <ShieldAlert className="h-5 w-5" />
-            <AlertTitle className="font-bold uppercase text-xs">Atenção Necessária</AlertTitle>
+            <AlertTitle className="font-bold uppercase text-xs">Acesso Negado ou Falha de Domínio</AlertTitle>
             <AlertDescription className="text-[11px] mt-2 space-y-2">
-              <p>O upload falhou. Certifique-se de que clicou em PUBLICAR nas Rules do Storage no Firebase.</p>
+              <p>O upload falhou. Certifique-se de que clicou em PUBLICAR nas Rules do Storage no projeto <b>legistrac</b> do Firebase.</p>
               <div className="p-3 bg-black/20 rounded font-mono break-all text-[10px]">
                 Erro: {lastError}
               </div>
-              <Button size="sm" variant="outline" className="h-7 text-[9px] font-bold mt-2" asChild>
-                <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer">
-                  Abrir Console do Firebase
-                </a>
-              </Button>
             </AlertDescription>
           </Alert>
         )}

@@ -1,24 +1,31 @@
+# Guia de Estabilização - LegisTrac
 
-# 🚀 GUIA DA SOLUÇÃO DEFINITIVA (ERRO 403)
+## 1. Restaurar Usuários e Emails
+Seus dados estão no projeto **`legistrac`**. Garanti que o código aponte apenas para ele. 
+**Importante:** Se você estiver vendo o console do Firebase com o projeto "pesquisa-...", mude no topo para o projeto **`legistrac`**.
 
-Se o seu upload continua dando erro mesmo com o Plano Blaze ativo, o problema é a **Autorização de Domínio**. O Firebase só aceita arquivos de sites que ele "conhece".
+## 2. Liberar Upload (CORS)
+Para que o navegador aceite enviar arquivos, você deve rodar este comando no Cloud Shell do Google Cloud:
+```bash
+echo '[{"origin": ["*"],"method": ["GET", "POST", "PUT", "DELETE", "HEAD"],"responseHeader": ["Content-Type"],"maxAgeSeconds": 3600}]' > cors.json
+gsutil cors set cors.json gs://legistrac.firebasestorage.app
+```
 
-## 1. Como arrumar agora (Definitivo e Seguro)
-1. No seu navegador, copie o link do site (ex: `https://...-firebase-studio.google`).
-2. Acesse o [Console do Firebase](https://console.firebase.google.com/).
-3. Vá em **Authentication** > **Settings** > **Authorized domains**.
-4. Clique em **Add domain** e cole o link.
-5. Volte no **Storage** > **Rules** e garanta que está assim:
-   `allow read, write: if request.auth != null;`
-6. Clique em **Publicar**.
+## 3. Segurança (Storage Rules)
+No projeto **`legistrac`** do Firebase:
+1. Vá em **Storage** > **Rules**.
+2. Cole o código abaixo:
+   ```rules
+   rules_version = '2';
+   service firebase.storage {
+     match /b/{bucket}/o {
+       match /{allPaths=**} {
+         allow read, write: if true;
+       }
+     }
+   }
+   ```
+3. Clique em **PUBLICAR**. 
 
-## 2. Por que isso acontece?
-É uma proteção do Google. Ele impede que outros sites usem o seu "estoque" de arquivos sem permissão. Ao adicionar o domínio, você está dando o "crachá de acesso" para o seu site.
-
----
-
-### Verificação de Status:
-- **Plano Blaze**: ✅ Ativo
-- **CORS (gsutil)**: ✅ Configurado
-- **Regras de Segurança**: 🔒 Protegidas (Requer Autenticação)
-- **Domínio Autorizado**: ⏳ Pendente seu clique no Firebase
+## 4. Próximos Passos
+Uma vez que o upload de teste funcione, voltaremos a fechar a segurança para `if request.auth != null`.
