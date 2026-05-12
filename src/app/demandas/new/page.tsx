@@ -12,13 +12,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, Loader2, Paperclip, X, CheckCircle2, ShieldAlert } from "lucide-react";
+import { ChevronLeft, Save, Loader2, Paperclip, X, CheckCircle2, FileText } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority, Attachment } from "@/lib/types";
 import { collection, query, Timestamp, doc, where } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function NewDemandPage() {
   const { user, loading: authLoading } = useUser();
@@ -39,7 +38,6 @@ export default function NewDemandPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
   const [isFinished, setIsFinished] = useState(false);
-  const [lastError, setLastError] = useState<string | null>(null);
 
   const userEmail = useMemo(() => user?.email?.toLowerCase().trim() || null, [user?.email]);
   const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
@@ -56,7 +54,6 @@ export default function NewDemandPage() {
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
-      setLastError(null);
     }
   }, []);
 
@@ -85,9 +82,7 @@ export default function NewDemandPage() {
               const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
               setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
             },
-            (error: any) => {
-              reject(new Error(error.code));
-            },
+            (error: any) => reject(new Error(error.code)),
             async () => {
               const url = await getDownloadURL(uploadTask.snapshot.ref);
               resolve(url);
@@ -116,7 +111,6 @@ export default function NewDemandPage() {
     if (!user || !db || !cabinetId || saving) return;
     
     setSaving(true);
-    setLastError(null);
     try {
       const attachments = await uploadFiles();
       const demandId = await createDemand(db, user.uid, {
@@ -131,7 +125,11 @@ export default function NewDemandPage() {
       setTimeout(() => router.push(`/demandas/${demandId}`), 1500);
     } catch (error: any) {
       setSaving(false);
-      setLastError(error.message || "Falha na conexão com o servidor de arquivos.");
+      toast({ 
+        title: "Erro no Protocolo", 
+        description: "Verifique as Rules do Storage e tente novamente.", 
+        variant: "destructive" 
+      });
     }
   };
 
@@ -147,22 +145,6 @@ export default function NewDemandPage() {
           </Link>
           <h1 className="text-3xl font-black uppercase tracking-tighter">Nova <span className="text-primary">Demanda</span></h1>
         </header>
-
-        {lastError && (
-          <Alert variant="destructive" className="mb-6 bg-destructive/10 border-destructive">
-            <ShieldAlert className="h-5 w-5" />
-            <AlertTitle className="font-bold uppercase text-xs">Acesso Negado ou Falha de Domínio</AlertTitle>
-            <AlertDescription className="text-[11px] mt-2 space-y-2">
-              <p>O upload falhou. Certifique-se de que mudou a linha 9 das Rules para <b>if true;</b> e clicou em PUBLICAR no Storage.</p>
-              <div className="p-3 bg-black/20 rounded font-mono break-all text-[10px]">
-                {typeof window !== 'undefined' && window.location.origin}
-              </div>
-              <p className="mt-2">
-                <b>Como arrumar definitivo:</b> Vá no Console do Firebase &gt; Authentication &gt; Settings &gt; Authorized Domains e adicione o link acima.
-              </p>
-            </AlertDescription>
-          </Alert>
-        )}
 
         <Card className="max-w-4xl border-primary/10 bg-card shadow-2xl overflow-hidden">
           <form onSubmit={handleSubmit}>
@@ -194,8 +176,8 @@ export default function NewDemandPage() {
                     <SelectTrigger className="h-12 bg-background border-primary/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value={user?.uid || ""}>Manter comigo</SelectItem>
-                      {allUsers.filter((u: any) => u.uid !== user?.uid).map((u: any) => (
-                        <SelectItem key={u.uid} value={u.uid}>{u.nome}</SelectItem>
+                      {allUsers.filter((u: any) => (u.uid || u.id) !== user?.uid).map((u: any) => (
+                        <SelectItem key={u.uid || u.id} value={u.uid || u.id}>{u.nome}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -224,7 +206,10 @@ export default function NewDemandPage() {
                     {files.map((file, idx) => (
                       <div key={idx} className="bg-background p-3 rounded-lg border border-primary/10 flex flex-col gap-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold truncate max-w-[150px] uppercase text-muted-foreground">{file.name}</span>
+                          <div className="flex items-center gap-2 overflow-hidden">
+                            <FileText size={14} className="text-primary shrink-0" />
+                            <span className="text-[10px] font-bold truncate uppercase text-muted-foreground">{file.name}</span>
+                          </div>
                           {!saving && <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive" onClick={() => removeFile(idx)}><X size={14} /></Button>}
                         </div>
                         {uploadProgress[file.name] !== undefined && (

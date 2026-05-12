@@ -8,7 +8,7 @@ import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 /**
  * CONFIGURAÇÃO OFICIAL E ÚNICA DO PROJETO LEGISTRAC
- * Este é o projeto onde estão os usuários e demandas originais.
+ * Este projeto contém o banco de dados e usuários autorizados originais.
  */
 const firebaseConfig = {
   apiKey: "AIzaSyBh9hcARIT6NNLM0T583mn9Ts5RqC2AgfI",
