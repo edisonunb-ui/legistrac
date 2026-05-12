@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 // Bloqueia acesso público e permite apenas usuários autenticados no sistema

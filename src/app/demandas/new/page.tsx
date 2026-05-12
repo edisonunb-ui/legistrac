@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, Loader2, Paperclip, X, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, Save, Loader2, Paperclip, X, CheckCircle2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority, Attachment } from "@/lib/types";
 import { collection, query, Timestamp, doc, where } from "firebase/firestore";
@@ -84,8 +84,9 @@ export default function NewDemandPage() {
               setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
             },
             (error: any) => {
-              console.error("Erro no Storage:", error);
-              reject(new Error("Erro no upload do arquivo. Verifique sua conexão."));
+              console.error("Erro detalhado no Storage:", error);
+              // Repassamos o código de erro para ajudar o usuário a diagnosticar permissões
+              reject(new Error(`Erro [${error.code}]: ${error.message}`));
             },
             async () => {
               const url = await getDownloadURL(uploadTask.snapshot.ref);
@@ -224,6 +225,15 @@ export default function NewDemandPage() {
                         )}
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {Object.keys(uploadProgress).some(k => uploadProgress[k] === 0) && (
+                  <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex gap-2">
+                    <AlertCircle size={14} className="text-destructive shrink-0 mt-0.5" />
+                    <p className="text-[9px] text-destructive font-bold uppercase leading-relaxed">
+                      Se o upload travar em 0%, verifique o passo "Segurança de Domínio" no arquivo INSTRUCTIONS.md.
+                    </p>
                   </div>
                 )}
               </div>
