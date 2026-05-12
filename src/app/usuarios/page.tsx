@@ -196,6 +196,10 @@ export default function UserManagementPage() {
   };
 
   const handleDeleteUser = async (email: string) => {
+    if (isAuditor) {
+      toast({ title: "Acesso Negado", description: "Auditores não podem excluir registros.", variant: "destructive" });
+      return;
+    }
     setIsDeleting(email);
     try {
       const result = await excluirUsuario(email, user?.email || "");

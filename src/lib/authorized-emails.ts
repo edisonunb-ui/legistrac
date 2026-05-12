@@ -5,7 +5,7 @@
  */
 export const VEREADORES_AUTORIZADOS = [
   'edisonunb@gmail.com', // SuperAdmin / Master
-  'alemao@gmail.com',    // Admin de Auditoria / Programação
+  'alemao@gmail.com',    // Auditor Global / Programação (Acesso total, sem exclusão)
   'gabinete.professoraflavia@gmail.com',
   'gabinetevereadorevandro@gmail.com',
   'josiasvereador@gmail.com',
