@@ -1,3 +1,4 @@
+
 import * as admin from "firebase-admin";
 
 /**
@@ -13,7 +14,7 @@ function getAdminApp() {
 
   return admin.initializeApp({
     credential: admin.credential.cert({
-      projectId: "legistrac",
+      projectId: "pesquisa-62831355-9c7d1",
       clientEmail: "firebase-adminsdk-fbsvc@legistrac.iam.gserviceaccount.com",
       privateKey: privateKey.replace(/\\n/g, '\n'),
     }),
