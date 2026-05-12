@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useDoc, useCollection, useStorage } from "@/firebase";
@@ -25,7 +26,8 @@ import {
   ExternalLink,
   Paperclip,
   X,
-  Gavel
+  Gavel,
+  Lock
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -54,6 +56,8 @@ import { generateDemandSummary } from "@/ai/flows/demand-summary-generation";
 import { draftLegislativeAction } from "@/ai/flows/legislative-draft-flow";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
+const MASTER_EMAIL = "edisonunb@gmail.com";
+
 export default function DemandDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user } = useUser();
@@ -71,7 +75,9 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const [obs, setObs] = useState("");
   const [selectedUser, setSelectedUser] = useState("");
   const [tramiteFiles, setTramiteFiles] = useState<File[]>([]);
-  const [uploadStatus, setUploadStatus] = useState<{ current: number, total: number } | null>(null);
+
+  const userEmail = user?.email?.toLowerCase().trim();
+  const isMasterAdmin = userEmail === MASTER_EMAIL;
 
   const demandRef = useMemo(() => (id && db) ? doc(db, "demandas", id) : null, [db, id]);
   const { data: demand, loading: loadingDemand } = useDoc(demandRef);
@@ -91,12 +97,17 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     });
   }, [tramitesRaw]);
 
-  const userEmail = user?.email?.toLowerCase().trim();
   const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
   const cabinetId = (profile as any)?.cabinetId;
-  const isMasterAdmin = userEmail === "edisonunb@gmail.com";
+
+  // VERIFICAÇÃO DE ISOLAMENTO DE SEGURANÇA (SÊNIOR)
+  const isAccessDenied = useMemo(() => {
+    if (loadingDemand || !demand || isMasterAdmin) return false;
+    if (!cabinetId) return true; // Se não tem gabinete e não é master, nega.
+    return (demand as any).cabinetId !== cabinetId;
+  }, [demand, cabinetId, isMasterAdmin, loadingDemand]);
 
   const usersQuery = useMemo(() => {
     if (!db || !user) return null;
@@ -116,12 +127,13 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     return [...allUsersRaw].sort((a: any, b: any) => (a.nome || "").localeCompare(b.nome || ""));
   }, [allUsersRaw]);
 
-  const cabinetQuery = useMemo(() => (db && cabinetId) ? doc(db, "gabinetes", cabinetId) : null, [db, cabinetId]);
+  const cabinetQuery = useMemo(() => (db && (cabinetId || (demand as any)?.cabinetId)) ? doc(db, "gabinetes", cabinetId || (demand as any)?.cabinetId) : null, [db, cabinetId, demand]);
   const { data: cabinet } = useDoc(cabinetQuery);
 
   const hasPermission = (perm: keyof UserPermissions) => {
-    if (!profile && !isMasterAdmin) return false;
-    return (profile as any)?.permissoes?.[perm] || isMasterAdmin;
+    if (isMasterAdmin) return true;
+    if (!profile) return false;
+    return (profile as any)?.permissoes?.[perm];
   };
 
   const allAttachments = useMemo(() => {
@@ -164,11 +176,11 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   };
 
   const handleSaveDraft = async () => {
-    if (!aiDraft || !db || !cabinetId) return;
+    if (!aiDraft || !db || (!cabinetId && !isMasterAdmin)) return;
     setProcessing(true);
     try {
       await addDoc(collection(db, "legislativo"), {
-        cabinetId,
+        cabinetId: cabinetId || (demand as any).cabinetId,
         tipo: "INDICACAO",
         titulo: aiDraft.title,
         ementa: aiDraft.content.substring(0, 200) + "...",
@@ -187,31 +199,6 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     }
   };
 
-  const uploadTramiteFiles = async (): Promise<Attachment[]> => {
-    const attachments: Attachment[] = [];
-    if (tramiteFiles.length === 0) return [];
-    for (let i = 0; i < tramiteFiles.length; i++) {
-      const file = tramiteFiles[i];
-      setUploadStatus({ current: i + 1, total: tramiteFiles.length });
-      const sanitizedName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-      const storageRef = ref(storage, `demandas/tramites/${Date.now()}_${sanitizedName}`);
-      try {
-        const snapshot = await uploadBytes(storageRef, file);
-        const url = await getDownloadURL(snapshot.ref);
-        attachments.push({
-          id: Math.random().toString(36).substring(7),
-          nome: file.name,
-          url: url,
-          tipo: file.type,
-          tamanho: file.size,
-          data: Timestamp.now(),
-          enviadoPor: user?.uid || "anonimo"
-        });
-      } catch (err: any) { throw new Error(`Falha no upload: ${file.name}`); }
-    }
-    return attachments;
-  };
-
   const handleSend = async () => {
     if (!demand || !user || !selectedUser || !db) {
       toast({ title: "Atenção", description: "Selecione um destinatário.", variant: "destructive" });
@@ -225,18 +212,15 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
       return;
     }
     try {
-      const newAttachments = await uploadTramiteFiles();
-      await sendDemand(db, demand.id, user.uid, targetUser.uid || targetUser.email, obs, targetUser.perfil, newAttachments);
+      await sendDemand(db, demand.id, user.uid, targetUser.uid || targetUser.email, obs, targetUser.perfil, []);
       toast({ title: "Sucesso", description: "Demanda tramitada com sucesso." });
       setSendModalOpen(false);
       setObs("");
       setSelectedUser("");
-      setTramiteFiles([]);
     } catch (e: any) {
       toast({ title: "Erro", description: e.message || "Falha ao tramitar demanda.", variant: "destructive" });
     } finally {
       setProcessing(false);
-      setUploadStatus(null);
     }
   };
 
@@ -244,17 +228,14 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     if (!demand || !user || !db) return;
     setProcessing(true);
     try {
-      const newAttachments = await uploadTramiteFiles();
-      await returnDemand(db, demand.id, user.uid, demand.criadoPor, obs || "Demanda devolvida para revisão.", newAttachments);
+      await returnDemand(db, demand.id, user.uid, demand.criadoPor, obs || "Demanda devolvida para revisão.", []);
       toast({ title: "Sucesso", description: "Demanda devolvida." });
       setSendModalOpen(false);
       setObs("");
-      setTramiteFiles([]);
     } catch (e: any) {
       toast({ title: "Erro", description: e.message || "Falha ao devolver demanda.", variant: "destructive" });
     } finally {
       setProcessing(false);
-      setUploadStatus(null);
     }
   };
 
@@ -276,6 +257,19 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="animate-spin h-10 w-10 text-primary" />
+      </div>
+    );
+  }
+
+  if (isAccessDenied) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+        <div className="p-4 bg-destructive/10 rounded-full mb-4 text-destructive">
+          <Lock size={48} />
+        </div>
+        <h1 className="text-xl font-black uppercase tracking-tighter mb-2">Acesso Negado</h1>
+        <p className="text-muted-foreground text-xs uppercase tracking-widest mb-6">Esta demanda pertence a outro gabinete isolado.</p>
+        <Button onClick={() => router.push("/demandas")} className="font-black uppercase text-[10px] tracking-widest">Voltar ao meu Gabinete</Button>
       </div>
     );
   }
