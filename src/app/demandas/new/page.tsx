@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useCollection, useDoc, useStorage, useMemoFirebase } from "@/firebase";
@@ -149,17 +150,20 @@ export default function NewDemandPage() {
           <h1 className="text-3xl font-black uppercase tracking-tighter">Nova <span className="text-primary">Demanda</span></h1>
         </header>
 
-        {lastError === 'storage/unauthorized' && (
+        {(lastError === 'storage/unauthorized' || lastError === '403') && (
           <Alert variant="destructive" className="mb-6 bg-destructive/10 border-destructive">
             <ShieldAlert className="h-5 w-5" />
-            <AlertTitle className="font-bold uppercase text-xs">Acesso Negado (Domínio não autorizado)</AlertTitle>
+            <AlertTitle className="font-bold uppercase text-xs">Acesso Negado (Segurança do Firebase)</AlertTitle>
             <AlertDescription className="text-[11px] mt-2 space-y-2">
-              <p>O Firebase bloqueou o upload porque este site ainda não está na sua lista de permissões.</p>
+              <p>O Firebase bloqueou o upload por falta de permissão ou domínio não autorizado.</p>
               <div className="p-3 bg-black/20 rounded font-mono break-all text-[10px]">
-                Link para copiar: <b>{typeof window !== 'undefined' ? window.location.origin : '...'}</b>
+                Domínio atual: <b>{typeof window !== 'undefined' ? window.location.origin : '...'}</b>
               </div>
               <p>
-                <b>Como arrumar:</b> Vá no Console do Firebase &gt; Authentication &gt; Settings &gt; Authorized Domains e adicione o link acima.
+                <b>Solução 1:</b> Vá no Firebase &gt; Authentication &gt; Settings &gt; Authorized Domains e adicione o link acima.
+              </p>
+              <p>
+                <b>Solução 2:</b> Se estiver com pressa, vá no Storage &gt; Rules e mude temporariamente para <b>allow read, write: if true;</b>
               </p>
               <Button size="sm" variant="outline" className="h-7 text-[9px] font-bold mt-2" asChild>
                 <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer">
