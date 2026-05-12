@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useFirestore, useCollection, useDoc, useStorage, useMemoFirebase } from "@/firebase";
@@ -160,7 +159,7 @@ export default function NewDemandPage() {
                 Link para copiar: <b>{typeof window !== 'undefined' ? window.location.origin : '...'}</b>
               </div>
               <p>
-                <b>Como arrumar:</b> Vá no Console do Firebase > Authentication > Settings > Authorized Domains e adicione o link acima.
+                <b>Como arrumar:</b> Vá no Console do Firebase &gt; Authentication &gt; Settings &gt; Authorized Domains e adicione o link acima.
               </p>
               <Button size="sm" variant="outline" className="h-7 text-[9px] font-bold mt-2" asChild>
                 <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer">
@@ -223,7 +222,7 @@ export default function NewDemandPage() {
                 </div>
                 
                 <div className="relative group">
-                  <Input type="file" multiple onChange={handleFileChange} disabled={saving} className="bg-background border-primary/10 h-14 cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90" />
+                  <Input type="file" multiple onChange={handleFileChange} disabled={saving} className="bg-background border-primary/10 h-14 cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90" />
                 </div>
                 
                 {files.length > 0 && (
