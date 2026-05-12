@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Loader2, Trash2, ChevronLeft, Building2, Edit2, ShieldCheck, Mail, AlertTriangle } from "lucide-react";
+import { Users, Loader2, Trash2, ChevronLeft, Building2, Edit2, ShieldCheck, Mail } from "lucide-react";
 import { provisionarMembro, excluirUsuario } from "@/app/actions/provisionamento";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -47,6 +47,7 @@ const PERMISSION_LABELS: Record<keyof UserPermissions, string> = {
 };
 
 const MASTER_EMAIL = "edisonunb@gmail.com";
+const AUDITOR_EMAIL = "alemao@gmail.com";
 
 export default function UserManagementPage() {
   const { user } = useUser();
@@ -82,6 +83,8 @@ export default function UserManagementPage() {
 
   const userEmail = user?.email?.toLowerCase().trim();
   const isMasterAdmin = userEmail === MASTER_EMAIL;
+  const isAuditor = userEmail === AUDITOR_EMAIL;
+  const hasGlobalView = isMasterAdmin || isAuditor;
   
   const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
@@ -93,16 +96,16 @@ export default function UserManagementPage() {
 
   const usersQuery = useMemo(() => {
     if (!db || !user) return null;
-    if (isMasterAdmin) return query(collection(db, "users"));
+    if (hasGlobalView) return query(collection(db, "users"));
     if (cabinetId) return query(collection(db, "users"), where("cabinetId", "==", cabinetId));
     return null;
-  }, [db, user, isMasterAdmin, cabinetId]);
+  }, [db, user, hasGlobalView, cabinetId]);
 
   const { data: rawUsers = [], loading: usersLoading } = useCollection(usersQuery);
 
   const activeUsers = useMemo(() => {
-    return rawUsers.filter((u: any) => !u.deleted || isMasterAdmin);
-  }, [rawUsers, isMasterAdmin]);
+    return rawUsers.filter((u: any) => !u.deleted || hasGlobalView);
+  }, [rawUsers, hasGlobalView]);
 
   const handleRoleChange = (role: UserRole, isEdit = false) => {
     const isAdminRole = role === "ADMIN" || role === "SUPER_ADMIN";
@@ -125,7 +128,7 @@ export default function UserManagementPage() {
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    const targetCabinet = isMasterAdmin ? newCabinetId : cabinetId;
+    const targetCabinet = hasGlobalView ? newCabinetId : cabinetId;
     if (!newEmail || !newName || !targetCabinet) {
       toast({ title: "Erro", description: "Preencha todos os campos obrigatórios.", variant: "destructive" });
       return;
@@ -145,7 +148,7 @@ export default function UserManagementPage() {
         toast({ title: "Membro Provisionado!", description: `Senha padrão: Mudar@123` });
         setNewEmail("");
         setNewName("");
-        if (isMasterAdmin) setNewCabinetId("");
+        if (hasGlobalView) setNewCabinetId("");
       } else {
         toast({ title: "Erro", description: result.error, variant: "destructive" });
       }
@@ -222,7 +225,7 @@ export default function UserManagementPage() {
               <h1 className="text-3xl font-bold flex items-center gap-2"><Users className="text-primary" /> Equipe do <span className="text-primary">Gabinete</span></h1>
               <p className="text-muted-foreground">Gerencie o acesso e as permissões de assessores e estagiários.</p>
             </div>
-            {isMasterAdmin && <Link href="/gabinetes" className="w-full sm:w-auto"><Button variant="outline" className="w-full sm:w-auto gap-2 font-bold"><Building2 size={16} /> Gabinetes Isolados</Button></Link>}
+            {hasGlobalView && <Link href="/gabinetes" className="w-full sm:w-auto"><Button variant="outline" className="w-full sm:w-auto gap-2 font-bold"><Building2 size={16} /> Gabinetes Isolados</Button></Link>}
           </div>
         </header>
 
@@ -244,7 +247,7 @@ export default function UserManagementPage() {
                     <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required placeholder="email@exemplo.com" className="pl-9 bg-background" />
                   </div>
                 </div>
-                {isMasterAdmin && (
+                {hasGlobalView && (
                   <div className="space-y-2">
                     <Label className="text-[10px] font-bold uppercase text-muted-foreground">Gabinete Destino</Label>
                     <Select value={newCabinetId} onValueChange={setNewCabinetId} required>
@@ -312,6 +315,7 @@ export default function UserManagementPage() {
                 ) : activeUsers.map((u: any) => {
                   const currentEmail = (u.email || u.id || "").toLowerCase().trim();
                   const isThisUserMaster = currentEmail === MASTER_EMAIL;
+                  const isThisUserAuditor = currentEmail === AUDITOR_EMAIL;
                   
                   return (
                     <div key={u.id} className={cn(
@@ -332,11 +336,11 @@ export default function UserManagementPage() {
                             <Badge variant="secondary" className={cn(
                               "text-[8px] font-bold uppercase tracking-tighter",
                               u.perfil === "ADMIN" && "bg-primary/20 text-primary border-primary/30",
-                              u.perfil === "SUPER_ADMIN" && "bg-purple-500/10 text-purple-500 border-purple-500/30"
+                              (u.perfil === "SUPER_ADMIN" || isThisUserAuditor) && "bg-purple-500/10 text-purple-500 border-purple-500/30"
                             )}>
-                              {u.perfil === "ADMIN" ? "VEREADOR" : u.perfil}
+                              {isThisUserAuditor ? "AUDITOR" : (u.perfil === "ADMIN" ? "VEREADOR" : u.perfil)}
                             </Badge>
-                            {isMasterAdmin && (
+                            {hasGlobalView && (
                               <Badge variant="outline" className="text-[8px] font-bold text-primary border-primary/20 bg-primary/5">
                                 {cabinets.find((c:any) => c.id === u.cabinetId)?.vereador || 'Sem Gabinete'}
                               </Badge>
@@ -410,7 +414,8 @@ export default function UserManagementPage() {
                           </Dialog>
                         )}
 
-                        {!isThisUserMaster && (isMasterAdmin || (profile?.perfil === "ADMIN" && u.perfil !== "ADMIN")) && (
+                        {/* SOMENTE SUPERADMIN PODE DELETAR. AUDITOR NÃO PODE. */}
+                        {isMasterAdmin && !isThisUserMaster && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10">
@@ -421,9 +426,7 @@ export default function UserManagementPage() {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>{u.deleted ? "Excluir Definitivamente?" : "Desativar Acesso?"}</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  {isMasterAdmin 
-                                    ? "Como SuperAdmin, você removerá este registro permanentemente." 
-                                    : "O assessor será desativado e suas demandas em andamento serão transferidas automaticamente para o Vereador deste gabinete."}
+                                  "Como SuperAdmin, você removerá este registro permanentemente."
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>

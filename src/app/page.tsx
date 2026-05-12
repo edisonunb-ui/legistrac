@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useFirestore, useCollection, useUser, useDoc, useMemoFirebase } from "@/firebase";
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useMemo, useState, useEffect } from "react";
 import { collection, query, doc, setDoc, where } from "firebase/firestore";
@@ -35,6 +35,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 const MASTER_EMAIL = "edisonunb@gmail.com";
+const AUDITOR_EMAIL = "alemao@gmail.com";
 
 export default function StrategicDashboard() {
   const { user, loading: authLoading } = useUser();
@@ -48,13 +49,14 @@ export default function StrategicDashboard() {
 
   const userEmail = useMemo(() => user?.email?.toLowerCase().trim() || null, [user?.email]);
   const isSuperAdmin = useMemo(() => userEmail === MASTER_EMAIL, [userEmail]);
+  const isAuditor = useMemo(() => userEmail === AUDITOR_EMAIL, [userEmail]);
+  const hasGlobalView = isSuperAdmin || isAuditor;
   
   const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile, loading: loadingProfile } = useDoc(profileRef);
 
   const cabinetId = (profile as any)?.cabinetId;
 
-  // Relógio Estratégico em Tempo Real (Brasília)
   useEffect(() => {
     const updateDateTime = () => {
       const now = new Date();
@@ -87,32 +89,31 @@ export default function StrategicDashboard() {
     }
   }, [user, authLoading, router]);
 
-  // Queries globais para SuperAdmin, filtradas para outros
   const demandsQuery = useMemoFirebase(() => {
-    if (!db || (!cabinetId && !isSuperAdmin)) return null;
-    return isSuperAdmin 
+    if (!db || (!cabinetId && !hasGlobalView)) return null;
+    return hasGlobalView 
       ? query(collection(db, "demandas"))
       : query(collection(db, "demandas"), where("cabinetId", "==", cabinetId));
-  }, [db, cabinetId, isSuperAdmin]);
+  }, [db, cabinetId, hasGlobalView]);
   const { data: allDemands = [] } = useCollection(demandsQuery);
 
   const leadersQuery = useMemoFirebase(() => {
-    if (!db || (!cabinetId && !isSuperAdmin)) return null;
-    return isSuperAdmin
+    if (!db || (!cabinetId && !hasGlobalView)) return null;
+    return hasGlobalView
       ? query(collection(db, "liderancas"))
       : query(collection(db, "liderancas"), where("cabinetId", "==", cabinetId));
-  }, [db, cabinetId, isSuperAdmin]);
+  }, [db, cabinetId, hasGlobalView]);
   const { data: allLeaders = [] } = useCollection(leadersQuery);
 
   const configRef = useMemoFirebase(() => {
     if (!db) return null;
-    if (isSuperAdmin) {
+    if (hasGlobalView) {
       return doc(db, "config", "global");
     } else if (cabinetId) {
       return doc(db, "gabinetes", cabinetId, "config", "global");
     }
     return null;
-  }, [db, cabinetId, isSuperAdmin]);
+  }, [db, cabinetId, hasGlobalView]);
   const { data: config } = useDoc<GlobalConfig>(configRef);
 
   const stats = useMemo(() => {
@@ -156,7 +157,7 @@ export default function StrategicDashboard() {
     }
   };
 
-  if (authLoading || (loadingProfile && !isSuperAdmin)) {
+  if (authLoading || (loadingProfile && !hasGlobalView)) {
     return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin text-primary" /></div>;
   }
 
@@ -167,7 +168,7 @@ export default function StrategicDashboard() {
         <header className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase leading-tight">Dashboard <span className="text-primary/50">{isSuperAdmin ? "Global" : "Estratégico"}</span></h1>
+              <h1 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase leading-tight">Dashboard <span className="text-primary/50">{hasGlobalView ? "Global" : "Estratégico"}</span></h1>
               <div className="flex flex-wrap items-center gap-3 mt-3">
                 <p className="text-muted-foreground text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black bg-slate-900/50 w-fit px-2 py-1 rounded">Inteligência Parlamentar</p>
                 {dateTime && (
@@ -244,7 +245,7 @@ export default function StrategicDashboard() {
                 </div>
                 <div className="flex flex-col items-center gap-2">
                   <div className="p-2 bg-slate-900 rounded-lg"><Target className="text-primary" size={20} /></div>
-                  {(profile?.perfil === "ADMIN" || isSuperAdmin) && (
+                  {(profile?.perfil === "ADMIN" || hasGlobalView) && (
                     <Dialog open={isEditingMeta} onOpenChange={setIsEditingMeta}>
                       <DialogTrigger asChild>
                         <button className="text-[9px] hover:text-primary text-muted-foreground font-black uppercase tracking-widest transition-colors">Ajustar</button>
