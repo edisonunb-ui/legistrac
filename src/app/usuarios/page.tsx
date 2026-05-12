@@ -81,10 +81,11 @@ export default function UserManagementPage() {
   });
 
   const userEmail = user?.email?.toLowerCase().trim();
+  const isMasterAdmin = userEmail === MASTER_EMAIL;
+  
   const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
-  const isMasterAdmin = userEmail === MASTER_EMAIL;
   const cabinetId = (profile as any)?.cabinetId;
 
   const cabinetsQuery = useMemo(() => db ? collection(db, "gabinetes") : null, [db]);
@@ -310,7 +311,7 @@ export default function UserManagementPage() {
                   </div>
                 ) : activeUsers.map((u: any) => {
                   const currentEmail = (u.email || u.id || "").toLowerCase().trim();
-                  const isThisUserMaster = currentEmail === MASTER_EMAIL || u.perfil === "SUPER_ADMIN";
+                  const isThisUserMaster = currentEmail === MASTER_EMAIL;
                   
                   return (
                     <div key={u.id} className={cn(

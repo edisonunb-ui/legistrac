@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useAuthInstance, useDoc } from "@/firebase";
@@ -26,6 +27,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
+const MASTER_EMAIL = "edisonunb@gmail.com";
+
 export function Navbar() {
   const { user } = useUser();
   const db = useFirestore();
@@ -35,14 +38,14 @@ export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const userEmail = user?.email?.toLowerCase().trim();
+  const isSuperAdmin = useMemo(() => userEmail === MASTER_EMAIL, [userEmail]);
+
   const userProfileQuery = useMemo(() => (db && userEmail) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(userProfileQuery);
 
   const cabinetId = (profile as any)?.cabinetId;
   const cabinetQuery = useMemo(() => (db && cabinetId) ? doc(db, "gabinetes", cabinetId) : null, [db, cabinetId]);
   const { data: cabinet } = useDoc(cabinetQuery);
-
-  const isSuperAdmin = userEmail === "edisonunb@gmail.com";
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -108,6 +111,15 @@ export function Navbar() {
                     >
                       <Users size={18} /> Equipe
                     </Link>
+                    {isSuperAdmin && (
+                      <Link 
+                        href="/gabinetes" 
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex items-center gap-4 py-3 text-sm font-bold text-muted-foreground hover:text-foreground uppercase tracking-widest"
+                      >
+                        <Building2 size={18} /> Gabinetes
+                      </Link>
+                    )}
                     <button 
                       onClick={handleLogout}
                       className="flex items-center gap-4 py-3 text-sm font-bold text-destructive hover:text-destructive/80 uppercase tracking-widest mt-2"
@@ -155,7 +167,7 @@ export function Navbar() {
               <Button variant="ghost" className="relative h-10 w-10 rounded-full border border-slate-800 p-0 overflow-hidden hover:bg-slate-900 transition-all focus-visible:ring-0">
                 <Avatar className="h-full w-full">
                   <AvatarFallback className="bg-slate-900 text-primary font-black text-xs">
-                    {(profile as any)?.nome?.[0]?.toUpperCase() || <User size={16} />}
+                    {(profile as any)?.nome?.[0]?.toUpperCase() || (isSuperAdmin ? "SA" : <User size={16} />)}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -163,8 +175,8 @@ export function Navbar() {
             <DropdownMenuContent className="w-64 bg-slate-950 border-slate-800 shadow-2xl" align="end">
               <DropdownMenuLabel className="p-4 bg-slate-900/50">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-black text-foreground truncate uppercase">{(profile as any)?.nome}</p>
-                  <p className="text-[9px] text-muted-foreground font-black truncate uppercase tracking-widest">{(profile as any)?.perfil}</p>
+                  <p className="text-sm font-black text-foreground truncate uppercase">{(profile as any)?.nome || (isSuperAdmin ? "Super Admin" : "Usuário")}</p>
+                  <p className="text-[9px] text-muted-foreground font-black truncate uppercase tracking-widest">{(profile as any)?.perfil || (isSuperAdmin ? "SUPER_ADMIN" : "")}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-slate-800" />

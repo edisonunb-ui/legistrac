@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useFirestore, useCollection, useUser, useDoc, useMemoFirebase } from "@/firebase";
@@ -43,11 +44,12 @@ export default function StrategicDashboard() {
   const [newMetaValue, setNewMetaValue] = useState("");
 
   const userEmail = useMemo(() => user?.email?.toLowerCase().trim() || null, [user?.email]);
+  const isSuperAdmin = useMemo(() => userEmail === MASTER_EMAIL, [userEmail]);
+  
   const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile, loading: loadingProfile } = useDoc(profileRef);
 
   const cabinetId = (profile as any)?.cabinetId;
-  const isSuperAdmin = userEmail === MASTER_EMAIL;
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -55,6 +57,7 @@ export default function StrategicDashboard() {
     }
   }, [user, authLoading, router]);
 
+  // Queries globais para SuperAdmin, filtradas para outros
   const demandsQuery = useMemoFirebase(() => {
     if (!db || (!cabinetId && !isSuperAdmin)) return null;
     return isSuperAdmin 
@@ -72,14 +75,14 @@ export default function StrategicDashboard() {
   const { data: allLeaders = [] } = useCollection(leadersQuery);
 
   const configRef = useMemoFirebase(() => {
-    if (!db || (!profile && !isSuperAdmin)) return null;
+    if (!db) return null;
     if (isSuperAdmin) {
       return doc(db, "config", "global");
     } else if (cabinetId) {
       return doc(db, "gabinetes", cabinetId, "config", "global");
     }
     return null;
-  }, [db, profile, cabinetId, isSuperAdmin]);
+  }, [db, cabinetId, isSuperAdmin]);
   const { data: config } = useDoc<GlobalConfig>(configRef);
 
   const stats = useMemo(() => {
@@ -123,7 +126,7 @@ export default function StrategicDashboard() {
     }
   };
 
-  if (authLoading || loadingProfile) {
+  if (authLoading || (loadingProfile && !isSuperAdmin)) {
     return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin text-primary" /></div>;
   }
 
@@ -134,7 +137,7 @@ export default function StrategicDashboard() {
         <header className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
-              <h1 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase leading-tight">Dashboard <span className="text-primary/50">Estratégico</span></h1>
+              <h1 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase leading-tight">Dashboard <span className="text-primary/50">{isSuperAdmin ? "Global" : "Estratégico"}</span></h1>
               <p className="text-muted-foreground text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black mt-2 bg-slate-900/50 w-fit px-2 py-1 rounded">Inteligência Parlamentar</p>
             </div>
             <div className="grid grid-cols-2 sm:flex gap-3">
