@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, Loader2, Paperclip, X, CheckCircle2, AlertCircle } from "lucide-react";
+import { ChevronLeft, Save, Loader2, Paperclip, X, CheckCircle2, AlertCircle, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority, Attachment } from "@/lib/types";
 import { collection, query, Timestamp, doc, where } from "firebase/firestore";
@@ -39,6 +39,7 @@ export default function NewDemandPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
   const [isFinished, setIsFinished] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
 
   const userEmail = useMemo(() => user?.email?.toLowerCase().trim() || null, [user?.email]);
   const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
@@ -55,6 +56,7 @@ export default function NewDemandPage() {
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+      setLastError(null);
     }
   }, []);
 
@@ -84,8 +86,7 @@ export default function NewDemandPage() {
               setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
             },
             (error: any) => {
-              console.error("Erro detalhado no Storage:", error);
-              // Repassamos o código de erro para ajudar o usuário a diagnosticar permissões
+              console.error("Erro no Storage:", error.code);
               reject(new Error(`Erro [${error.code}]: ${error.message}`));
             },
             async () => {
@@ -116,6 +117,7 @@ export default function NewDemandPage() {
     if (!user || !db || !cabinetId || saving) return;
     
     setSaving(true);
+    setLastError(null);
     try {
       const attachments = await uploadFiles();
       const demandId = await createDemand(db, user.uid, {
@@ -130,6 +132,7 @@ export default function NewDemandPage() {
       setTimeout(() => router.push(`/demandas/${demandId}`), 1500);
     } catch (error: any) {
       setSaving(false);
+      setLastError(error.message);
       toast({
         title: "Erro no Protocolo",
         description: error.message,
@@ -150,6 +153,23 @@ export default function NewDemandPage() {
           </Link>
           <h1 className="text-3xl font-black uppercase tracking-tighter">Nova <span className="text-primary">Demanda</span></h1>
         </header>
+
+        {lastError?.includes('storage/unauthorized') && (
+          <Card className="mb-6 border-destructive bg-destructive/10">
+            <CardContent className="pt-6 flex gap-4">
+              <ShieldAlert className="text-destructive shrink-0" size={24} />
+              <div className="space-y-2">
+                <h3 className="font-bold text-destructive uppercase text-sm">Acesso Negado ao Storage</h3>
+                <p className="text-xs leading-relaxed">
+                  O Firebase está bloqueando o seu site por segurança. Para resolver: <br />
+                  1. Vá em <b>Authentication > Settings > Authorized Domains</b> no Firebase.<br />
+                  2. Adicione este domínio: <b>{typeof window !== 'undefined' ? window.location.hostname : 'seu-site'}</b><br />
+                  3. Ou mude as Rules do Storage para <b>if true;</b> temporariamente.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="max-w-4xl border-primary/10 bg-card shadow-2xl overflow-hidden">
           <form onSubmit={handleSubmit}>
@@ -225,15 +245,6 @@ export default function NewDemandPage() {
                         )}
                       </div>
                     ))}
-                  </div>
-                )}
-
-                {Object.keys(uploadProgress).some(k => uploadProgress[k] === 0) && (
-                  <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex gap-2">
-                    <AlertCircle size={14} className="text-destructive shrink-0 mt-0.5" />
-                    <p className="text-[9px] text-destructive font-bold uppercase leading-relaxed">
-                      Se o upload travar em 0%, verifique o passo "Segurança de Domínio" no arquivo INSTRUCTIONS.md.
-                    </p>
                   </div>
                 )}
               </div>
