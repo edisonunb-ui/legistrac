@@ -3,7 +3,7 @@
 
 import { useUser, useFirestore, useAuthInstance, useDoc } from "@/firebase";
 import { Button } from "@/components/ui/button";
-import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, X, User } from "lucide-react";
+import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, X, User, Clock } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -21,7 +21,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { doc } from "firebase/firestore";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
@@ -36,6 +36,7 @@ export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [time, setTime] = useState<string | null>(null);
 
   const userEmail = user?.email?.toLowerCase().trim();
   const isSuperAdmin = useMemo(() => userEmail === MASTER_EMAIL, [userEmail]);
@@ -46,6 +47,22 @@ export function Navbar() {
   const cabinetId = (profile as any)?.cabinetId;
   const cabinetQuery = useMemo(() => (db && cabinetId) ? doc(db, "gabinetes", cabinetId) : null, [db, cabinetId]);
   const { data: cabinet } = useDoc(cabinetQuery);
+
+  // Relógio em tempo real - Brasília
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setTime(new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }).format(now));
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 10000); // Atualiza a cada 10s para poupar processamento
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -161,7 +178,15 @@ export function Navbar() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          {/* Relógio Global na Navbar */}
+          {time && (
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-900/50 rounded-lg border border-slate-800 text-[10px] font-black uppercase tracking-widest text-muted-foreground animate-in fade-in">
+              <Clock size={12} className="text-primary/50" />
+              <span>{time}</span>
+            </div>
+          )}
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full border border-slate-800 p-0 overflow-hidden hover:bg-slate-900 transition-all focus-visible:ring-0">

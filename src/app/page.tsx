@@ -14,7 +14,9 @@ import {
   ChevronRight,
   ClipboardList,
   MapPin,
-  Target
+  Target,
+  Clock as ClockIcon,
+  Calendar as CalendarIcon
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -42,6 +44,7 @@ export default function StrategicDashboard() {
 
   const [isEditingMeta, setIsEditingMeta] = useState(false);
   const [newMetaValue, setNewMetaValue] = useState("");
+  const [dateTime, setDateTime] = useState<{ date: string, time: string } | null>(null);
 
   const userEmail = useMemo(() => user?.email?.toLowerCase().trim() || null, [user?.email]);
   const isSuperAdmin = useMemo(() => userEmail === MASTER_EMAIL, [userEmail]);
@@ -50,6 +53,33 @@ export default function StrategicDashboard() {
   const { data: profile, loading: loadingProfile } = useDoc(profileRef);
 
   const cabinetId = (profile as any)?.cabinetId;
+
+  // Relógio Estratégico em Tempo Real (Brasília)
+  useEffect(() => {
+    const updateDateTime = () => {
+      const now = new Date();
+      const dateStr = new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      }).format(now);
+      
+      const timeStr = new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).format(now);
+
+      setDateTime({ date: dateStr, time: timeStr });
+    };
+
+    updateDateTime();
+    const interval = setInterval(updateDateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -136,9 +166,20 @@ export default function StrategicDashboard() {
       <main className="container mx-auto px-4 py-6 sm:py-10">
         <header className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div>
+            <div className="flex-1">
               <h1 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase leading-tight">Dashboard <span className="text-primary/50">{isSuperAdmin ? "Global" : "Estratégico"}</span></h1>
-              <p className="text-muted-foreground text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black mt-2 bg-slate-900/50 w-fit px-2 py-1 rounded">Inteligência Parlamentar</p>
+              <div className="flex flex-wrap items-center gap-3 mt-3">
+                <p className="text-muted-foreground text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black bg-slate-900/50 w-fit px-2 py-1 rounded">Inteligência Parlamentar</p>
+                {dateTime && (
+                  <div className="flex items-center gap-2 text-[10px] sm:text-xs font-black uppercase tracking-widest text-primary/80 animate-in slide-in-from-left-2">
+                    <CalendarIcon size={14} className="text-primary/40" />
+                    <span>{dateTime.date}</span>
+                    <span className="mx-1 text-slate-800">|</span>
+                    <ClockIcon size={14} className="text-primary/40" />
+                    <span className="font-mono">{dateTime.time}</span>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-2 sm:flex gap-3">
               <Link href="/demandas/new" className="w-full">
