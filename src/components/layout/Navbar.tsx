@@ -75,7 +75,7 @@ export function Navbar() {
         weekday: 'long',
         day: '2-digit',
         month: 'long',
-      }).format(now));
+      }).format(now).toUpperCase());
     };
 
     updateTime();
@@ -172,7 +172,7 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Relógio Global Expansível */}
+          {/* Relógio Global Expansível - Estilo Windows Modern */}
           {time && (
             <Popover>
               <PopoverTrigger asChild>
@@ -182,29 +182,43 @@ export function Navbar() {
                   <ChevronDown size={10} className="opacity-50" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-80 p-0 bg-slate-950 border-slate-800 shadow-2xl overflow-hidden animate-in slide-in-from-top-2" align="end">
-                <div className="p-4 bg-slate-900/50 border-b border-slate-800">
+              <PopoverContent className="w-[320px] p-0 bg-[#05070a] border-slate-800 shadow-2xl overflow-hidden animate-in slide-in-from-top-2" align="end">
+                {/* Header Estilo Exemplo */}
+                <div className="p-6 bg-[#0c1120] border-b border-white/5">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] font-black text-primary uppercase tracking-widest">{fullDate}</span>
-                    <Clock size={14} className="text-primary/40" />
+                    <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">{fullDate}</span>
+                    <Clock size={14} className="text-white/30" />
                   </div>
-                  <h2 className="text-3xl font-black font-mono tracking-tighter text-foreground">{time}</h2>
+                  <h2 className="text-4xl font-black font-mono tracking-tighter text-white leading-none">{time}</h2>
                 </div>
-                <div className="p-2">
+                
+                {/* Calendário Estilo Exemplo */}
+                <div className="p-6">
+                  <div className="mb-6 text-center">
+                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/40">
+                      {currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
+                    </span>
+                  </div>
                   <Calendar
                     mode="single"
                     selected={currentDate}
-                    className="rounded-md border-none"
+                    className="p-0"
                     classNames={{
-                      day_selected: "bg-primary text-primary-foreground font-black rounded-full",
-                      day_today: "text-primary border border-primary/20",
-                      head_cell: "text-[10px] font-black uppercase text-muted-foreground",
-                      caption_label: "text-xs font-black uppercase tracking-widest",
+                      months: "w-full",
+                      month: "space-y-4 w-full",
+                      caption: "hidden", 
+                      head_row: "flex w-full justify-between mb-4",
+                      head_cell: "text-white font-black text-[10px] uppercase w-9 text-center",
+                      row: "flex w-full justify-between mt-2",
+                      cell: "h-9 w-9 text-center text-xs p-0 relative focus-within:relative focus-within:z-20",
+                      day: cn(
+                        "h-9 w-9 p-0 font-bold text-white/50 hover:bg-white/10 hover:text-white rounded-none transition-all"
+                      ),
+                      day_selected: "bg-white text-[#05070a] hover:bg-white hover:text-[#05070a] font-black rounded-none",
+                      day_today: "text-white border border-white/20",
+                      day_outside: "text-white/5 pointer-events-none",
                     }}
                   />
-                </div>
-                <div className="p-3 bg-slate-900/30 flex justify-center">
-                   <p className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.2em]">Horário Oficial de Brasília</p>
                 </div>
               </PopoverContent>
             </Popover>
