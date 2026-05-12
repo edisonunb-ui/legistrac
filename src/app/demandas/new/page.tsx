@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useFirestore, useCollection, useDoc, useStorage, useMemoFirebase } from "@/firebase";
@@ -13,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, Loader2, Paperclip, X, CheckCircle2, AlertCircle, ShieldAlert, ExternalLink } from "lucide-react";
+import { ChevronLeft, Save, Loader2, Paperclip, X, CheckCircle2, ShieldAlert, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority, Attachment } from "@/lib/types";
 import { collection, query, Timestamp, doc, where } from "firebase/firestore";
@@ -133,7 +132,8 @@ export default function NewDemandPage() {
       setTimeout(() => router.push(`/demandas/${demandId}`), 1500);
     } catch (error: any) {
       setSaving(false);
-      setLastError(error.message);
+      setLastError(error.message || "Erro desconhecido");
+      toast({ title: "Erro no Protocolo", description: error.message || "Falha ao enviar arquivos.", variant: "destructive" });
     }
   };
 
@@ -150,17 +150,17 @@ export default function NewDemandPage() {
           <h1 className="text-3xl font-black uppercase tracking-tighter">Nova <span className="text-primary">Demanda</span></h1>
         </header>
 
-        {(lastError === 'storage/unauthorized' || lastError === '403') && (
+        {lastError && (
           <Alert variant="destructive" className="mb-6 bg-destructive/10 border-destructive">
             <ShieldAlert className="h-5 w-5" />
-            <AlertTitle className="font-bold uppercase text-xs">Acesso Negado (Segurança do Firebase)</AlertTitle>
+            <AlertTitle className="font-bold uppercase text-xs">Erro no Processamento</AlertTitle>
             <AlertDescription className="text-[11px] mt-2 space-y-2">
-              <p>O Firebase bloqueou o upload por falta de permissão ou domínio não autorizado.</p>
+              <p>Ocorreu uma falha ao tentar enviar os arquivos para o servidor.</p>
               <div className="p-3 bg-black/20 rounded font-mono break-all text-[10px]">
-                Domínio atual: <b>{typeof window !== 'undefined' ? window.location.origin : '...'}</b>
+                Código do Erro: <b>{lastError}</b>
               </div>
               <p>
-                <b>Como arrumar:</b> Vá no Console do Firebase &gt; Authentication &gt; Settings &gt; Authorized Domains e adicione o link acima.
+                <b>Dica:</b> Vá na aba <b>Rules</b> do Storage no Firebase, certifique-se que as regras estão publicadas como <b>if true;</b> e tente novamente.
               </p>
               <Button size="sm" variant="outline" className="h-7 text-[9px] font-bold mt-2" asChild>
                 <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer">

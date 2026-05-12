@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -8,8 +7,7 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 /**
- * Configurações mestre restauradas para o projeto "legistrac".
- * Este é o projeto que contém os dados originais da equipe e demandas.
+ * Configurações oficiais do projeto LegisTrac.
  */
 const firebaseConfig = {
   apiKey: "AIzaSyBh9hcARIT6NNLM0T583mn9Ts5RqC2AgfI",
