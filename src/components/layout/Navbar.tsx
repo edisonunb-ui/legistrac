@@ -3,7 +3,7 @@
 
 import { useUser, useFirestore, useAuthInstance, useDoc } from "@/firebase";
 import { Button } from "@/components/ui/button";
-import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, X, User, Clock } from "lucide-react";
+import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, Calendar as CalendarIcon, ChevronDown } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -21,6 +21,12 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { useMemo, useState, useEffect } from "react";
 import { doc } from "firebase/firestore";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -37,6 +43,8 @@ export function Navbar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [time, setTime] = useState<string | null>(null);
+  const [fullDate, setFullDate] = useState<string | null>(null);
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
   const userEmail = user?.email?.toLowerCase().trim();
   const isSuperAdmin = useMemo(() => userEmail === MASTER_EMAIL, [userEmail]);
@@ -52,15 +60,26 @@ export function Navbar() {
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
+      setCurrentDate(now);
+      
       setTime(new Intl.DateTimeFormat('pt-BR', {
         timeZone: 'America/Sao_Paulo',
         hour: '2-digit',
         minute: '2-digit',
+        second: '2-digit',
         hour12: false
       }).format(now));
+
+      setFullDate(new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        weekday: 'long',
+        day: '2-digit',
+        month: 'long',
+      }).format(now));
     };
+
     updateTime();
-    const interval = setInterval(updateTime, 10000); // Atualiza a cada 10s para poupar processamento
+    const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -82,7 +101,6 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-2 sm:px-0">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2 md:gap-8">
-          {/* Mobile Menu Trigger */}
           <div className="md:hidden">
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
@@ -119,31 +137,6 @@ export function Navbar() {
                       {item.label}
                     </Link>
                   ))}
-                  <div className="pt-6 px-6 mt-6 border-t border-slate-900">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">Configurações</p>
-                    <Link 
-                      href="/usuarios" 
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex items-center gap-4 py-3 text-sm font-bold text-muted-foreground hover:text-foreground uppercase tracking-widest"
-                    >
-                      <Users size={18} /> Equipe
-                    </Link>
-                    {isSuperAdmin && (
-                      <Link 
-                        href="/gabinetes" 
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center gap-4 py-3 text-sm font-bold text-muted-foreground hover:text-foreground uppercase tracking-widest"
-                      >
-                        <Building2 size={18} /> Gabinetes
-                      </Link>
-                    )}
-                    <button 
-                      onClick={handleLogout}
-                      className="flex items-center gap-4 py-3 text-sm font-bold text-destructive hover:text-destructive/80 uppercase tracking-widest mt-2"
-                    >
-                      <LogOut size={18} /> Sair
-                    </button>
-                  </div>
                 </div>
               </SheetContent>
             </Sheet>
@@ -178,13 +171,43 @@ export function Navbar() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          {/* Relógio Global na Navbar */}
+        <div className="flex items-center gap-3">
+          {/* Relógio Global Expansível */}
           {time && (
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-900/50 rounded-lg border border-slate-800 text-[10px] font-black uppercase tracking-widest text-muted-foreground animate-in fade-in">
-              <Clock size={12} className="text-primary/50" />
-              <span>{time}</span>
-            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-900/50 hover:bg-slate-900 rounded-lg border border-slate-800 text-[10px] font-black uppercase tracking-widest text-muted-foreground transition-all active:scale-95 group">
+                  <Clock size={12} className="text-primary/50 group-hover:text-primary transition-colors" />
+                  <span className="font-mono">{time.substring(0, 5)}</span>
+                  <ChevronDown size={10} className="opacity-50" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0 bg-slate-950 border-slate-800 shadow-2xl overflow-hidden animate-in slide-in-from-top-2" align="end">
+                <div className="p-4 bg-slate-900/50 border-b border-slate-800">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] font-black text-primary uppercase tracking-widest">{fullDate}</span>
+                    <Clock size={14} className="text-primary/40" />
+                  </div>
+                  <h2 className="text-3xl font-black font-mono tracking-tighter text-foreground">{time}</h2>
+                </div>
+                <div className="p-2">
+                  <Calendar
+                    mode="single"
+                    selected={currentDate}
+                    className="rounded-md border-none"
+                    classNames={{
+                      day_selected: "bg-primary text-primary-foreground font-black rounded-full",
+                      day_today: "text-primary border border-primary/20",
+                      head_cell: "text-[10px] font-black uppercase text-muted-foreground",
+                      caption_label: "text-xs font-black uppercase tracking-widest",
+                    }}
+                  />
+                </div>
+                <div className="p-3 bg-slate-900/30 flex justify-center">
+                   <p className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.2em]">Horário Oficial de Brasília</p>
+                </div>
+              </PopoverContent>
+            </Popover>
           )}
 
           <DropdownMenu>
