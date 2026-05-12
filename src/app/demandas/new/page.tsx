@@ -153,10 +153,13 @@ export default function NewDemandPage() {
             <ShieldAlert className="h-5 w-5" />
             <AlertTitle className="font-bold uppercase text-xs">Acesso Negado ou Falha de Domínio</AlertTitle>
             <AlertDescription className="text-[11px] mt-2 space-y-2">
-              <p>O upload falhou. Certifique-se de que clicou em PUBLICAR nas Rules do Storage no projeto <b>legistrac</b> do Firebase.</p>
+              <p>O upload falhou. Certifique-se de que mudou a linha 9 das Rules para <b>if true;</b> e clicou em PUBLICAR no Storage.</p>
               <div className="p-3 bg-black/20 rounded font-mono break-all text-[10px]">
-                Erro: {lastError}
+                {typeof window !== 'undefined' && window.location.origin}
               </div>
+              <p className="mt-2">
+                <b>Como arrumar definitivo:</b> Vá no Console do Firebase &gt; Authentication &gt; Settings &gt; Authorized Domains e adicione o link acima.
+              </p>
             </AlertDescription>
           </Alert>
         )}
