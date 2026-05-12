@@ -2,7 +2,7 @@
 
 import { useUser, useFirestore, useAuthInstance, useDoc } from "@/firebase";
 import { Button } from "@/components/ui/button";
-import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, X } from "lucide-react";
+import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, X, User } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -59,55 +59,74 @@ export function Navbar() {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-2 sm:px-0">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-4 md:gap-8">
+        <div className="flex items-center gap-2 md:gap-8">
           {/* Mobile Menu Trigger */}
           <div className="md:hidden">
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-muted-foreground">
-                  <Menu size={24} />
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-slate-900 h-10 w-10">
+                  <Menu size={20} />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[280px] p-0 border-r border-slate-800">
-                <SheetHeader className="p-6 border-b text-left">
-                  <SheetTitle className="flex items-center gap-2">
-                    <div className="p-1 bg-slate-800 rounded">
+              <SheetContent side="left" className="w-[300px] p-0 border-r border-slate-800 bg-slate-950">
+                <SheetHeader className="p-6 border-b border-slate-800 text-left bg-slate-900/50">
+                  <SheetTitle className="flex items-center gap-3">
+                    <div className="p-2 bg-slate-800 rounded-lg border border-slate-700 shadow-inner">
                        <Target className="text-slate-200" size={20} />
                     </div>
-                    <span className="font-bold tracking-tight text-foreground uppercase">Legis<span className="text-slate-400">Trac</span></span>
+                    <div className="flex flex-col leading-none">
+                      <span className="font-black tracking-tight text-foreground uppercase">Legis<span className="text-slate-400">Trac</span></span>
+                      <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Gabinete Mobile</span>
+                    </div>
                   </SheetTitle>
                 </SheetHeader>
-                <div className="flex flex-col py-4">
+                <div className="flex flex-col py-6 space-y-1">
                   {navItems.map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={cn(
-                        "flex items-center gap-3 px-6 py-4 text-sm font-bold transition-colors",
+                        "flex items-center gap-4 px-6 py-4 text-sm font-black transition-all uppercase tracking-widest",
                         pathname === item.href 
-                          ? "text-foreground bg-slate-800 border-r-4 border-slate-400" 
-                          : "text-muted-foreground hover:bg-muted"
+                          ? "text-primary bg-slate-900 border-l-4 border-primary" 
+                          : "text-muted-foreground hover:bg-slate-900/50 hover:text-foreground"
                       )}
                     >
-                      <item.icon size={18} className={pathname === item.href ? "text-foreground" : ""} />
+                      <item.icon size={18} className={pathname === item.href ? "text-primary" : ""} />
                       {item.label}
                     </Link>
                   ))}
+                  <div className="pt-6 px-6 mt-6 border-t border-slate-900">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">Configurações</p>
+                    <Link 
+                      href="/usuarios" 
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center gap-4 py-3 text-sm font-bold text-muted-foreground hover:text-foreground uppercase tracking-widest"
+                    >
+                      <Users size={18} /> Equipe
+                    </Link>
+                    <button 
+                      onClick={handleLogout}
+                      className="flex items-center gap-4 py-3 text-sm font-bold text-destructive hover:text-destructive/80 uppercase tracking-widest mt-2"
+                    >
+                      <LogOut size={18} /> Sair
+                    </button>
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>
           </div>
 
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="p-1.5 bg-slate-800 rounded text-slate-200 border border-slate-700">
-              <Target size={20} />
+            <div className="p-1.5 bg-slate-800 rounded-md text-slate-200 border border-slate-700 shadow-sm">
+              <Target size={18} />
             </div>
             <div className="flex flex-col leading-none">
-              <span className="text-lg font-black tracking-tighter text-foreground uppercase">Legis<span className="text-slate-400">Trac</span></span>
-              <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest truncate max-w-[120px] sm:max-w-none">
+              <span className="text-base sm:text-lg font-black tracking-tighter text-foreground uppercase">Legis<span className="text-slate-400">Trac</span></span>
+              <span className="text-[8px] sm:text-[9px] text-muted-foreground font-bold uppercase tracking-widest truncate max-w-[100px] sm:max-w-none">
                 {isSuperAdmin ? "Central SuperAdmin" : (cabinet as any)?.vereador || "Gabinete"}
               </span>
             </div>
@@ -119,47 +138,47 @@ export function Navbar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "px-3 py-2 rounded-md text-xs font-bold transition-colors flex items-center gap-2 uppercase tracking-wide",
-                  pathname === item.href ? "text-foreground bg-slate-800" : "text-muted-foreground hover:text-foreground hover:bg-slate-900"
+                  "px-3 py-2 rounded-md text-[11px] font-black transition-colors flex items-center gap-2 uppercase tracking-widest",
+                  pathname === item.href ? "text-primary bg-slate-900" : "text-muted-foreground hover:text-foreground hover:bg-slate-900"
                 )}
               >
-                <item.icon size={14} />
+                <item.icon size={13} />
                 {item.label}
               </Link>
             ))}
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-9 w-9 rounded-full border border-slate-700 p-0 overflow-hidden hover:bg-slate-800 transition-colors">
+              <Button variant="ghost" className="relative h-10 w-10 rounded-full border border-slate-800 p-0 overflow-hidden hover:bg-slate-900 transition-all focus-visible:ring-0">
                 <Avatar className="h-full w-full">
-                  <AvatarFallback className="bg-slate-800 text-slate-200 font-bold">
-                    {(profile as any)?.nome?.[0] || "U"}
+                  <AvatarFallback className="bg-slate-900 text-primary font-black text-xs">
+                    {(profile as any)?.nome?.[0]?.toUpperCase() || <User size={16} />}
                   </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 bg-slate-950 border-slate-800" align="end">
-              <DropdownMenuLabel>
+            <DropdownMenuContent className="w-64 bg-slate-950 border-slate-800 shadow-2xl" align="end">
+              <DropdownMenuLabel className="p-4 bg-slate-900/50">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-bold truncate">{(profile as any)?.nome}</p>
-                  <p className="text-[10px] text-muted-foreground font-bold truncate uppercase">{(profile as any)?.perfil}</p>
+                  <p className="text-sm font-black text-foreground truncate uppercase">{(profile as any)?.nome}</p>
+                  <p className="text-[9px] text-muted-foreground font-black truncate uppercase tracking-widest">{(profile as any)?.perfil}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-slate-800" />
-              <DropdownMenuItem onClick={() => router.push("/usuarios")} className="hover:bg-slate-900 cursor-pointer">
-                <Users size={14} className="mr-2" /> Equipe do Gabinete
+              <DropdownMenuItem onClick={() => router.push("/usuarios")} className="p-3 hover:bg-slate-900 cursor-pointer font-bold uppercase text-[10px] tracking-widest">
+                <Users size={14} className="mr-3 text-primary" /> Equipe do Gabinete
               </DropdownMenuItem>
               {isSuperAdmin && (
-                <DropdownMenuItem onClick={() => router.push("/gabinetes")} className="hover:bg-slate-900 cursor-pointer">
-                  <Building2 size={14} className="mr-2" /> Gabinetes Isolados
+                <DropdownMenuItem onClick={() => router.push("/gabinetes")} className="p-3 hover:bg-slate-900 cursor-pointer font-bold uppercase text-[10px] tracking-widest">
+                  <Building2 size={14} className="mr-3 text-primary" /> Gabinetes Isolados
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator className="bg-slate-800" />
-              <DropdownMenuItem onClick={handleLogout} className="text-destructive hover:bg-destructive/10 cursor-pointer">
-                <LogOut size={14} className="mr-2" /> Sair do Sistema
+              <DropdownMenuItem onClick={handleLogout} className="p-3 text-destructive hover:bg-destructive/10 cursor-pointer font-bold uppercase text-[10px] tracking-widest">
+                <LogOut size={14} className="mr-3" /> Encerrar Sessão
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

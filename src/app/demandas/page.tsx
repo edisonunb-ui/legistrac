@@ -13,7 +13,8 @@ import {
   Calendar, 
   Clock,
   ChevronLeft,
-  AlertCircle
+  AlertCircle,
+  Plus
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -82,40 +83,49 @@ export default function DemandListPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
-        <header className="mb-8 space-y-4">
+      <main className="container mx-auto px-4 py-6 sm:py-8">
+        <header className="mb-8 space-y-6">
           <div className="flex flex-col gap-2">
-            <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors w-fit text-sm font-bold uppercase tracking-widest">
+            <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors w-fit text-[10px] font-black uppercase tracking-[0.2em]">
               <ChevronLeft size={16} /> Dashboard
             </Link>
-            <div className="flex items-center justify-between mt-2">
-              <h1 className="text-3xl font-black uppercase tracking-tighter">Gestão de <span className="text-primary">Demandas</span></h1>
-              <Link href="/demandas/new"><Button className="font-bold uppercase text-xs h-11 px-8 shadow-xl shadow-primary/10">Nova Demanda</Button></Link>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
+              <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tighter leading-none">Gestão de <span className="text-primary">Demandas</span></h1>
+              <Link href="/demandas/new" className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto font-black uppercase text-[10px] tracking-widest h-12 px-8 shadow-xl shadow-primary/20">
+                  <Plus className="mr-2" size={16} /> Nova Demanda
+                </Button>
+              </Link>
             </div>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-4 p-4 bg-card rounded-xl border border-slate-900 shadow-sm">
+          <div className="flex flex-col lg:flex-row gap-4 p-4 bg-slate-900/30 rounded-2xl border border-slate-900 shadow-xl backdrop-blur-sm">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-              <Input placeholder="Buscar protocolo ou título..." className="pl-10 h-12 bg-slate-950 border-slate-800" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+              <Input 
+                placeholder="Buscar protocolo ou título..." 
+                className="pl-12 h-12 bg-slate-950 border-slate-800 focus:border-primary/50 text-sm font-bold" 
+                value={searchTerm} 
+                onChange={(e) => setSearchTerm(e.target.value)} 
+              />
             </div>
             
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="grid grid-cols-2 lg:flex items-center gap-3">
               <Select value={filterType} onValueChange={(v: any) => setFilterType(v)}>
-                <SelectTrigger className="w-[160px] h-12 bg-slate-950 border-slate-800 font-bold text-xs uppercase"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="MINHAS">Minhas Demandas</SelectItem>
-                  {(isVereador || isMasterAdmin) && <SelectItem value="TODAS">Todas do Gabinete</SelectItem>}
+                <SelectTrigger className="h-12 bg-slate-950 border-slate-800 font-black text-[10px] uppercase tracking-widest"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-slate-950 border-slate-800">
+                  <SelectItem value="MINHAS">Minhas</SelectItem>
+                  {(isVereador || isMasterAdmin) && <SelectItem value="TODAS">Gabinete</SelectItem>}
                 </SelectContent>
               </Select>
 
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[160px] h-12 bg-slate-950 border-slate-800 font-bold text-xs uppercase"><SelectValue /></SelectTrigger>
-                <SelectContent>
+                <SelectTrigger className="h-12 bg-slate-950 border-slate-800 font-black text-[10px] uppercase tracking-widest"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-slate-950 border-slate-800">
                   <SelectItem value="TODOS">Todos Status</SelectItem>
                   <SelectItem value="ABERTO">Aberto</SelectItem>
                   <SelectItem value="EM_ANDAMENTO">Em Trâmite</SelectItem>
-                  <SelectItem value="AGUARDANDO_VEREADORA">Pendente ADMIN</SelectItem>
+                  <SelectItem value="AGUARDANDO_VEREADORA">Aguardando</SelectItem>
                   <SelectItem value="FINALIZADO">Finalizado</SelectItem>
                 </SelectContent>
               </Select>
@@ -125,47 +135,55 @@ export default function DemandListPage() {
 
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-48 bg-slate-900 animate-pulse rounded-xl" />)}
+            {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-48 bg-slate-900/50 animate-pulse rounded-2xl border border-slate-800" />)}
           </div>
         ) : filteredDemands.length === 0 ? (
-          <div className="text-center py-32 bg-slate-950/50 rounded-2xl border-2 border-dashed border-slate-900">
-            <AlertCircle size={48} className="mx-auto text-muted-foreground opacity-20 mb-4" />
-            <h3 className="text-xl font-bold uppercase tracking-widest text-muted-foreground">Vazio</h3>
+          <div className="text-center py-32 bg-slate-950/50 rounded-2xl border-2 border-dashed border-slate-900 shadow-inner">
+            <AlertCircle size={48} className="mx-auto text-muted-foreground opacity-10 mb-4" />
+            <h3 className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground">Sem registros encontrados</h3>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredDemands.map((demand: Demand) => (
               <Link key={demand.id} href={`/demandas/${demand.id}`}>
-                <Card className="h-full border-slate-900 bg-card hover:bg-slate-900/50 hover:border-primary/20 transition-all flex flex-col group">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <Badge variant={demand.prioridade === "ALTA" ? "destructive" : "secondary"} className="text-[10px] font-black uppercase tracking-widest px-2">
+                <Card className="h-full border-slate-900 bg-card hover:bg-slate-900/40 hover:border-primary/30 transition-all flex flex-col group active:scale-[0.98] shadow-lg">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <Badge variant={demand.prioridade === "ALTA" ? "destructive" : "secondary"} className="text-[9px] font-black uppercase tracking-[0.1em] px-2 py-0.5">
                         {demand.prioridade}
                       </Badge>
-                      <span className="text-[10px] font-mono font-bold text-muted-foreground bg-slate-950 px-2 py-0.5 rounded border border-slate-900">
+                      <span className="text-[9px] font-mono font-black text-muted-foreground bg-slate-900 px-2 py-1 rounded border border-slate-800 shadow-inner">
                         #{demand.id.substring(0, 8)}
                       </span>
                     </div>
-                    <CardTitle className="text-base font-bold leading-tight mt-3 line-clamp-2 group-hover:text-primary transition-colors uppercase">
+                    <CardTitle className="text-base font-black leading-tight group-hover:text-primary transition-colors uppercase tracking-tight">
                       {demand.titulo}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="flex-1 space-y-4">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground font-bold uppercase tracking-widest">
-                      <Calendar size={14} className="text-primary" /> {new Date(demand.prazo).toLocaleDateString()}
+                  <CardContent className="flex-1 space-y-5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-black uppercase tracking-widest">
+                        <Calendar size={14} className="text-primary/70" /> {new Date(demand.prazo).toLocaleDateString()}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {demand.anexos && demand.anexos.length > 0 && <Badge variant="outline" className="text-[8px] font-black uppercase h-5">PDF</Badge>}
+                      </div>
                     </div>
                     
                     <div className="pt-4 border-t border-slate-900 flex items-center justify-between">
                       <Badge className={cn(
-                        "text-[9px] font-black uppercase tracking-widest",
-                        demand.status === "ABERTO" && "bg-blue-500",
-                        demand.status === "EM_ANDAMENTO" && "bg-purple-500",
-                        demand.status === "AGUARDANDO_VEREADORA" && "bg-orange-500",
-                        demand.status === "FINALIZADO" && "bg-green-500"
+                        "text-[9px] font-black uppercase tracking-widest px-3 py-1",
+                        demand.status === "ABERTO" && "bg-blue-600",
+                        demand.status === "EM_ANDAMENTO" && "bg-purple-600",
+                        demand.status === "AGUARDANDO_VEREADORA" && "bg-orange-600",
+                        demand.status === "FINALIZADO" && "bg-green-600"
                       )}>
                         {demand.status.replace("_", " ")}
                       </Badge>
-                      <ChevronRight size={18} className="text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                      <div className="flex items-center text-primary group-hover:translate-x-1 transition-transform">
+                        <span className="text-[9px] font-black uppercase mr-1 opacity-0 group-hover:opacity-100 transition-opacity tracking-widest">Ver Detalhes</span>
+                        <ChevronRight size={18} />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
