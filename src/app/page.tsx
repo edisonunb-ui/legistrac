@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
@@ -158,24 +157,24 @@ export default function StrategicDashboard() {
   };
 
   if (authLoading || (loadingProfile && !hasGlobalView)) {
-    return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin text-primary" /></div>;
+    return <div className="flex items-center justify-center min-h-screen bg-white"><Loader2 className="animate-spin text-primary" /></div>;
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-gray-50/50 text-foreground">
       <Navbar />
       <main className="container mx-auto px-4 py-6 sm:py-10">
         <header className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase leading-tight">Dashboard <span className="text-primary/50">{hasGlobalView ? "Global" : "Estratégico"}</span></h1>
-              <div className="flex flex-wrap items-center gap-3 mt-3">
-                <p className="text-muted-foreground text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black bg-slate-900/50 w-fit px-2 py-1 rounded">Inteligência Parlamentar</p>
+              <h1 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase leading-tight text-gray-900">Dashboard <span className="text-primary">{hasGlobalView ? "Global" : "Estratégico"}</span></h1>
+              <div className="flex wrap items-center gap-3 mt-3">
+                <p className="text-primary text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black bg-primary/10 w-fit px-2 py-1 rounded">Inteligência Parlamentar</p>
                 {dateTime && (
-                  <div className="flex items-center gap-2 text-[10px] sm:text-xs font-black uppercase tracking-widest text-primary/80 animate-in slide-in-from-left-2">
+                  <div className="flex items-center gap-2 text-[10px] sm:text-xs font-black uppercase tracking-widest text-muted-foreground animate-in slide-in-from-left-2">
                     <CalendarIcon size={14} className="text-primary/40" />
                     <span>{dateTime.date}</span>
-                    <span className="mx-1 text-slate-800">|</span>
+                    <span className="mx-1 text-gray-200">|</span>
                     <ClockIcon size={14} className="text-primary/40" />
                     <span className="font-mono">{dateTime.time}</span>
                   </div>
@@ -184,12 +183,12 @@ export default function StrategicDashboard() {
             </div>
             <div className="grid grid-cols-2 sm:flex gap-3">
               <Link href="/demandas/new" className="w-full">
-                <Button variant="outline" className="w-full font-black text-[10px] uppercase h-11 px-6 tracking-widest border-primary/20 hover:bg-primary hover:text-primary-foreground transition-all">
+                <Button variant="outline" className="w-full font-black text-[10px] uppercase h-11 px-6 tracking-widest border-primary/20 hover:bg-primary/5 transition-all text-primary">
                   Nova Demanda
                 </Button>
               </Link>
               <Link href="/liderancas/new" className="w-full">
-                <Button className="w-full font-black text-[10px] uppercase h-11 px-6 tracking-widest shadow-xl shadow-primary/10">
+                <Button className="w-full font-black text-[10px] uppercase h-11 px-6 tracking-widest shadow-lg shadow-primary/20 bg-primary text-white">
                   Cadastrar Líder
                 </Button>
               </Link>
@@ -198,65 +197,65 @@ export default function StrategicDashboard() {
         </header>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-10">
-          <Card className="bg-card border-slate-900 shadow-xl overflow-hidden group">
+          <Card className="bg-white border-gray-100 shadow-sm overflow-hidden group">
             <CardContent className="pt-6 relative">
               <p className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest">Votos Mapeados</p>
-              <h3 className="text-4xl font-black tabular-nums">{stats.votosMapeados.toLocaleString()}</h3>
+              <h3 className="text-4xl font-black tabular-nums text-primary">{stats.votosMapeados.toLocaleString()}</h3>
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
                   <span className="text-muted-foreground">Progresso Meta</span>
                   <span className="text-primary">{stats.progressoMeta.toFixed(1)}%</span>
                 </div>
-                <Progress value={stats.progressoMeta} className="h-1.5 bg-slate-900" />
+                <Progress value={stats.progressoMeta} className="h-1.5 bg-gray-100" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-slate-900 shadow-xl group hover:border-primary/20 transition-all">
+          <Card className="bg-white border-gray-100 shadow-sm group hover:border-primary/20 transition-all">
             <CardContent className="pt-6">
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest">Lideranças</p>
-                  <h3 className="text-4xl font-black tabular-nums">{stats.totalLideres}</h3>
+                  <h3 className="text-4xl font-black tabular-nums text-gray-900">{stats.totalLideres}</h3>
                 </div>
-                <div className="p-2 bg-slate-900 rounded-lg"><Users className="text-primary" size={20} /></div>
+                <div className="p-2 bg-primary/10 rounded-lg text-primary"><Users size={20} /></div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-slate-900 shadow-xl">
+          <Card className="bg-white border-gray-100 shadow-sm group hover:border-primary/20 transition-all">
             <CardContent className="pt-6">
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest">Processos Ativos</p>
-                  <h3 className="text-4xl font-black tabular-nums">{stats.demandasAtivas}</h3>
+                  <h3 className="text-4xl font-black tabular-nums text-gray-900">{stats.demandasAtivas}</h3>
                 </div>
-                <div className="p-2 bg-slate-900 rounded-lg"><ClipboardList className="text-primary" size={20} /></div>
+                <div className="p-2 bg-primary/10 rounded-lg text-primary"><ClipboardList size={20} /></div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-slate-900 shadow-xl relative overflow-hidden">
+          <Card className="bg-white border-gray-100 shadow-sm relative overflow-hidden group hover:border-primary/20 transition-all">
             <CardContent className="pt-6">
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest">Meta de Votos</p>
-                  <h3 className="text-4xl font-black tabular-nums">{(stats.metaGeral / 1000).toFixed(0)}K</h3>
+                  <h3 className="text-4xl font-black tabular-nums text-gray-900">{(stats.metaGeral / 1000).toFixed(0)}K</h3>
                 </div>
                 <div className="flex flex-col items-center gap-2">
-                  <div className="p-2 bg-slate-900 rounded-lg"><Target className="text-primary" size={20} /></div>
+                  <div className="p-2 bg-primary/10 rounded-lg text-primary"><Target size={20} /></div>
                   {(profile?.perfil === "ADMIN" || hasGlobalView) && (
                     <Dialog open={isEditingMeta} onOpenChange={setIsEditingMeta}>
                       <DialogTrigger asChild>
                         <button className="text-[9px] hover:text-primary text-muted-foreground font-black uppercase tracking-widest transition-colors">Ajustar</button>
                       </DialogTrigger>
-                      <DialogContent className="bg-slate-950 border-slate-900 w-[95vw] sm:max-w-md">
-                        <DialogHeader><DialogTitle className="uppercase text-sm font-black tracking-widest">Objetivo 2026</DialogTitle></DialogHeader>
+                      <DialogContent className="bg-white border-gray-100 w-[95vw] sm:max-w-md">
+                        <DialogHeader><DialogTitle className="uppercase text-sm font-black tracking-widest text-primary">Objetivo 2026</DialogTitle></DialogHeader>
                         <div className="py-6 space-y-4">
                           <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Número de Votos</Label>
-                          <Input type="number" className="h-12 border-slate-800 bg-slate-900 font-black text-lg" value={newMetaValue} onChange={e => setNewMetaValue(e.target.value)} />
+                          <Input type="number" className="h-12 border-gray-100 bg-gray-50 font-black text-lg" value={newMetaValue} onChange={e => setNewMetaValue(e.target.value)} />
                         </div>
-                        <DialogFooter><Button className="w-full h-12 font-black uppercase text-xs tracking-widest" onClick={handleUpdateMeta}>Salvar Objetivo</Button></DialogFooter>
+                        <DialogFooter><Button className="w-full h-12 font-black uppercase text-xs tracking-widest bg-primary text-white" onClick={handleUpdateMeta}>Salvar Objetivo</Button></DialogFooter>
                       </DialogContent>
                     </Dialog>
                   )}
@@ -269,29 +268,29 @@ export default function StrategicDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <section className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between px-1">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
-                <MapPin size={14} className="text-primary" /> Mapeamento Territorial
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 text-primary">
+                <MapPin size={14} /> Mapeamento Territorial
               </h2>
               <Link href="/liderancas" className="text-[9px] font-black text-muted-foreground uppercase hover:text-primary transition-colors tracking-widest">Ver Mapa</Link>
             </div>
             <div className="space-y-3">
               {allLeaders.length === 0 ? (
-                <div className="text-center py-20 border border-dashed border-slate-900 rounded-2xl bg-slate-950/30">
+                <div className="text-center py-20 border border-dashed border-gray-200 rounded-2xl bg-white">
                   <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Sem registros estratégicos</p>
                 </div>
               ) : 
                 allLeaders.slice(0, 5).map((l: Leader) => (
                   <Link key={l.id} href="/liderancas">
-                    <Card className="hover:bg-slate-900/40 transition-all border-slate-900 hover:border-primary/20 group cursor-pointer active:scale-[0.98]">
+                    <Card className="hover:bg-gray-50 transition-all border-gray-100 hover:border-primary/20 group cursor-pointer active:scale-[0.98] shadow-sm">
                       <CardContent className="p-4 flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center font-black text-xs text-primary shadow-inner border border-slate-800 uppercase">
+                          <div className="w-10 h-10 bg-primary/5 rounded-xl flex items-center justify-center font-black text-xs text-primary border border-primary/10 uppercase shadow-inner">
                             {l.nome[0]}
                           </div>
                           <div>
-                            <h4 className="font-black text-sm uppercase tracking-tight group-hover:text-primary transition-colors">{l.nome}</h4>
+                            <h4 className="font-black text-sm uppercase tracking-tight group-hover:text-primary transition-colors text-gray-800">{l.nome}</h4>
                             <div className="flex items-center gap-2 text-[9px] text-muted-foreground font-black uppercase mt-1 tracking-widest">
-                              <MapPin size={10} className="text-primary/50" /> {l.bairro} <span className="text-slate-800">•</span> <span className="text-primary/80">{l.potencialVotos} Votos</span>
+                              <MapPin size={10} className="text-primary/50" /> {l.bairro} <span className="text-gray-200">•</span> <span className="text-primary font-bold">{l.potencialVotos} Votos</span>
                             </div>
                           </div>
                         </div>
@@ -305,27 +304,27 @@ export default function StrategicDashboard() {
           </section>
 
           <aside className="space-y-6">
-            <Card className="bg-slate-900/20 border-slate-900 shadow-xl">
-              <CardHeader className="bg-slate-900/30 border-b border-slate-900">
-                <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+            <Card className="bg-white border-gray-100 shadow-sm">
+              <CardHeader className="bg-gray-50/50 border-b border-gray-100">
+                <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
                   <TrendingUp size={14} /> Atividade Recente
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 pt-6">
-                <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-xl border border-slate-900 transition-all hover:border-primary/20">
+                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100 transition-all hover:border-primary/20 group">
                   <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Demandas Abertas</span>
                   <span className="font-black text-primary bg-primary/10 px-3 py-1 rounded-full text-xs">
                     {allDemands.filter(d => d.status === "ABERTO" && !d.deleted).length}
                   </span>
                 </div>
-                <div className="flex justify-between items-center p-4 bg-slate-950/50 rounded-xl border border-slate-900 transition-all hover:border-primary/20">
+                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100 transition-all hover:border-primary/20 group">
                   <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Em Trâmite</span>
                   <span className="font-black text-primary bg-primary/10 px-3 py-1 rounded-full text-xs">
                     {allDemands.filter(d => d.status === "EM_ANDAMENTO" && !d.deleted).length}
                   </span>
                 </div>
                 <Link href="/demandas" className="block mt-4">
-                  <Button variant="ghost" className="w-full text-[10px] font-black uppercase tracking-widest h-10 hover:bg-slate-900">
+                  <Button variant="ghost" className="w-full text-[10px] font-black uppercase tracking-widest h-10 hover:bg-primary/5 hover:text-primary">
                     Gerenciar Fluxo <ChevronRight size={14} className="ml-2" />
                   </Button>
                 </Link>
