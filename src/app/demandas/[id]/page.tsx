@@ -11,20 +11,16 @@ import { Badge } from "@/components/ui/badge";
 import { 
   ChevronLeft, 
   Send, 
-  RotateCcw, 
   CheckCircle, 
   History, 
   Info,
   Calendar,
   User as UserIcon,
   Sparkles,
-  MessageSquare,
   Loader2,
   FileText,
   Download,
-  ExternalLink,
   Paperclip,
-  X,
   Gavel,
   Lock
 } from "lucide-react";
@@ -43,17 +39,14 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { 
   sendDemand, 
   returnDemand, 
-  finalizeDemand, 
-  reopenDemand 
+  finalizeDemand 
 } from "@/lib/demand-service";
 import { generateDemandSummary } from "@/ai/flows/demand-summary-generation";
 import { draftLegislativeAction } from "@/ai/flows/legislative-draft-flow";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const MASTER_EMAIL = "edisonunb@gmail.com";
 
@@ -61,7 +54,6 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const { id } = use(params);
   const { user } = useUser();
   const db = useFirestore();
-  const storage = useStorage();
   const router = useRouter();
   const { toast } = useToast();
   
@@ -251,77 +243,82 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   };
 
   if (loadingDemand) {
-    return <div className="min-h-screen bg-white flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
+    return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
   }
 
   if (isAccessDenied) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center">
-        <div className="p-4 bg-red-100 rounded-full mb-4 text-red-600"><Lock size={48} /></div>
-        <h1 className="text-xl font-black uppercase tracking-tighter mb-2">Acesso Negado</h1>
-        <p className="text-muted-foreground text-xs uppercase tracking-widest mb-6">Esta demanda pertence a outro gabinete.</p>
-        <Button onClick={() => router.push("/demandas")} className="bg-primary text-white font-black uppercase text-[10px] tracking-widest px-8">Voltar</Button>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+        <div className="p-6 bg-primary/10 rounded-full mb-6 text-primary glow-primary"><Lock size={48} /></div>
+        <h1 className="text-2xl font-black uppercase tracking-tighter mb-2 text-white">Acesso Negado</h1>
+        <p className="text-muted-foreground text-[10px] uppercase tracking-widest mb-10">Esta demanda pertence a outro gabinete.</p>
+        <Button onClick={() => router.push("/demandas")} className="bg-primary text-black font-black uppercase text-[11px] tracking-widest px-12 h-12 glow-primary">Voltar Agora</Button>
       </div>
     );
   }
 
-  if (!demand) return <div className="p-20 text-center font-black uppercase text-muted-foreground">Não encontrada.</div>;
+  if (!demand) return <div className="p-20 text-center font-black uppercase text-muted-foreground bg-background min-h-screen">Protocolo não encontrado.</div>;
 
   const isResponsible = demand.responsavelAtual === user?.uid;
   const filteredCollaborators = allUsers.filter(u => u.email?.toLowerCase() !== user?.email?.toLowerCase());
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
+    <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-6 sm:py-8">
-        <header className="mb-8 flex flex-col gap-4">
-          <Link href="/demandas" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors w-fit text-[10px] font-black uppercase tracking-widest">
-            <ChevronLeft size={16} /> Voltar para Lista
+      <main className="container mx-auto px-4 py-8 sm:py-12">
+        <header className="mb-12 flex flex-col gap-6">
+          <Link href="/demandas" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-all w-fit text-[10px] font-black uppercase tracking-[0.3em]">
+            <ChevronLeft size={16} /> Voltar ao Painel
           </Link>
           
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl sm:text-3xl font-black uppercase leading-tight tracking-tighter text-gray-900">{demand.titulo}</h1>
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-8">
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <h1 className="text-3xl sm:text-4xl font-black uppercase leading-tight tracking-tighter text-white">{demand.titulo}</h1>
                 <Badge className={cn(
-                  "uppercase text-[9px] font-black tracking-widest px-3 py-1 text-white",
-                  demand.status === "ABERTO" && "bg-blue-600",
-                  demand.status === "EM_ANDAMENTO" && "bg-purple-600",
-                  demand.status === "AGUARDANDO_VEREADORA" && "bg-orange-600",
-                  demand.status === "FINALIZADO" && "bg-green-600"
+                  "uppercase text-[10px] font-black tracking-widest px-4 py-1.5 text-black",
+                  demand.status === "ABERTO" && "bg-primary glow-primary",
+                  demand.status === "EM_ANDAMENTO" && "bg-secondary text-white",
+                  demand.status === "AGUARDANDO_VEREADORA" && "bg-yellow-500",
+                  demand.status === "FINALIZADO" && "bg-green-500"
                 )}>
                   {demand.status.replace("_", " ")}
                 </Badge>
               </div>
-              <p className="text-[10px] text-primary font-black uppercase tracking-widest bg-primary/5 w-fit px-2 py-1 rounded border border-primary/10">Protocolo: #{demand.id.substring(0, 8)}</p>
+              <div className="flex items-center gap-3">
+                <p className="text-[10px] text-primary font-black uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">Protocolo: #{demand.id.substring(0, 8)}</p>
+                <Badge variant={demand.prioridade === "ALTA" ? "destructive" : "secondary"} className="text-[9px] font-black uppercase tracking-widest">
+                  {demand.prioridade} PRIORIDADE
+                </Badge>
+              </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="gap-2 font-black uppercase text-[10px] tracking-widest h-12 sm:h-10 w-full sm:w-auto border-primary/20 text-primary hover:bg-primary/5"><Sparkles size={16} /> Redigir IA</Button>
+                  <Button variant="outline" className="gap-2 font-black uppercase text-[11px] tracking-widest h-14 sm:h-12 w-full sm:w-auto border-white/10 text-white hover:bg-white/5"><Sparkles size={16} className="text-primary" /> Redigir IA</Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl w-[95vw] bg-white border-gray-100">
+                <DialogContent className="max-w-2xl w-[95vw] bg-black border-white/10 shadow-2xl">
                   <DialogHeader>
-                    <DialogTitle className="font-black uppercase tracking-widest text-primary">Assistente Legislativo IA</DialogTitle>
-                    <DialogDescription className="text-xs uppercase tracking-widest">A IA redigirá um documento oficial com base nesta demanda.</DialogDescription>
+                    <DialogTitle className="font-black uppercase tracking-widest text-primary text-xl">Assistente Legislativo IA</DialogTitle>
+                    <DialogDescription className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mt-2">Transformação inteligente de demanda em documento oficial.</DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <Button variant="outline" size="sm" className="font-black uppercase text-[10px]" onClick={() => handleDraftLegislative('INDICACAO')} disabled={drafting}>Indicação</Button>
-                      <Button variant="outline" size="sm" className="font-black uppercase text-[10px]" onClick={() => handleDraftLegislative('REQUERIMENTO')} disabled={drafting}>Requerimento</Button>
-                      <Button variant="outline" size="sm" className="font-black uppercase text-[10px]" onClick={() => handleDraftLegislative('PROJETO_LEI')} disabled={drafting}>Projeto de Lei</Button>
+                  <div className="space-y-6 py-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <Button variant="outline" size="sm" className="font-black uppercase text-[10px] h-12" onClick={() => handleDraftLegislative('INDICACAO')} disabled={drafting}>Indicação</Button>
+                      <Button variant="outline" size="sm" className="font-black uppercase text-[10px] h-12" onClick={() => handleDraftLegislative('REQUERIMENTO')} disabled={drafting}>Requerimento</Button>
+                      <Button variant="outline" size="sm" className="font-black uppercase text-[10px] h-12" onClick={() => handleDraftLegislative('PROJETO_LEI')} disabled={drafting}>Projeto de Lei</Button>
                     </div>
-                    {drafting && <div className="text-center py-10"><Loader2 className="animate-spin mx-auto mb-2 text-primary" /><p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">A IA está trabalhando...</p></div>}
+                    {drafting && <div className="text-center py-12"><Loader2 className="animate-spin mx-auto mb-4 text-primary" /><p className="text-[11px] text-muted-foreground font-black uppercase tracking-widest">Processando Inteligência...</p></div>}
                     {aiDraft && (
-                      <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                        <Label className="text-[10px] font-black text-primary uppercase tracking-widest">DRAFT GERADO:</Label>
-                        <Textarea value={aiDraft.content} readOnly className="h-[250px] sm:h-[300px] text-xs font-mono bg-gray-50 border-gray-200" />
+                      <div className="space-y-3 animate-in fade-in slide-in-from-top-4">
+                        <Label className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Minuta Gerada:</Label>
+                        <Textarea value={aiDraft.content} readOnly className="h-[300px] text-xs font-mono bg-white/5 border-white/10 text-white/90 leading-relaxed" />
                       </div>
                     )}
                   </div>
                   <DialogFooter>
-                    {aiDraft && <Button className="font-black uppercase text-[10px] tracking-widest w-full bg-primary text-white" onClick={handleSaveDraft} disabled={processing}>Salvar Documento</Button>}
+                    {aiDraft && <Button className="font-black uppercase text-[11px] tracking-widest w-full bg-primary text-black h-14 glow-primary" onClick={handleSaveDraft} disabled={processing}>Salvar na Atividade Legislativa</Button>}
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -329,31 +326,31 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
               {isResponsible && !demand.finalizada && (
                 <Dialog open={sendModalOpen} onOpenChange={setSendModalOpen}>
                   <DialogTrigger asChild>
-                    <Button className="gap-2 font-black uppercase text-[10px] tracking-widest h-12 sm:h-10 w-full sm:w-auto bg-primary text-white"><Send size={16} /> Tramitar</Button>
+                    <Button className="gap-2 font-black uppercase text-[11px] tracking-widest h-14 sm:h-12 w-full sm:w-auto bg-primary text-black glow-primary"><Send size={16} /> Tramitar</Button>
                   </DialogTrigger>
-                  <DialogContent className="w-[95vw] sm:max-w-md bg-white border-gray-100">
-                    <DialogHeader><DialogTitle className="font-black uppercase tracking-widest text-primary">Mover Demanda</DialogTitle></DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest">Destinatário</Label>
+                  <DialogContent className="w-[95vw] sm:max-w-md bg-black border-white/10 shadow-2xl">
+                    <DialogHeader><DialogTitle className="font-black uppercase tracking-widest text-primary">Despacho de Demanda</DialogTitle></DialogHeader>
+                    <div className="space-y-6 py-6">
+                      <div className="space-y-3">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Destinatário</Label>
                         <Select onValueChange={setSelectedUser} value={selectedUser}>
-                          <SelectTrigger className="h-12 bg-gray-50 border-gray-100"><SelectValue placeholder="Selecione um colaborador" /></SelectTrigger>
-                          <SelectContent className="bg-white">
+                          <SelectTrigger className="h-14 bg-white/5 border-white/10 text-white font-bold"><SelectValue placeholder="Selecione o assessor" /></SelectTrigger>
+                          <SelectContent className="bg-black border-white/10">
                             {filteredCollaborators.map((u: any) => (
                               <SelectItem key={u.email} value={u.uid || u.email}>{u.nome} ({u.perfil})</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase tracking-widest">Observação</Label>
-                        <Textarea placeholder="Instruções de despacho..." value={obs} onChange={e => setObs(e.target.value)} className="bg-gray-50 border-gray-100 min-h-[100px]" />
+                      <div className="space-y-3">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Observações Técnicas</Label>
+                        <Textarea placeholder="Instruções para o próximo trâmite..." value={obs} onChange={e => setObs(e.target.value)} className="bg-white/5 border-white/10 min-h-[120px] text-white" />
                       </div>
                     </div>
-                    <DialogFooter className="flex flex-col sm:flex-row gap-2">
-                      <Button variant="outline" className="w-full font-black uppercase text-[10px]" onClick={handleReturn} disabled={processing}>Devolver</Button>
-                      <Button className="w-full font-black uppercase text-[10px] bg-primary text-white" onClick={handleSend} disabled={processing || !selectedUser}>
-                        {processing ? <Loader2 className="animate-spin" /> : "Enviar Despacho"}
+                    <DialogFooter className="flex flex-col sm:flex-row gap-3">
+                      <Button variant="outline" className="w-full font-black uppercase text-[11px] h-14" onClick={handleReturn} disabled={processing}>Devolver</Button>
+                      <Button className="w-full font-black uppercase text-[11px] bg-primary text-black h-14 glow-primary" onClick={handleSend} disabled={processing || !selectedUser}>
+                        {processing ? <Loader2 className="animate-spin" /> : "Confirmar Envio"}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -361,7 +358,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
               )}
               
               {hasPermission('finalizar_demandas') && !demand.finalizada && (
-                <Button variant="outline" className="text-green-600 border-green-200 hover:bg-green-50 gap-2 font-black uppercase text-[10px] tracking-widest h-12 sm:h-10 w-full sm:w-auto" onClick={handleFinalize} disabled={processing}>
+                <Button variant="outline" className="text-green-500 border-green-500/20 hover:bg-green-500/10 gap-2 font-black uppercase text-[11px] tracking-widest h-14 sm:h-12 w-full sm:w-auto" onClick={handleFinalize} disabled={processing}>
                   <CheckCircle size={16} /> Finalizar
                 </Button>
               )}
@@ -369,55 +366,56 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
           </div>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="border-gray-100 bg-white shadow-sm overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between border-b border-gray-50 bg-gray-50/50">
-                <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-primary">
-                  <Info size={16} /> Detalhes da Solicitação
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+          <div className="lg:col-span-2 space-y-8">
+            <Card className="border-white/5 bg-white/5 shadow-2xl overflow-hidden relative">
+              <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
+              <CardHeader className="flex flex-row items-center justify-between border-b border-white/5 bg-white/5 px-8 py-6">
+                <CardTitle className="text-[11px] font-black uppercase tracking-[0.4em] flex items-center gap-3 text-primary">
+                  <Info size={16} /> Descritivo do Protocolo
                 </CardTitle>
-                <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10 h-8 w-8 p-0" onClick={handleGenerateSummary} disabled={summarizing}>
-                  {summarizing ? <Loader2 className="animate-spin h-4 w-4" /> : <Sparkles size={16} />}
+                <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10 h-10 w-10 p-0" onClick={handleGenerateSummary} disabled={summarizing}>
+                  {summarizing ? <Loader2 className="animate-spin h-5 w-5" /> : <Sparkles size={18} />}
                 </Button>
               </CardHeader>
-              <CardContent className="space-y-6 pt-6">
+              <CardContent className="space-y-8 p-8">
                 {summary && (
-                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl animate-in slide-in-from-top-2">
-                    <p className="text-xs sm:text-sm leading-relaxed text-primary italic font-medium">"{summary}"</p>
+                  <div className="p-6 bg-primary/10 border border-primary/20 rounded-2xl animate-in slide-in-from-top-4">
+                    <p className="text-sm sm:text-base leading-relaxed text-primary italic font-black">"{summary}"</p>
                   </div>
                 )}
-                <div className="whitespace-pre-wrap text-gray-700 text-sm sm:text-base leading-relaxed font-body">
+                <div className="whitespace-pre-wrap text-white/90 text-base sm:text-lg leading-relaxed font-medium">
                   {demand.descricao}
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-gray-100 bg-white shadow-sm overflow-hidden">
-              <CardHeader className="bg-gray-50/50 border-b border-gray-50">
-                <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-primary">
-                  <History size={16} /> Histórico de Trâmite
+            <Card className="border-white/5 bg-white/5 shadow-2xl overflow-hidden">
+              <CardHeader className="bg-white/5 border-b border-white/5 px-8 py-6">
+                <CardTitle className="text-[11px] font-black uppercase tracking-[0.4em] flex items-center gap-3 text-primary">
+                  <History size={16} /> Linha do Tempo de Trâmite
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-8 pt-8 px-6 sm:px-8">
+              <CardContent className="space-y-10 p-8">
                 {tramites.map((t: Tramite, idx: number) => (
-                  <div key={t.id} className="relative flex gap-6">
-                    {idx !== tramites.length - 1 && <div className="absolute left-[0.9rem] top-8 bottom-0 w-px bg-gray-100" />}
-                    <div className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center shrink-0 z-10 shadow-sm">
-                      <div className="w-2 h-2 rounded-full bg-primary" />
+                  <div key={t.id} className="relative flex gap-8">
+                    {idx !== tramites.length - 1 && <div className="absolute left-[0.9rem] top-10 bottom-0 w-px bg-white/5" />}
+                    <div className="w-8 h-8 rounded-xl bg-black border border-white/10 flex items-center justify-center shrink-0 z-10 shadow-2xl group">
+                      <div className="w-2.5 h-2.5 rounded-full bg-primary glow-primary" />
                     </div>
-                    <div className="flex-1 pb-2">
-                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
-                        <h4 className="font-black text-[10px] uppercase tracking-widest text-primary">{t.acao}</h4>
-                        <span className="text-[9px] font-black text-muted-foreground uppercase">{t.data?.toDate().toLocaleString()}</span>
+                    <div className="flex-1 pb-4">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                        <h4 className="font-black text-[11px] uppercase tracking-widest text-primary">{t.acao}</h4>
+                        <span className="text-[10px] font-black text-muted-foreground uppercase">{t.data?.toDate().toLocaleString()}</span>
                       </div>
-                      <p className="text-xs text-gray-600 mt-2 bg-gray-50 p-3 rounded-lg border border-gray-100 italic leading-relaxed">
+                      <p className="text-sm text-white/70 mt-3 bg-black/40 p-4 rounded-2xl border border-white/5 italic leading-relaxed">
                         {t.observacao}
                       </p>
                       {t.anexos && t.anexos.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-3">
+                        <div className="flex flex-wrap gap-3 mt-4">
                           {t.anexos.map((a, i) => (
-                            <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[9px] font-black uppercase bg-white px-2 py-1.5 rounded border border-gray-200 hover:border-primary/30 transition-colors text-primary">
-                              <Paperclip size={10} /> {a.nome}
+                            <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-[10px] font-black uppercase bg-white/5 px-4 py-2 rounded-xl border border-white/10 hover:border-primary/40 transition-all text-white/80">
+                              <Paperclip size={12} className="text-primary" /> {a.nome}
                             </a>
                           ))}
                         </div>
@@ -429,50 +427,53 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
             </Card>
           </div>
 
-          <div className="space-y-6">
-            <Card className="border-gray-100 bg-white shadow-sm overflow-hidden">
-              <CardHeader className="bg-gray-50/50 border-b border-gray-50">
-                <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-primary"><Gavel size={16} /> Pasta Digital</CardTitle>
+          <div className="space-y-8">
+            <Card className="border-white/5 bg-white/5 shadow-2xl overflow-hidden">
+              <CardHeader className="bg-white/5 border-b border-white/5 px-6 py-5">
+                <CardTitle className="text-[11px] font-black uppercase tracking-[0.3em] flex items-center gap-3 text-primary"><Gavel size={16} /> Pasta Digital</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 pt-6">
+              <CardContent className="space-y-4 p-6">
                 {allAttachments.map((a, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 group hover:border-primary/30 transition-all">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="p-2 bg-white rounded-lg group-hover:bg-primary/10 transition-colors shadow-sm">
-                        <FileText size={14} className="text-primary" />
+                  <div key={i} className="flex items-center justify-between p-4 bg-black/40 rounded-2xl border border-white/5 group hover:border-primary/40 transition-all">
+                    <div className="flex items-center gap-4 overflow-hidden">
+                      <div className="p-3 bg-white/5 rounded-xl group-hover:bg-primary/10 transition-colors shadow-inner">
+                        <FileText size={16} className="text-primary" />
                       </div>
-                      <span className="text-[10px] font-black uppercase tracking-tight truncate pr-2 text-gray-700 group-hover:text-primary transition-colors">{a.nome}</span>
+                      <span className="text-[10px] font-black uppercase tracking-tight truncate pr-4 text-white group-hover:text-primary transition-colors">{a.nome}</span>
                     </div>
-                    <a href={a.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:bg-primary/10 p-2 rounded-lg transition-all shrink-0">
-                      <Download size={16} />
+                    <a href={a.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:bg-primary/20 p-2.5 rounded-xl transition-all shrink-0 border border-transparent hover:border-primary/20">
+                      <Download size={18} />
                     </a>
                   </div>
                 ))}
-                {allAttachments.length === 0 && <p className="text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground py-4">Sem documentos anexados.</p>}
+                {allAttachments.length === 0 && <p className="text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground py-8 border border-dashed border-white/5 rounded-2xl">Sem documentos anexados.</p>}
               </CardContent>
             </Card>
 
-            <Card className="border-gray-100 bg-white shadow-sm overflow-hidden">
-              <CardHeader className="bg-gray-50/50 border-b border-gray-50">
-                <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-primary">Metadados</CardTitle>
+            <Card className="border-white/5 bg-white/5 shadow-2xl overflow-hidden">
+              <CardHeader className="bg-white/5 border-b border-white/5 px-6 py-5">
+                <CardTitle className="text-[11px] font-black uppercase tracking-[0.3em] text-primary">Indicadores Estratégicos</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-5 pt-6">
-                <div className="space-y-1">
-                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Prazo Limite</p>
-                  <div className="flex items-center gap-2 text-sm font-black uppercase tracking-tight text-gray-800">
-                    <Calendar size={14} className="text-primary" /> {new Date(demand.prazo).toLocaleDateString()}
+              <CardContent className="space-y-8 p-8">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Prazo Estimado</p>
+                  <div className="flex items-center gap-3 text-lg font-black uppercase tracking-tight text-white">
+                    <Calendar size={18} className="text-primary" /> {new Date(demand.prazo).toLocaleDateString()}
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Assessor Responsável</p>
-                  <div className="flex items-center gap-2 text-sm font-black uppercase tracking-tight text-gray-800">
-                    <UserIcon size={14} className="text-primary" /> {allUsers.find(u => u.uid === demand.responsavelAtual)?.nome || 'Não Atribuído'}
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Agente Responsável</p>
+                  <div className="flex items-center gap-3 text-lg font-black uppercase tracking-tight text-white">
+                    <UserIcon size={18} className="text-primary" /> {allUsers.find(u => u.uid === demand.responsavelAtual)?.nome || 'Pendente'}
                   </div>
                 </div>
-                <div className="pt-2">
-                  <Badge variant={demand.prioridade === "ALTA" ? "destructive" : "secondary"} className="text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1">
-                    {demand.prioridade} PRIORIDADE
-                  </Badge>
+                <div className="pt-4 border-t border-white/5">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Nível de Prioridade</span>
+                    <Badge variant={demand.prioridade === "ALTA" ? "destructive" : "secondary"} className="text-[10px] font-black uppercase tracking-widest px-4 py-1.5 shadow-lg">
+                      {demand.prioridade}
+                    </Badge>
+                  </div>
                 </div>
               </CardContent>
             </Card>
