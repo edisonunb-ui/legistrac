@@ -157,38 +157,38 @@ export default function StrategicDashboard() {
   };
 
   if (authLoading || (loadingProfile && !hasGlobalView)) {
-    return <div className="flex items-center justify-center min-h-screen bg-white"><Loader2 className="animate-spin text-primary" /></div>;
+    return <div className="flex items-center justify-center min-h-screen bg-black"><Loader2 className="animate-spin text-primary" /></div>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50 text-foreground">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="container mx-auto px-4 py-6 sm:py-10">
-        <header className="mb-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <header className="mb-12">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
             <div className="flex-1">
-              <h1 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase leading-tight text-gray-900">Dashboard <span className="text-primary">{hasGlobalView ? "Global" : "Estratégico"}</span></h1>
-              <div className="flex wrap items-center gap-3 mt-3">
-                <p className="text-primary text-[10px] sm:text-xs uppercase tracking-[0.2em] font-black bg-primary/10 w-fit px-2 py-1 rounded">Inteligência Parlamentar</p>
+              <h1 className="text-4xl sm:text-5xl font-black tracking-tighter uppercase leading-tight text-white">Dashboard <span className="text-primary">{hasGlobalView ? "Global" : "Estratégico"}</span></h1>
+              <div className="flex flex-wrap items-center gap-4 mt-4">
+                <p className="text-primary text-[10px] sm:text-xs uppercase tracking-[0.3em] font-black bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full glow-primary">Inteligência Parlamentar</p>
                 {dateTime && (
-                  <div className="flex items-center gap-2 text-[10px] sm:text-xs font-black uppercase tracking-widest text-muted-foreground animate-in slide-in-from-left-2">
-                    <CalendarIcon size={14} className="text-primary/40" />
-                    <span>{dateTime.date}</span>
-                    <span className="mx-1 text-gray-200">|</span>
-                    <ClockIcon size={14} className="text-primary/40" />
-                    <span className="font-mono">{dateTime.time}</span>
+                  <div className="flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-muted-foreground">
+                    <CalendarIcon size={14} className="text-primary/60" />
+                    <span className="text-white/80">{dateTime.date}</span>
+                    <span className="mx-1 text-white/10">|</span>
+                    <ClockIcon size={14} className="text-primary/60" />
+                    <span className="font-mono text-white/80">{dateTime.time}</span>
                   </div>
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:flex gap-3">
+            <div className="grid grid-cols-1 sm:flex gap-4">
               <Link href="/demandas/new" className="w-full">
-                <Button variant="outline" className="w-full font-black text-[10px] uppercase h-11 px-6 tracking-widest border-primary/20 hover:bg-primary/5 transition-all text-primary">
+                <Button variant="outline" className="w-full font-black text-[11px] uppercase h-12 px-8 tracking-widest border-white/10 bg-white/5 hover:bg-white/10 transition-all text-white">
                   Nova Demanda
                 </Button>
               </Link>
               <Link href="/liderancas/new" className="w-full">
-                <Button className="w-full font-black text-[10px] uppercase h-11 px-6 tracking-widest shadow-lg shadow-primary/20 bg-primary text-white">
+                <Button className="w-full font-black text-[11px] uppercase h-12 px-8 tracking-widest shadow-lg shadow-primary/20 bg-primary text-black hover:opacity-90 transition-all glow-primary">
                   Cadastrar Líder
                 </Button>
               </Link>
@@ -196,66 +196,67 @@ export default function StrategicDashboard() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-10">
-          <Card className="bg-white border-gray-100 shadow-sm overflow-hidden group">
-            <CardContent className="pt-6 relative">
-              <p className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest">Votos Mapeados</p>
-              <h3 className="text-4xl font-black tabular-nums text-primary">{stats.votosMapeados.toLocaleString()}</h3>
-              <div className="mt-4 space-y-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <Card className="bg-white/5 border-white/5 shadow-2xl overflow-hidden group relative">
+             <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
+            <CardContent className="pt-8">
+              <p className="text-[10px] font-black uppercase text-muted-foreground mb-2 tracking-[0.2em]">Votos Mapeados</p>
+              <h3 className="text-5xl font-black tabular-nums text-white">{stats.votosMapeados.toLocaleString()}</h3>
+              <div className="mt-6 space-y-3">
                 <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
                   <span className="text-muted-foreground">Progresso Meta</span>
                   <span className="text-primary">{stats.progressoMeta.toFixed(1)}%</span>
                 </div>
-                <Progress value={stats.progressoMeta} className="h-1.5 bg-gray-100" />
+                <Progress value={stats.progressoMeta} className="h-1.5 bg-white/5" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-gray-100 shadow-sm group hover:border-primary/20 transition-all">
-            <CardContent className="pt-6">
+          <Card className="bg-white/5 border-white/5 shadow-2xl group hover:border-primary/30 transition-all">
+            <CardContent className="pt-8">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest">Lideranças</p>
-                  <h3 className="text-4xl font-black tabular-nums text-gray-900">{stats.totalLideres}</h3>
+                  <p className="text-[10px] font-black uppercase text-muted-foreground mb-2 tracking-[0.2em]">Lideranças</p>
+                  <h3 className="text-5xl font-black tabular-nums text-white">{stats.totalLideres}</h3>
                 </div>
-                <div className="p-2 bg-primary/10 rounded-lg text-primary"><Users size={20} /></div>
+                <div className="p-3 bg-secondary/20 rounded-xl text-secondary border border-secondary/30"><Users size={24} /></div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-gray-100 shadow-sm group hover:border-primary/20 transition-all">
-            <CardContent className="pt-6">
+          <Card className="bg-white/5 border-white/5 shadow-2xl group hover:border-primary/30 transition-all">
+            <CardContent className="pt-8">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest">Processos Ativos</p>
-                  <h3 className="text-4xl font-black tabular-nums text-gray-900">{stats.demandasAtivas}</h3>
+                  <p className="text-[10px] font-black uppercase text-muted-foreground mb-2 tracking-[0.2em]">Processos Ativos</p>
+                  <h3 className="text-5xl font-black tabular-nums text-white">{stats.demandasAtivas}</h3>
                 </div>
-                <div className="p-2 bg-primary/10 rounded-lg text-primary"><ClipboardList size={20} /></div>
+                <div className="p-3 bg-primary/10 rounded-xl text-primary border border-primary/20"><ClipboardList size={24} /></div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-gray-100 shadow-sm relative overflow-hidden group hover:border-primary/20 transition-all">
-            <CardContent className="pt-6">
+          <Card className="bg-white/5 border-white/5 shadow-2xl relative overflow-hidden group hover:border-primary/30 transition-all">
+            <CardContent className="pt-8">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest">Meta de Votos</p>
-                  <h3 className="text-4xl font-black tabular-nums text-gray-900">{(stats.metaGeral / 1000).toFixed(0)}K</h3>
+                  <p className="text-[10px] font-black uppercase text-muted-foreground mb-2 tracking-[0.2em]">Meta de Votos</p>
+                  <h3 className="text-5xl font-black tabular-nums text-white">{(stats.metaGeral / 1000).toFixed(0)}K</h3>
                 </div>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="p-2 bg-primary/10 rounded-lg text-primary"><Target size={20} /></div>
+                <div className="flex flex-col items-center gap-3">
+                  <div className="p-3 bg-primary/10 rounded-xl text-primary border border-primary/20"><Target size={24} /></div>
                   {(profile?.perfil === "ADMIN" || hasGlobalView) && (
                     <Dialog open={isEditingMeta} onOpenChange={setIsEditingMeta}>
                       <DialogTrigger asChild>
-                        <button className="text-[9px] hover:text-primary text-muted-foreground font-black uppercase tracking-widest transition-colors">Ajustar</button>
+                        <button className="text-[10px] hover:text-primary text-muted-foreground font-black uppercase tracking-widest transition-colors border-b border-transparent hover:border-primary">Ajustar</button>
                       </DialogTrigger>
-                      <DialogContent className="bg-white border-gray-100 w-[95vw] sm:max-w-md">
+                      <DialogContent className="bg-black border-white/10 w-[95vw] sm:max-w-md">
                         <DialogHeader><DialogTitle className="uppercase text-sm font-black tracking-widest text-primary">Objetivo 2026</DialogTitle></DialogHeader>
-                        <div className="py-6 space-y-4">
-                          <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Número de Votos</Label>
-                          <Input type="number" className="h-12 border-gray-100 bg-gray-50 font-black text-lg" value={newMetaValue} onChange={e => setNewMetaValue(e.target.value)} />
+                        <div className="py-8 space-y-6">
+                          <Label className="text-[11px] uppercase font-black tracking-widest text-muted-foreground">Número de Votos</Label>
+                          <Input type="number" className="h-14 border-white/10 bg-white/5 font-black text-2xl text-white text-center" value={newMetaValue} onChange={e => setNewMetaValue(e.target.value)} />
                         </div>
-                        <DialogFooter><Button className="w-full h-12 font-black uppercase text-xs tracking-widest bg-primary text-white" onClick={handleUpdateMeta}>Salvar Objetivo</Button></DialogFooter>
+                        <DialogFooter><Button className="w-full h-14 font-black uppercase text-xs tracking-widest bg-primary text-black hover:opacity-90" onClick={handleUpdateMeta}>Salvar Objetivo</Button></DialogFooter>
                       </DialogContent>
                     </Dialog>
                   )}
@@ -265,36 +266,38 @@ export default function StrategicDashboard() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <section className="lg:col-span-2 space-y-6">
-            <div className="flex items-center justify-between px-1">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 text-primary">
-                <MapPin size={14} /> Mapeamento Territorial
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+          <section className="lg:col-span-2 space-y-8">
+            <div className="flex items-center justify-between px-2">
+              <h2 className="text-[11px] font-black uppercase tracking-[0.4em] flex items-center gap-3 text-primary">
+                <MapPin size={16} /> Mapeamento Territorial
               </h2>
-              <Link href="/liderancas" className="text-[9px] font-black text-muted-foreground uppercase hover:text-primary transition-colors tracking-widest">Ver Mapa</Link>
+              <Link href="/liderancas" className="text-[10px] font-black text-muted-foreground uppercase hover:text-primary transition-all tracking-widest border-b border-transparent hover:border-primary">Ver Mapa</Link>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {allLeaders.length === 0 ? (
-                <div className="text-center py-20 border border-dashed border-gray-200 rounded-2xl bg-white">
-                  <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Sem registros estratégicos</p>
+                <div className="text-center py-24 border border-dashed border-white/10 rounded-2xl bg-white/5">
+                  <p className="text-[11px] text-muted-foreground font-black uppercase tracking-[0.3em]">Sem registros estratégicos</p>
                 </div>
               ) : 
                 allLeaders.slice(0, 5).map((l: Leader) => (
                   <Link key={l.id} href="/liderancas">
-                    <Card className="hover:bg-gray-50 transition-all border-gray-100 hover:border-primary/20 group cursor-pointer active:scale-[0.98] shadow-sm">
-                      <CardContent className="p-4 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-primary/5 rounded-xl flex items-center justify-center font-black text-xs text-primary border border-primary/10 uppercase shadow-inner">
+                    <Card className="bg-white/5 hover:bg-white/10 transition-all border-white/5 hover:border-primary/20 group cursor-pointer active:scale-[0.99] shadow-xl overflow-hidden">
+                      <CardContent className="p-6 flex items-center justify-between">
+                        <div className="flex items-center gap-6">
+                          <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center font-black text-lg text-primary border border-primary/20 uppercase">
                             {l.nome[0]}
                           </div>
                           <div>
-                            <h4 className="font-black text-sm uppercase tracking-tight group-hover:text-primary transition-colors text-gray-800">{l.nome}</h4>
-                            <div className="flex items-center gap-2 text-[9px] text-muted-foreground font-black uppercase mt-1 tracking-widest">
-                              <MapPin size={10} className="text-primary/50" /> {l.bairro} <span className="text-gray-200">•</span> <span className="text-primary font-bold">{l.potencialVotos} Votos</span>
+                            <h4 className="font-black text-base uppercase tracking-tight group-hover:text-primary transition-colors text-white">{l.nome}</h4>
+                            <div className="flex items-center gap-4 text-[10px] text-muted-foreground font-black uppercase mt-2 tracking-widest">
+                              <span className="flex items-center gap-1.5"><MapPin size={12} className="text-primary/50" /> {l.bairro}</span>
+                              <span className="text-white/10">|</span>
+                              <span className="text-primary font-bold">{l.potencialVotos} Votos</span>
                             </div>
                           </div>
                         </div>
-                        <ChevronRight size={16} className="text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-1" />
+                        <ChevronRight size={20} className="text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-1" />
                       </CardContent>
                     </Card>
                   </Link>
@@ -303,29 +306,29 @@ export default function StrategicDashboard() {
             </div>
           </section>
 
-          <aside className="space-y-6">
-            <Card className="bg-white border-gray-100 shadow-sm">
-              <CardHeader className="bg-gray-50/50 border-b border-gray-100">
-                <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                  <TrendingUp size={14} /> Atividade Recente
+          <aside className="space-y-8">
+            <Card className="bg-white/5 border-white/5 shadow-2xl overflow-hidden">
+              <CardHeader className="bg-white/5 border-b border-white/5">
+                <CardTitle className="text-[11px] font-black uppercase tracking-[0.4em] text-primary flex items-center gap-3">
+                  <TrendingUp size={16} /> Atividade Recente
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 pt-6">
-                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100 transition-all hover:border-primary/20 group">
+              <CardContent className="space-y-4 pt-8">
+                <div className="flex justify-between items-center p-5 bg-black/40 rounded-2xl border border-white/5 transition-all hover:border-primary/30 group">
                   <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Demandas Abertas</span>
-                  <span className="font-black text-primary bg-primary/10 px-3 py-1 rounded-full text-xs">
+                  <span className="font-black text-primary bg-primary/10 border border-primary/20 px-4 py-1.5 rounded-full text-xs">
                     {allDemands.filter(d => d.status === "ABERTO" && !d.deleted).length}
                   </span>
                 </div>
-                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100 transition-all hover:border-primary/20 group">
+                <div className="flex justify-between items-center p-5 bg-black/40 rounded-2xl border border-white/5 transition-all hover:border-primary/30 group">
                   <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Em Trâmite</span>
-                  <span className="font-black text-primary bg-primary/10 px-3 py-1 rounded-full text-xs">
+                  <span className="font-black text-secondary bg-secondary/10 border border-secondary/20 px-4 py-1.5 rounded-full text-xs">
                     {allDemands.filter(d => d.status === "EM_ANDAMENTO" && !d.deleted).length}
                   </span>
                 </div>
-                <Link href="/demandas" className="block mt-4">
-                  <Button variant="ghost" className="w-full text-[10px] font-black uppercase tracking-widest h-10 hover:bg-primary/5 hover:text-primary">
-                    Gerenciar Fluxo <ChevronRight size={14} className="ml-2" />
+                <Link href="/demandas" className="block mt-6">
+                  <Button variant="ghost" className="w-full text-[11px] font-black uppercase tracking-widest h-12 hover:bg-primary/10 hover:text-primary border border-transparent hover:border-primary/20">
+                    Gerenciar Fluxo <ChevronRight size={16} className="ml-2" />
                   </Button>
                 </Link>
               </CardContent>

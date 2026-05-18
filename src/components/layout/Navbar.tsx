@@ -100,24 +100,24 @@ export function Navbar() {
   if (!mounted) return null;
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-white shadow-sm px-2 sm:px-0">
+    <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-black/80 backdrop-blur-md px-2 sm:px-0">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2 md:gap-8">
           <div className="md:hidden">
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-gray-100 h-10 w-10">
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-white/5 h-10 w-10">
                   <Menu size={20} />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[300px] p-0 border-r border-gray-100 bg-white">
-                <SheetHeader className="p-6 border-b border-gray-100 text-left bg-gray-50/50">
+              <SheetContent side="left" className="w-[300px] p-0 border-r border-white/5 bg-black">
+                <SheetHeader className="p-6 border-b border-white/5 text-left bg-white/5">
                   <SheetTitle className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg border border-primary/20">
+                    <div className="p-2 bg-primary/20 rounded-lg border border-primary/40">
                        <Target className="text-primary" size={20} />
                     </div>
                     <div className="flex flex-col leading-none">
-                      <span className="font-black tracking-tight text-foreground uppercase">Legis<span className="text-primary">Trac</span></span>
+                      <span className="font-black tracking-tight text-white uppercase">Legis<span className="text-primary">Trac</span></span>
                       <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Gabinete Mobile</span>
                     </div>
                   </SheetTitle>
@@ -131,8 +131,8 @@ export function Navbar() {
                       className={cn(
                         "flex items-center gap-4 px-6 py-4 text-sm font-black transition-all uppercase tracking-widest",
                         pathname === item.href 
-                          ? "text-primary bg-primary/5 border-l-4 border-primary" 
-                          : "text-muted-foreground hover:bg-gray-50 hover:text-foreground"
+                          ? "text-primary bg-primary/10 border-l-4 border-primary" 
+                          : "text-muted-foreground hover:bg-white/5 hover:text-white"
                       )}
                     >
                       <item.icon size={18} className={pathname === item.href ? "text-primary" : ""} />
@@ -145,11 +145,11 @@ export function Navbar() {
           </div>
 
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="p-1.5 bg-primary/10 rounded-md text-primary border border-primary/20 shadow-sm">
+            <div className="p-1.5 bg-primary/10 rounded-md text-primary border border-primary/20 glow-primary">
               <Target size={18} />
             </div>
             <div className="flex flex-col leading-none">
-              <span className="text-base sm:text-lg font-black tracking-tighter text-foreground uppercase">Legis<span className="text-primary">Trac</span></span>
+              <span className="text-base sm:text-lg font-black tracking-tighter text-white uppercase">Legis<span className="text-primary">Trac</span></span>
               <span className="text-[8px] sm:text-[9px] text-muted-foreground font-bold uppercase tracking-widest truncate max-w-[100px] sm:max-w-none">
                 {isSuperAdmin ? "Central SuperAdmin" : (cabinet as any)?.vereador || "Gabinete"}
               </span>
@@ -162,8 +162,8 @@ export function Navbar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "px-3 py-2 rounded-md text-[11px] font-black transition-colors flex items-center gap-2 uppercase tracking-widest",
-                  pathname === item.href ? "text-primary bg-primary/5" : "text-muted-foreground hover:text-foreground hover:bg-gray-100"
+                  "px-3 py-2 rounded-md text-[11px] font-black transition-all flex items-center gap-2 uppercase tracking-widest",
+                  pathname === item.href ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-white hover:bg-white/5"
                 )}
               >
                 <item.icon size={13} />
@@ -177,24 +177,24 @@ export function Navbar() {
           {time && (
             <Popover>
               <PopoverTrigger asChild>
-                <button className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-200 text-[10px] font-black uppercase tracking-widest text-muted-foreground transition-all active:scale-95 group">
-                  <Clock size={12} className="text-primary/50 group-hover:text-primary transition-colors" />
-                  <span className="font-mono">{time.substring(0, 5)}</span>
+                <button className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 text-[10px] font-black uppercase tracking-widest text-muted-foreground transition-all active:scale-95 group">
+                  <Clock size={12} className="text-primary group-hover:glow-primary transition-all" />
+                  <span className="font-mono text-white">{time.substring(0, 5)}</span>
                   <ChevronDown size={10} className="opacity-50" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-[320px] p-0 bg-white border-gray-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95" align="end">
-                <div className="p-6 bg-primary border-b border-primary-foreground/10">
+              <PopoverContent className="w-[320px] p-0 bg-black border-white/10 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95" align="end">
+                <div className="p-6 bg-primary border-b border-black/20">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] font-black text-white/80 uppercase tracking-widest">{fullDate}</span>
-                    <Clock size={14} className="text-white/40" />
+                    <span className="text-[10px] font-black text-black/80 uppercase tracking-widest">{fullDate}</span>
+                    <Clock size={14} className="text-black/40" />
                   </div>
-                  <h2 className="text-4xl font-black font-mono tracking-tighter text-white leading-none">{time}</h2>
+                  <h2 className="text-4xl font-black font-mono tracking-tighter text-black leading-none">{time}</h2>
                 </div>
                 
-                <div className="p-6">
+                <div className="p-6 bg-black">
                   <div className="mb-6 text-center">
-                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-primary/40">
+                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-primary">
                       {currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
                     </span>
                   </div>
@@ -211,11 +211,11 @@ export function Navbar() {
                       row: "flex w-full justify-between mt-2",
                       cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
                       day: cn(
-                        "h-9 w-9 p-0 font-bold text-muted-foreground hover:bg-primary/10 hover:text-primary rounded-none transition-all"
+                        "h-9 w-9 p-0 font-bold text-muted-foreground hover:bg-primary/20 hover:text-primary rounded-none transition-all"
                       ),
-                      day_selected: "bg-primary text-white hover:bg-primary hover:text-white font-black rounded-none",
-                      day_today: "text-primary border border-primary/20",
-                      day_outside: "text-muted-foreground/10 pointer-events-none",
+                      day_selected: "bg-primary text-black hover:bg-primary hover:text-black font-black rounded-none",
+                      day_today: "text-primary border border-primary/30",
+                      day_outside: "text-white/5 pointer-events-none",
                     }}
                   />
                 </div>
@@ -225,31 +225,31 @@ export function Navbar() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-10 w-10 rounded-full border border-gray-200 p-0 overflow-hidden hover:bg-gray-100 transition-all focus-visible:ring-0">
+              <Button variant="ghost" className="relative h-10 w-10 rounded-full border border-white/10 p-0 overflow-hidden hover:bg-white/5 transition-all focus-visible:ring-0">
                 <Avatar className="h-full w-full">
-                  <AvatarFallback className="bg-primary/10 text-primary font-black text-xs">
+                  <AvatarFallback className="bg-primary/20 text-primary font-black text-xs border border-primary/30">
                     {(profile as any)?.nome?.[0]?.toUpperCase() || (isSuperAdmin ? "SA" : <User size={16} />)}
                   </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-64 bg-white border-gray-200 shadow-2xl" align="end">
-              <DropdownMenuLabel className="p-4 bg-gray-50/50">
+            <DropdownMenuContent className="w-64 bg-black border-white/10 shadow-2xl" align="end">
+              <DropdownMenuLabel className="p-4 bg-white/5">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-black text-foreground truncate uppercase">{(profile as any)?.nome || (isSuperAdmin ? "Super Admin" : "Usuário")}</p>
-                  <p className="text-[9px] text-muted-foreground font-black truncate uppercase tracking-widest">{(profile as any)?.perfil || (isSuperAdmin ? "SUPER_ADMIN" : "")}</p>
+                  <p className="text-sm font-black text-white truncate uppercase">{(profile as any)?.nome || (isSuperAdmin ? "Super Admin" : "Usuário")}</p>
+                  <p className="text-[9px] text-primary font-black truncate uppercase tracking-widest">{(profile as any)?.perfil || (isSuperAdmin ? "SUPER_ADMIN" : "")}</p>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-gray-100" />
-              <DropdownMenuItem onClick={() => router.push("/usuarios")} className="p-3 hover:bg-gray-50 cursor-pointer font-bold uppercase text-[10px] tracking-widest">
+              <DropdownMenuSeparator className="bg-white/5" />
+              <DropdownMenuItem onClick={() => router.push("/usuarios")} className="p-3 hover:bg-white/5 cursor-pointer font-bold uppercase text-[10px] tracking-widest text-white/80 hover:text-primary">
                 <Users size={14} className="mr-3 text-primary" /> Equipe do Gabinete
               </DropdownMenuItem>
               {isSuperAdmin && (
-                <DropdownMenuItem onClick={() => router.push("/gabinetes")} className="p-3 hover:bg-gray-50 cursor-pointer font-bold uppercase text-[10px] tracking-widest">
+                <DropdownMenuItem onClick={() => router.push("/gabinetes")} className="p-3 hover:bg-white/5 cursor-pointer font-bold uppercase text-[10px] tracking-widest text-white/80 hover:text-primary">
                   <Building2 size={14} className="mr-3 text-primary" /> Gabinetes Isolados
                 </DropdownMenuItem>
               )}
-              <DropdownMenuSeparator className="bg-gray-100" />
+              <DropdownMenuSeparator className="bg-white/5" />
               <DropdownMenuItem onClick={handleLogout} className="p-3 text-destructive hover:bg-destructive/10 cursor-pointer font-bold uppercase text-[10px] tracking-widest">
                 <LogOut size={14} className="mr-3" /> Encerrar Sessão
               </DropdownMenuItem>
