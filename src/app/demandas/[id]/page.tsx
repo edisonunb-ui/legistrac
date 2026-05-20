@@ -2,7 +2,7 @@
 
 import { useUser, useFirestore, useDoc, useCollection, useStorage } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useEffect, useState, useMemo, use } from "react";
+import { useEffect, useState, useMemo, use, useCallback } from "react";
 import { doc, collection, query, where, Timestamp, addDoc } from "firebase/firestore";
 import { Tramite, Attachment, UserPermissions } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +22,9 @@ import {
   Download,
   Paperclip,
   Gavel,
-  Lock
+  Lock,
+  X,
+  CheckCircle2
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -47,6 +49,9 @@ import {
 } from "@/lib/demand-service";
 import { generateDemandSummary } from "@/ai/flows/demand-summary-generation";
 import { draftLegislativeAction } from "@/ai/flows/legislative-draft-flow";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 
 const MASTER_EMAIL = "edisonunb@gmail.com";
 
@@ -54,6 +59,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const { id } = use(params);
   const { user } = useUser();
   const db = useFirestore();
+  const storage = useStorage();
   const router = useRouter();
   const { toast } = useToast();
   
@@ -65,6 +71,9 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const [processing, setProcessing] = useState(false);
   const [obs, setObs] = useState("");
   const [selectedUser, setSelectedUser] = useState("");
+  
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
 
   const userEmail = user?.email?.toLowerCase().trim();
   const isMasterAdmin = userEmail === MASTER_EMAIL;
@@ -133,6 +142,61 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     return Array.from(new Map(combined.map(item => [item.url, item])).values());
   }, [demand, tramites]);
 
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+    }
+  }, []);
+
+  const removeFile = useCallback((index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+    const newProgress = { ...uploadProgress };
+    delete newProgress[files[index]?.name];
+    setUploadProgress(newProgress);
+  }, [files, uploadProgress]);
+
+  const uploadFiles = async (): Promise<Attachment[]> => {
+    const attachments: Attachment[] = [];
+    if (files.length === 0 || !storage) return [];
+
+    for (const file of files) {
+      const sanitizedName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+      const storageRef = ref(storage, `tramites/${Date.now()}_${sanitizedName}`);
+      
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      try {
+        const downloadUrl = await new Promise<string>((resolve, reject) => {
+          uploadTask.on(
+            'state_changed',
+            (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
+            },
+            (error: any) => reject(new Error(error.code)),
+            async () => {
+              const url = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(url);
+            }
+          );
+        });
+        
+        attachments.push({
+          id: Math.random().toString(36).substring(7),
+          nome: file.name,
+          url: downloadUrl,
+          tipo: file.type,
+          tamanho: file.size,
+          data: Timestamp.now(),
+          enviadoPor: user?.uid || "anonimo"
+        });
+      } catch (err: any) {
+        throw err;
+      }
+    }
+    return attachments;
+  };
+
   const handleGenerateSummary = async () => {
     if (!demand?.descricao) return;
     setSummarizing(true);
@@ -194,18 +258,20 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
       return;
     }
     setProcessing(true);
-    const targetUser = allUsers.find((u: any) => u.uid === selectedUser || u.email === selectedUser);
-    if (!targetUser) {
-      setProcessing(false);
-      toast({ title: "Erro", description: "Usuário destino não encontrado.", variant: "destructive" });
-      return;
-    }
     try {
-      await sendDemand(db, demand.id, user.uid, targetUser.uid || targetUser.email, obs, targetUser.perfil, []);
+      const targetUser = allUsers.find((u: any) => u.uid === selectedUser || u.email === selectedUser);
+      if (!targetUser) {
+        throw new Error("Usuário destino não encontrado.");
+      }
+
+      const newAttachments = await uploadFiles();
+      await sendDemand(db, demand.id, user.uid, targetUser.uid || targetUser.email, obs, targetUser.perfil, newAttachments);
+      
       toast({ title: "Sucesso", description: "Demanda tramitada com sucesso." });
       setSendModalOpen(false);
       setObs("");
       setSelectedUser("");
+      setFiles([]);
     } catch (e: any) {
       toast({ title: "Erro", description: e.message || "Falha ao tramitar.", variant: "destructive" });
     } finally {
@@ -217,10 +283,12 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     if (!demand || !user || !db) return;
     setProcessing(true);
     try {
-      await returnDemand(db, demand.id, user.uid, demand.criadoPor, obs || "Devolvida para revisão.", []);
+      const newAttachments = await uploadFiles();
+      await returnDemand(db, demand.id, user.uid, demand.criadoPor, obs || "Devolvida para revisão.", newAttachments);
       toast({ title: "Sucesso", description: "Demanda devolvida." });
       setSendModalOpen(false);
       setObs("");
+      setFiles([]);
     } catch (e: any) {
       toast({ title: "Erro", description: e.message || "Falha ao devolver.", variant: "destructive" });
     } finally {
@@ -260,7 +328,8 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   if (!demand) return <div className="p-20 text-center font-black uppercase text-muted-foreground bg-background min-h-screen">Protocolo não encontrado.</div>;
 
   const isResponsible = demand.responsavelAtual === user?.uid;
-  const filteredCollaborators = allUsers.filter(u => u.email?.toLowerCase() !== user?.email?.toLowerCase());
+  const canTramitar = isResponsible || isMasterAdmin;
+  const filteredCollaborators = allUsers.filter(u => u.uid !== user?.uid && u.email?.toLowerCase() !== user?.email?.toLowerCase());
 
   return (
     <div className="min-h-screen bg-background">
@@ -323,12 +392,12 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                 </DialogContent>
               </Dialog>
 
-              {isResponsible && !demand.finalizada && (
+              {canTramitar && !demand.finalizada && (
                 <Dialog open={sendModalOpen} onOpenChange={setSendModalOpen}>
                   <DialogTrigger asChild>
                     <Button className="gap-2 font-black uppercase text-[11px] tracking-widest h-14 sm:h-12 w-full sm:w-auto bg-primary text-black glow-primary"><Send size={16} /> Tramitar</Button>
                   </DialogTrigger>
-                  <DialogContent className="w-[95vw] sm:max-w-md bg-black border-white/10 shadow-2xl">
+                  <DialogContent className="w-[95vw] sm:max-w-2xl bg-black border-white/10 shadow-2xl overflow-y-auto max-h-[90vh]">
                     <DialogHeader><DialogTitle className="font-black uppercase tracking-widest text-primary">Despacho de Demanda</DialogTitle></DialogHeader>
                     <div className="space-y-6 py-6">
                       <div className="space-y-3">
@@ -337,19 +406,45 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                           <SelectTrigger className="h-14 bg-white/5 border-white/10 text-white font-bold"><SelectValue placeholder="Selecione o assessor" /></SelectTrigger>
                           <SelectContent className="bg-black border-white/10">
                             {filteredCollaborators.map((u: any) => (
-                              <SelectItem key={u.email} value={u.uid || u.email}>{u.nome} ({u.perfil})</SelectItem>
+                              <SelectItem key={u.uid || u.id} value={u.uid || u.id}>{u.nome} ({u.perfil})</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-3">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Observações Técnicas</Label>
-                        <Textarea placeholder="Instruções para o próximo trâmite..." value={obs} onChange={e => setObs(e.target.value)} className="bg-white/5 border-white/10 min-h-[120px] text-white" />
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Observações Técnicas / Relato Parcial</Label>
+                        <Textarea placeholder="Descreva o que foi feito até agora e o motivo do encaminhamento..." value={obs} onChange={e => setObs(e.target.value)} className="bg-white/5 border-white/10 min-h-[120px] text-white" />
+                      </div>
+
+                      <div className="p-6 bg-white/5 rounded-2xl border border-white/10 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                            <Paperclip size={14} /> Anexar Novos Documentos
+                          </Label>
+                          <span className="text-[9px] text-muted-foreground font-black uppercase">{files.length} selecionado(s)</span>
+                        </div>
+                        <Input type="file" multiple onChange={handleFileChange} disabled={processing} className="bg-black/50 border-white/10 h-12 file:bg-primary file:text-black file:font-black file:uppercase file:text-[9px] file:px-4 file:h-full file:mr-4 file:border-none" />
+                        
+                        {files.length > 0 && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                            {files.map((file, idx) => (
+                              <div key={idx} className="bg-black/60 p-3 rounded-xl border border-white/5 flex flex-col gap-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-black truncate uppercase text-white/70 w-full pr-2">{file.name}</span>
+                                  <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-destructive/20 hover:text-destructive" onClick={() => removeFile(idx)}><X size={14} /></Button>
+                                </div>
+                                {uploadProgress[file.name] !== undefined && (
+                                  <Progress value={uploadProgress[file.name]} className="h-1 bg-white/5" />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <DialogFooter className="flex flex-col sm:flex-row gap-3">
-                      <Button variant="outline" className="w-full font-black uppercase text-[11px] h-14" onClick={handleReturn} disabled={processing}>Devolver</Button>
-                      <Button className="w-full font-black uppercase text-[11px] bg-primary text-black h-14 glow-primary" onClick={handleSend} disabled={processing || !selectedUser}>
+                    <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-white/5">
+                      <Button variant="outline" className="w-full font-black uppercase text-[11px] h-14" onClick={handleReturn} disabled={processing}>Devolver Origem</Button>
+                      <Button className="w-full font-black uppercase text-[11px] bg-primary text-black h-14 glow-primary" onClick={handleSend} disabled={processing || !selectedUser || !obs}>
                         {processing ? <Loader2 className="animate-spin" /> : "Confirmar Envio"}
                       </Button>
                     </DialogFooter>
@@ -464,7 +559,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                 <div className="space-y-2">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Agente Responsável</p>
                   <div className="flex items-center gap-3 text-lg font-black uppercase tracking-tight text-white">
-                    <UserIcon size={18} className="text-primary" /> {allUsers.find(u => u.uid === demand.responsavelAtual)?.nome || 'Pendente'}
+                    <UserIcon size={18} className="text-primary" /> {allUsers.find(u => u.uid === demand.responsavelAtual || u.id === demand.responsavelAtual)?.nome || 'Pendente'}
                   </div>
                 </div>
                 <div className="pt-4 border-t border-white/5">
