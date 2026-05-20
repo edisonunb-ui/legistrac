@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser, useFirestore, useAuthInstance, useDoc } from "@/firebase";
+import { useUser, useFirestore, useAuthInstance, useDoc, useCollection } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, ChevronDown } from "lucide-react";
 import { signOut } from "firebase/auth";
@@ -27,17 +27,19 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { useMemo, useState, useEffect } from "react";
-import { doc } from "firebase/firestore";
+import { doc, collection, query, where } from "firebase/firestore";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { Demand } from "@/lib/types";
 
 const MASTER_EMAIL = "edisonunb@gmail.com";
+const AUDITOR_EMAIL = "alemao@gmail.com";
 
 /**
- * Componente de Relógio isolado para evitar re-render da Navbar inteira
+ * Componente de Relógio isolado com Calendário de Prazos
  */
-function ClockDisplay() {
+function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
   const [time, setTime] = useState<string | null>(null);
   const [fullDate, setFullDate] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -72,12 +74,12 @@ function ClockDisplay() {
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-[320px] p-0 bg-black border-white/10 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95" align="end">
-        <div className="p-6 bg-primary border-b border-black/20">
+        <div className="p-6 bg-[#0c1120] border-b border-white/5">
           <div className="flex justify-between items-center mb-1">
-            <span className="text-[10px] font-black text-black/80 uppercase tracking-widest">{fullDate}</span>
-            <Clock size={14} className="text-black/40" />
+            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">{fullDate}</span>
+            <Clock size={14} className="text-primary/40" />
           </div>
-          <h2 className="text-4xl font-black font-mono tracking-tighter text-black leading-none">{time}</h2>
+          <h2 className="text-4xl font-black font-mono tracking-tighter text-white leading-none">{time}</h2>
         </div>
         <div className="p-6 bg-black">
           <div className="mb-6 text-center">
@@ -89,6 +91,12 @@ function ClockDisplay() {
             mode="single"
             selected={currentDate}
             className="p-0"
+            modifiers={{
+              deadline: demandDates
+            }}
+            modifiersClassNames={{
+              deadline: "bg-primary/10 text-primary font-black relative after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-primary after:rounded-full after:glow-primary after:shadow-[0_0_5px_rgba(0,229,255,0.8)]"
+            }}
             classNames={{
               months: "w-full",
               month: "space-y-4 w-full",
@@ -105,6 +113,14 @@ function ClockDisplay() {
               day_outside: "text-white/5 pointer-events-none",
             }}
           />
+          {demandDates.length > 0 && (
+            <div className="mt-6 pt-4 border-t border-white/5">
+              <p className="text-[9px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                <div className="w-1 h-1 bg-primary rounded-full glow-primary" />
+                Destaque: Dias com Prazos
+              </p>
+            </div>
+          )}
         </div>
       </PopoverContent>
     </Popover>
@@ -121,6 +137,8 @@ export function Navbar() {
 
   const userEmail = useMemo(() => user?.email?.toLowerCase().trim(), [user?.email]);
   const isSuperAdmin = useMemo(() => userEmail === MASTER_EMAIL, [userEmail]);
+  const isAuditor = useMemo(() => userEmail === AUDITOR_EMAIL, [userEmail]);
+  const hasGlobalView = isSuperAdmin || isAuditor;
 
   const userProfileQuery = useMemo(() => (db && userEmail) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(userProfileQuery);
@@ -128,6 +146,30 @@ export function Navbar() {
   const cabinetId = (profile as any)?.cabinetId;
   const cabinetQuery = useMemo(() => (db && cabinetId) ? doc(db, "gabinetes", cabinetId) : null, [db, cabinetId]);
   const { data: cabinet } = useDoc(cabinetQuery);
+
+  // Busca demandas para marcar no calendário
+  const demandsQuery = useMemo(() => {
+    if (!db || (!cabinetId && !hasGlobalView)) return null;
+    if (hasGlobalView) return query(collection(db, "demandas"), where("deleted", "==", false));
+    return query(
+      collection(db, "demandas"), 
+      where("cabinetId", "==", cabinetId),
+      where("deleted", "==", false)
+    );
+  }, [db, cabinetId, hasGlobalView]);
+
+  const { data: allDemands = [] } = useCollection<Demand>(demandsQuery);
+
+  const demandDates = useMemo(() => {
+    return allDemands
+      .filter(d => d.prazo && d.status !== 'FINALIZADO')
+      .map(d => {
+        // Formato esperado: YYYY-MM-DD
+        const [year, month, day] = d.prazo.split('-').map(Number);
+        // Cria a data no fuso local para comparação correta no DayPicker
+        return new Date(year, month - 1, day);
+      });
+  }, [allDemands]);
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -218,7 +260,7 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          <ClockDisplay />
+          <ClockDisplay demandDates={demandDates} />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
