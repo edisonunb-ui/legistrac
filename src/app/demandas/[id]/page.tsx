@@ -328,7 +328,8 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   if (!demand) return <div className="p-20 text-center font-black uppercase text-muted-foreground bg-background min-h-screen">Protocolo não encontrado.</div>;
 
   const isResponsible = demand.responsavelAtual === user?.uid;
-  const canTramitar = isResponsible || isMasterAdmin;
+  const isVereador = (profile as any)?.perfil === "ADMIN";
+  const canTramitar = isResponsible || isMasterAdmin || isVereador;
   const filteredCollaborators = allUsers.filter(u => u.uid !== user?.uid && u.email?.toLowerCase() !== user?.email?.toLowerCase());
 
   return (
