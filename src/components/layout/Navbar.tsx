@@ -2,7 +2,7 @@
 
 import { useUser, useFirestore, useAuthInstance, useDoc, useCollection } from "@/firebase";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, ChevronDown } from "lucide-react";
+import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, ChevronDown, ChevronUp, Play, Plus, Minus } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -33,17 +33,15 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Demand } from "@/lib/types";
 
-const MASTER_EMAIL = "edisonunb@gmail.com";
-const AUDITOR_EMAIL = "alemao@gmail.com";
-
 /**
- * Componente de Relógio isolado com Calendário de Prazos
+ * Componente de Relógio / Calendário estilo "Foco"
  */
 function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
   const [time, setTime] = useState<string | null>(null);
   const [fullDate, setFullDate] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [viewMonth, setViewMonth] = useState<Date>(new Date());
+  const [minutes, setMinutes] = useState(30);
 
   useEffect(() => {
     const update = () => {
@@ -53,10 +51,11 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
         timeZone: 'America/Sao_Paulo',
         hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
       }).format(now));
-      setFullDate(new Intl.DateTimeFormat('pt-BR', {
-        timeZone: 'America/Sao_Paulo',
-        weekday: 'long', day: '2-digit', month: 'long',
-      }).format(now).toUpperCase());
+      
+      const weekday = new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(now);
+      const day = now.getDate();
+      const month = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(now);
+      setFullDate(`${weekday}, ${day} de ${month}`);
     };
     update();
     const interval = setInterval(update, 1000);
@@ -74,46 +73,81 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
           <ChevronDown size={10} className="opacity-50" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[320px] p-0 bg-black border-white/10 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95" align="end">
-        <div className="p-6 bg-[#0c1120] border-b border-white/5">
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">{fullDate}</span>
-            <Clock size={14} className="text-primary/40" />
+      <PopoverContent className="w-[340px] p-0 bg-[#1a1a1a] border-none shadow-2xl rounded-2xl overflow-hidden animate-in fade-in zoom-in-95" align="end">
+        {/* Header do Calendário */}
+        <div className="p-5 flex items-center justify-between">
+          <span className="text-sm font-medium text-white/90">{fullDate}</span>
+          <div className="bg-white/10 p-1 rounded-md text-white/40">
+            <ChevronDown size={14} />
           </div>
-          <h2 className="text-4xl font-black font-mono tracking-tighter text-white leading-none">{time}</h2>
         </div>
-        <div className="p-4 bg-black">
+
+        {/* Corpo do Calendário */}
+        <div className="px-2 pb-2">
           <Calendar
             mode="single"
             month={viewMonth}
             onMonthChange={setViewMonth}
             selected={currentDate}
-            className="rounded-md border-none"
+            showOutsideDays={true}
+            className="p-3"
             modifiers={{
               deadline: demandDates
             }}
             modifiersClassNames={{
-              deadline: "text-primary font-black relative after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-primary after:rounded-full"
+              deadline: "after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-primary after:rounded-full"
             }}
             classNames={{
-              caption_label: "text-[11px] font-black uppercase tracking-[0.2em] text-primary",
+              months: "space-y-4",
+              month: "space-y-4",
+              caption: "flex justify-between items-center px-2 pb-4 relative",
+              caption_label: "text-sm font-bold text-white lowercase",
+              nav: "flex items-center gap-2",
               nav_button: cn(
-                buttonVariants({ variant: "outline" }),
-                "h-7 w-7 bg-white/5 border-white/10 text-primary hover:bg-primary/20 p-0 opacity-100"
+                "h-6 w-6 bg-transparent p-0 text-white/40 hover:text-white transition-colors"
               ),
-              day_selected: "bg-primary text-black font-black hover:bg-primary hover:text-black focus:bg-primary focus:text-black",
-              day_today: "border border-primary/40 text-primary",
-              head_cell: "text-muted-foreground font-black text-[10px] uppercase w-9",
+              table: "w-full border-collapse space-y-1",
+              head_row: "flex justify-between mb-2",
+              head_cell: "text-white/40 font-bold text-[11px] w-9 text-center uppercase",
+              row: "flex w-full justify-between mt-1",
+              cell: "h-9 w-9 text-center text-sm p-0 relative",
+              day: cn(
+                "h-9 w-9 p-0 font-medium text-white/90 aria-selected:opacity-100 hover:bg-white/5 rounded-full transition-all"
+              ),
+              day_selected: "bg-[#4cc9f0] text-black hover:bg-[#4cc9f0] font-bold rounded-full",
+              day_today: "text-[#4cc9f0] font-bold",
+              day_outside: "text-white/10",
+            }}
+            components={{
+              IconLeft: () => <ChevronUp size={16} className="rotate-[-45deg]" />,
+              IconRight: () => <ChevronDown size={16} className="rotate-[-45deg]" />,
             }}
           />
-          {demandDates.length > 0 && (
-            <div className="px-4 pb-4">
-              <div className="text-[9px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-primary rounded-full glow-primary" />
-                Destaque: Dias com Prazos
-              </div>
-            </div>
-          )}
+        </div>
+
+        {/* Footer do Calendário (Controles de Foco) */}
+        <div className="p-4 bg-black/20 flex items-center justify-between border-t border-white/5">
+          <div className="flex items-center gap-3 bg-white/5 rounded-lg p-1">
+            <button 
+              onClick={() => setMinutes(m => Math.max(5, m - 5))}
+              className="w-8 h-8 flex items-center justify-center text-white/40 hover:text-white"
+            >
+              <Minus size={14} />
+            </button>
+            <span className="text-sm font-bold text-white min-w-[70px] text-center">
+              {minutes} <span className="text-white/40 font-normal">minutos</span>
+            </span >
+            <button 
+              onClick={() => setMinutes(m => m + 5)}
+              className="w-8 h-8 flex items-center justify-center text-white/40 hover:text-white"
+            >
+              <Plus size={14} />
+            </button>
+          </div>
+          <button className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all">
+            <Play size={14} fill="currentColor" />
+            Foco
+          </button>
         </div>
       </PopoverContent>
     </Popover>
@@ -121,7 +155,7 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
 }
 
 export function Navbar() {
-  const { user } = useUser();
+  const { user } = userUser();
   const db = useFirestore();
   const auth = useAuthInstance();
   const router = useRouter();
