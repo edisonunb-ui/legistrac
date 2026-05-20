@@ -20,7 +20,8 @@ import {
   ChevronLeft, 
   Trash2, 
   Loader2,
-  ClipboardList 
+  ClipboardList,
+  AlertCircle
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const MASTER_EMAIL = "edisonunb@gmail.com";
+const AUDITOR_EMAIL = "alemao@gmail.com";
 
 export default function CitizenServiceListPage() {
   const { user } = useUser();
@@ -46,50 +48,47 @@ export default function CitizenServiceListPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const userEmail = user?.email?.toLowerCase().trim();
+  const userEmail = useMemo(() => user?.email?.toLowerCase().trim() || null, [user?.email]);
   const isMasterAdmin = userEmail === MASTER_EMAIL;
+  const isAuditor = userEmail === AUDITOR_EMAIL;
+  const hasGlobalView = isMasterAdmin || isAuditor;
 
   const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
-  const isAdmin = (profile as any)?.perfil === "ADMIN" || (profile as any)?.perfil === "SUPER_ADMIN" || isMasterAdmin;
+  const isAdmin = (profile as any)?.perfil === "ADMIN" || (profile as any)?.perfil === "SUPER_ADMIN" || hasGlobalView;
   const cabinetId = (profile as any)?.cabinetId;
 
   const servicesQuery = useMemo(() => {
-    if (!db || !user) return null;
+    if (!db || (!cabinetId && !hasGlobalView)) return null;
     
-    // REGRA DE ISOLAMENTO SÊNIOR
-    if (isMasterAdmin) {
+    if (hasGlobalView) {
       return query(collection(db, "atendimentos"), orderBy("dataAtendimento", "desc"));
     }
     
-    if (cabinetId) {
-      return query(
-        collection(db, "atendimentos"), 
-        where("cabinetId", "==", cabinetId),
-        orderBy("dataAtendimento", "desc")
-      );
-    }
-    
-    return null; // Usuário sem gabinete não vê nada por segurança
-  }, [db, user, isMasterAdmin, cabinetId]);
+    return query(
+      collection(db, "atendimentos"), 
+      where("cabinetId", "==", cabinetId),
+      orderBy("dataAtendimento", "desc")
+    );
+  }, [db, hasGlobalView, cabinetId]);
   
   const { data: rawServices = [], loading } = useCollection(servicesQuery);
 
-  const services = useMemo(() => {
-    return rawServices.filter((s: any) => !s.deleted);
-  }, [rawServices]);
-
   const filteredServices = useMemo(() => {
+    const services = rawServices.filter((s: any) => !s.deleted);
+    if (!searchTerm) return services;
+    
+    const term = searchTerm.toLowerCase();
     return services.filter((s: CitizenService) => 
-      s.municipeNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.municipeTelefone.includes(searchTerm) ||
-      s.municipeEndereco.toLowerCase().includes(searchTerm.toLowerCase())
+      s.municipeNome.toLowerCase().includes(term) ||
+      s.municipeTelefone.includes(term) ||
+      s.municipeEndereco.toLowerCase().includes(term)
     );
-  }, [services, searchTerm]);
+  }, [rawServices, searchTerm]);
 
   const handleDelete = async (id: string) => {
-    if (!db) return;
+    if (!db || isAuditor) return;
     setDeletingId(id);
     try {
       if (isMasterAdmin) {
@@ -101,7 +100,7 @@ export default function CitizenServiceListPage() {
           deletedBy: user?.uid
         });
       }
-      toast({ title: "Registro removido", description: "O atendimento foi enviado para a lixeira de segurança." });
+      toast({ title: "Registro removido", description: "O atendimento foi removido com sucesso." });
     } catch (e) {
       toast({ title: "Erro ao excluir", description: "Não foi possível remover o registro.", variant: "destructive" });
     } finally {
@@ -113,106 +112,104 @@ export default function CitizenServiceListPage() {
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
-        <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors mb-2 text-sm font-bold uppercase tracking-widest">
-              <ChevronLeft size={16} /> Dashboard
-            </Link>
-            <h1 className="text-3xl font-bold tracking-tight">Atendimento ao <span className="text-primary">Munícipe</span></h1>
-            <p className="text-muted-foreground">Registre e acompanhe as solicitações da população.</p>
-          </div>
-          <Link href="/atendimentos/new">
-            <Button className="bg-primary text-primary-foreground font-bold h-11 px-6 shadow-lg shadow-primary/20">
-              <Plus className="mr-2" size={18} /> Novo Atendimento
-            </Button>
+        <header className="mb-10">
+          <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-all mb-4 text-[10px] font-black uppercase tracking-[0.3em]">
+            <ChevronLeft size={16} /> Dashboard
           </Link>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+              <h1 className="text-4xl font-black tracking-tighter uppercase text-white">Atendimento ao <span className="text-primary">Munícipe</span></h1>
+              <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest mt-1">Gestão de solicitações e base de contatos.</p>
+            </div>
+            <Link href="/atendimentos/new">
+              <Button className="bg-primary text-black font-black uppercase text-[11px] tracking-widest h-12 px-8 shadow-lg shadow-primary/20 hover:opacity-90 glow-primary">
+                <Plus className="mr-2" size={18} /> Novo Atendimento
+              </Button>
+            </Link>
+          </div>
         </header>
 
-        <div className="mb-6 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+        <div className="mb-8 relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
           <input 
             placeholder="Buscar por nome, telefone ou endereço..." 
-            className="pl-10 h-12 w-full bg-card border border-primary/10 rounded-md focus:outline-none focus:ring-1 focus:ring-primary/20" 
+            className="w-full h-14 bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 text-sm font-bold text-white focus:outline-none focus:border-primary/50 transition-all" 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => <div key={i} className="h-40 bg-card rounded-xl animate-pulse border border-primary/5" />)}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-56 bg-white/5 rounded-2xl animate-pulse border border-white/5" />
+            ))}
           </div>
         ) : filteredServices.length === 0 ? (
-          <div className="text-center py-20 bg-card rounded-2xl border border-dashed border-primary/10">
-            <User size={48} className="mx-auto text-muted-foreground mb-4 opacity-20" />
-            <h3 className="text-lg font-bold uppercase tracking-widest">Nenhum atendimento</h3>
-            <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">Comece registrando o primeiro munícipe.</p>
+          <div className="text-center py-32 bg-white/5 rounded-3xl border-2 border-dashed border-white/5">
+            <AlertCircle size={48} className="mx-auto text-muted-foreground mb-4 opacity-20" />
+            <h3 className="text-xs font-black uppercase tracking-[0.4em] text-muted-foreground">Nenhum atendimento encontrado</h3>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredServices.map((s: CitizenService) => (
-              <Card key={s.id} className="bg-card border-primary/10 hover:border-primary/30 transition-all group overflow-hidden shadow-lg">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <Badge variant="outline" className="text-[9px] font-black tracking-widest uppercase border-primary/20 text-primary">
+              <Card key={s.id} className="bg-white/5 border-white/5 hover:border-primary/40 transition-all group overflow-hidden shadow-2xl relative">
+                <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
+                <CardHeader className="pb-4 pt-8">
+                  <div className="flex justify-between items-start mb-4">
+                    <Badge variant="outline" className="text-[9px] font-black tracking-widest uppercase border-primary/20 text-primary px-3 py-1">
                       {s.dataAtendimento?.toDate().toLocaleDateString()}
                     </Badge>
-                    <div className="flex gap-2">
-                      {isAdmin && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive p-0">
-                              {deletingId === s.id ? <Loader2 className="animate-spin h-3 w-3" /> : <Trash2 size={14} />}
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Excluir Atendimento?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                {isMasterAdmin 
-                                  ? "Como SuperAdmin, esta ação removerá o registro PERMANENTEMENTE." 
-                                  : "Esta ação enviará o registro para a lixeira de segurança."}
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(s.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                Confirmar Exclusão
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
-                    </div>
+                    {!isAuditor && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                            {deletingId === s.id ? <Loader2 className="animate-spin h-3 w-3" /> : <Trash2 size={16} />}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="bg-black border-white/10">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-white font-black uppercase tracking-tight">Excluir Registro?</AlertDialogTitle>
+                            <AlertDialogDescription className="text-muted-foreground text-xs uppercase font-bold">
+                              Esta ação removerá o atendimento do sistema.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="bg-white/5 border-white/10 text-white font-bold">Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(s.id)} className="bg-destructive text-white font-bold">Confirmar</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
                   </div>
-                  <CardTitle className="text-xl font-black uppercase tracking-tight mt-2 group-hover:text-primary transition-colors">{s.municipeNome}</CardTitle>
+                  <CardTitle className="text-xl font-black uppercase tracking-tight text-white group-hover:text-primary transition-colors">{s.municipeNome}</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                      <Phone size={14} className="text-primary" /> {s.municipeTelefone}
+                <CardContent className="space-y-6 pb-8">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                      <Phone size={14} className="text-primary/70" /> {s.municipeTelefone}
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground truncate">
-                      <MapPin size={14} className="text-primary shrink-0" /> {s.municipeEndereco}
+                    <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground truncate">
+                      <MapPin size={14} className="text-primary/70 shrink-0" /> {s.municipeEndereco}
                     </div>
                   </div>
                   
-                  <div className="p-3 bg-muted/30 rounded-lg text-xs line-clamp-3 border-l-2 border-primary/30 text-muted-foreground italic leading-relaxed">
+                  <div className="p-4 bg-black/40 rounded-2xl text-xs line-clamp-3 border-l-2 border-primary/30 text-white/70 italic leading-relaxed">
                     "{s.descricaoSolicitacao}"
                   </div>
 
-                  <div className="pt-4 border-t border-primary/5 flex items-center justify-between">
+                  <div className="pt-6 border-t border-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-[9px] font-black text-muted-foreground uppercase tracking-widest">
-                      <ClipboardList size={12} /> Título: {s.municipeTituloEleitoral || 'N/I'}
+                      <ClipboardList size={12} className="text-primary/50" /> {s.municipeTituloEleitoral || 'S/ TÍTULO'}
                     </div>
                     {s.demandaId ? (
                       <Link href={`/demandas/${s.demandaId}`}>
-                        <Button variant="ghost" size="sm" className="h-8 text-primary hover:text-primary hover:bg-primary/10 gap-1 text-[10px] font-black uppercase tracking-widest">
+                        <Button variant="ghost" size="sm" className="h-9 text-primary hover:bg-primary/10 gap-2 text-[10px] font-black uppercase tracking-widest">
                           Ver Demanda <ChevronRight size={14} />
                         </Button>
                       </Link>
                     ) : (
-                      <span className="text-[9px] text-muted-foreground font-black uppercase tracking-widest opacity-30">Sem Demanda</span>
+                      <span className="text-[9px] text-muted-foreground font-black uppercase tracking-widest opacity-20">Sem Demanda</span>
                     )}
                   </div>
                 </CardContent>

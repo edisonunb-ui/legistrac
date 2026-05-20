@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -14,24 +15,21 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<FirestoreError | null>(null);
   
-  const lastQueryKey = useRef<string | null>(null);
+  const lastQueryRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!query) {
       setData([]);
-      lastQueryKey.current = null;
       setLoading(false);
+      lastQueryRef.current = null;
       return;
     }
 
-    // Estabilização de Query para evitar loops de re-render
-    const currentQueryKey = (query as any)._query?.path?.toString() + (query as any)._query?.filters?.length;
-    
-    if (lastQueryKey.current === currentQueryKey) {
-      return;
-    }
-    
-    lastQueryKey.current = currentQueryKey;
+    // Identificador simples para evitar loops, mas sem travar o loading
+    const queryId = JSON.stringify((query as any)._query || query.toString());
+    if (lastQueryRef.current === queryId) return;
+    lastQueryRef.current = queryId;
+
     setLoading(true);
 
     const unsubscribe = onSnapshot(
