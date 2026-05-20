@@ -43,6 +43,7 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
   const [time, setTime] = useState<string | null>(null);
   const [fullDate, setFullDate] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [viewMonth, setViewMonth] = useState<Date>(new Date());
 
   useEffect(() => {
     const update = () => {
@@ -82,13 +83,10 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
           <h2 className="text-4xl font-black font-mono tracking-tighter text-white leading-none">{time}</h2>
         </div>
         <div className="p-6 bg-black">
-          <div className="mb-6 text-center">
-            <span className="text-[11px] font-black uppercase tracking-[0.4em] text-primary">
-              {currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
-            </span>
-          </div>
           <Calendar
             mode="single"
+            month={viewMonth}
+            onMonthChange={setViewMonth}
             selected={currentDate}
             className="p-0"
             modifiers={{
@@ -99,10 +97,13 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
             }}
             classNames={{
               months: "w-full",
-              month: "space-y-4 w-full",
-              caption: "hidden", 
+              month: "space-y-6 w-full",
+              caption: "flex justify-between items-center pt-2 px-2 mb-4",
+              caption_label: "text-[11px] font-black uppercase tracking-[0.3em] text-primary",
+              nav: "flex items-center gap-1",
+              nav_button: "h-7 w-7 bg-white/5 border border-white/10 text-primary hover:bg-primary/20 transition-all rounded-md flex items-center justify-center",
               head_row: "flex w-full justify-between mb-4",
-              head_cell: "text-primary font-black text-[10px] uppercase w-9 text-center",
+              head_cell: "text-primary/60 font-black text-[10px] uppercase w-9 text-center",
               row: "flex w-full justify-between mt-2",
               cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
               day: cn(
@@ -116,7 +117,7 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
           {demandDates.length > 0 && (
             <div className="mt-6 pt-4 border-t border-white/5">
               <p className="text-[9px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                <div className="w-1 h-1 bg-primary rounded-full glow-primary" />
+                <div className="w-1.5 h-1.5 bg-primary rounded-full glow-primary" />
                 Destaque: Dias com Prazos
               </p>
             </div>
