@@ -108,10 +108,10 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
           />
           {demandDates.length > 0 && (
             <div className="px-4 pb-4">
-              <p className="text-[9px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+              <div className="text-[9px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-primary rounded-full glow-primary" />
                 Destaque: Dias com Prazos
-              </p>
+              </div>
             </div>
           )}
         </div>
