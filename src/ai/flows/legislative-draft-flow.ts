@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A Genkit flow for drafting formal legislative documents from citizen demands.
@@ -6,6 +5,8 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+
+export const maxDuration = 60; // Aumenta o tempo limite para 60 segundos
 
 const LegislativeDraftInputSchema = z.object({
   demandTitle: z.string().describe('The title of the demand.'),
@@ -25,7 +26,12 @@ export type LegislativeDraftOutput = z.infer<typeof LegislativeDraftOutputSchema
 export async function draftLegislativeAction(
   input: LegislativeDraftInput
 ): Promise<LegislativeDraftOutput> {
-  return legislativeDraftFlow(input);
+  try {
+    return await legislativeDraftFlow(input);
+  } catch (error) {
+    console.error("Erro no fluxo de redação legislativa:", error);
+    throw error;
+  }
 }
 
 const legislativeDraftPrompt = ai.definePrompt({

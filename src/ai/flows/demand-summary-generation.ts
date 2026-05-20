@@ -6,6 +6,8 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+export const maxDuration = 30;
+
 const DemandSummaryInputSchema = z.object({
   description: z.string().describe('The demand description to summarize.'),
 });
@@ -19,7 +21,12 @@ export type DemandSummaryOutput = z.infer<typeof DemandSummaryOutputSchema>;
 export async function generateDemandSummary(
   input: DemandSummaryInput
 ): Promise<DemandSummaryOutput> {
-  return demandSummaryFlow(input);
+  try {
+    return await demandSummaryFlow(input);
+  } catch (error) {
+    console.error("Erro ao gerar resumo da demanda:", error);
+    throw error;
+  }
 }
 
 const demandSummaryPrompt = ai.definePrompt({
