@@ -74,7 +74,6 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-[340px] p-0 bg-[#1a1a1a] border-none shadow-2xl rounded-2xl overflow-hidden animate-in fade-in zoom-in-95" align="end">
-        {/* Header do Calendário */}
         <div className="p-5 flex items-center justify-between">
           <span className="text-sm font-medium text-white/90">{fullDate}</span>
           <div className="bg-white/10 p-1 rounded-md text-white/40">
@@ -82,7 +81,6 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
           </div>
         </div>
 
-        {/* Corpo do Calendário */}
         <div className="px-2 pb-2">
           <Calendar
             mode="single"
@@ -125,7 +123,6 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
           />
         </div>
 
-        {/* Footer do Calendário (Controles de Foco) */}
         <div className="p-4 bg-black/20 flex items-center justify-between border-t border-white/5">
           <div className="flex items-center gap-3 bg-white/5 rounded-lg p-1">
             <button 
@@ -155,7 +152,7 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
 }
 
 export function Navbar() {
-  const { user } = userUser();
+  const { user } = useUser();
   const db = useFirestore();
   const auth = useAuthInstance();
   const router = useRouter();
@@ -208,6 +205,9 @@ export function Navbar() {
     { label: "Legislativo", icon: Gavel, href: "/legislativo" },
     { label: "Lideranças", icon: Users, href: "/liderancas" },
   ], []);
+
+  const MASTER_EMAIL = "edisonunb@gmail.com";
+  const AUDITOR_EMAIL = "alemao@gmail.com";
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-black/80 backdrop-blur-md">
