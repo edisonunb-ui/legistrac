@@ -6,7 +6,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const maxDuration = 60; // Aumenta o tempo limite para 60 segundos
+const maxDuration = 60;
 
 const LegislativeDraftInputSchema = z.object({
   demandTitle: z.string().describe('The title of the demand.'),

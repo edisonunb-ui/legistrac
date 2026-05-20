@@ -6,7 +6,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const maxDuration = 30;
+const maxDuration = 30;
 
 const DemandSummaryInputSchema = z.object({
   description: z.string().describe('The demand description to summarize.'),
