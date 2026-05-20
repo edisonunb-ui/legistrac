@@ -1,7 +1,7 @@
 "use client";
 
 import { useUser, useFirestore, useAuthInstance, useDoc, useCollection } from "@/firebase";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, ChevronDown, ChevronUp, Play, Plus, Minus } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
@@ -32,6 +32,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Demand } from "@/lib/types";
+
+// Definição global para evitar erros de inicialização (Temporal Dead Zone)
+const MASTER_EMAIL = "edisonunb@gmail.com";
+const AUDITOR_EMAIL = "alemao@gmail.com";
 
 /**
  * Componente de Relógio / Calendário estilo "Foco"
@@ -159,7 +163,7 @@ export function Navbar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const userEmail = useMemo(() => user?.email?.toLowerCase().trim(), [user?.email]);
+  const userEmail = useMemo(() => user?.email?.toLowerCase().trim() || null, [user?.email]);
   const isSuperAdmin = useMemo(() => userEmail === MASTER_EMAIL, [userEmail]);
   const isAuditor = useMemo(() => userEmail === AUDITOR_EMAIL, [userEmail]);
   const hasGlobalView = isSuperAdmin || isAuditor;
@@ -205,9 +209,6 @@ export function Navbar() {
     { label: "Legislativo", icon: Gavel, href: "/legislativo" },
     { label: "Lideranças", icon: Users, href: "/liderancas" },
   ], []);
-
-  const MASTER_EMAIL = "edisonunb@gmail.com";
-  const AUDITOR_EMAIL = "alemao@gmail.com";
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-black/80 backdrop-blur-md">
