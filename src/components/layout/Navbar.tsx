@@ -82,47 +82,32 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
           </div>
           <h2 className="text-4xl font-black font-mono tracking-tighter text-white leading-none">{time}</h2>
         </div>
-        <div className="p-6 bg-black">
+        <div className="p-4 bg-black">
           <Calendar
             mode="single"
             month={viewMonth}
             onMonthChange={setViewMonth}
             selected={currentDate}
-            className="p-0"
+            className="rounded-md border-none"
             modifiers={{
               deadline: demandDates
             }}
             modifiersClassNames={{
-              deadline: "bg-primary/10 text-primary font-black relative after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-primary after:rounded-full after:glow-primary after:shadow-[0_0_5px_rgba(0,229,255,0.8)]"
+              deadline: "text-primary font-black relative after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-primary after:rounded-full"
             }}
             classNames={{
-              months: "w-full",
-              month: "space-y-4 w-full",
-              caption: "flex justify-center pt-1 relative items-center h-10 mb-4",
-              caption_label: "text-[11px] font-black uppercase tracking-[0.3em] text-primary",
-              nav: "space-x-1 flex items-center",
+              caption_label: "text-[11px] font-black uppercase tracking-[0.2em] text-primary",
               nav_button: cn(
                 buttonVariants({ variant: "outline" }),
-                "h-8 w-8 bg-white/5 border border-white/10 text-primary hover:bg-primary/20 transition-all rounded-md flex items-center justify-center p-0 opacity-100"
+                "h-7 w-7 bg-white/5 border-white/10 text-primary hover:bg-primary/20 p-0 opacity-100"
               ),
-              nav_button_previous: "absolute left-1",
-              nav_button_next: "absolute right-1",
-              table: "w-full border-collapse space-y-1",
-              head_row: "flex w-full justify-between mb-4",
-              head_cell: "text-primary/60 font-black text-[10px] uppercase w-9 text-center",
-              row: "flex w-full justify-between mt-2",
-              cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
-              day: cn(
-                buttonVariants({ variant: "ghost" }),
-                "h-9 w-9 p-0 font-bold text-muted-foreground hover:bg-primary/20 hover:text-primary rounded-none transition-all"
-              ),
-              day_selected: "bg-primary text-black hover:bg-primary hover:text-black font-black rounded-none",
-              day_today: "text-primary border border-primary/30",
-              day_outside: "text-white/5 pointer-events-none",
+              day_selected: "bg-primary text-black font-black hover:bg-primary hover:text-black focus:bg-primary focus:text-black",
+              day_today: "border border-primary/40 text-primary",
+              head_cell: "text-muted-foreground font-black text-[10px] uppercase w-9",
             }}
           />
           {demandDates.length > 0 && (
-            <div className="mt-6 pt-4 border-t border-white/5">
+            <div className="px-4 pb-4">
               <p className="text-[9px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-primary rounded-full glow-primary" />
                 Destaque: Dias com Prazos
@@ -155,7 +140,6 @@ export function Navbar() {
   const cabinetQuery = useMemo(() => (db && cabinetId) ? doc(db, "gabinetes", cabinetId) : null, [db, cabinetId]);
   const { data: cabinet } = useDoc(cabinetQuery);
 
-  // Busca demandas para marcar no calendário
   const demandsQuery = useMemo(() => {
     if (!db || (!cabinetId && !hasGlobalView)) return null;
     if (hasGlobalView) return query(collection(db, "demandas"), where("deleted", "==", false));
@@ -172,9 +156,7 @@ export function Navbar() {
     return allDemands
       .filter(d => d.prazo && d.status !== 'FINALIZADO')
       .map(d => {
-        // Formato esperado: YYYY-MM-DD
         const [year, month, day] = d.prazo.split('-').map(Number);
-        // Cria a data no fuso local para comparação correta no DayPicker
         return new Date(year, month - 1, day);
       });
   }, [allDemands]);
