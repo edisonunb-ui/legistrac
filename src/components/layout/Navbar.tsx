@@ -1,7 +1,7 @@
 "use client";
 
 import { useUser, useFirestore, useAuthInstance, useDoc, useCollection } from "@/firebase";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, ChevronDown } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
@@ -97,18 +97,23 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
             }}
             classNames={{
               months: "w-full",
-              month: "space-y-6 w-full",
-              caption: "flex justify-center pt-2 px-2 mb-4 relative items-center h-10",
-              caption_label: "text-[11px] font-black uppercase tracking-[0.3em] text-primary absolute left-1/2 -translate-x-1/2",
-              nav: "flex items-center gap-1 z-10 w-full justify-between",
-              nav_button: "h-8 w-8 bg-white/5 border border-white/10 text-primary hover:bg-primary/20 transition-all rounded-md flex items-center justify-center",
-              nav_button_previous: "hover:opacity-100",
-              nav_button_next: "hover:opacity-100",
+              month: "space-y-4 w-full",
+              caption: "flex justify-center pt-1 relative items-center h-10 mb-4",
+              caption_label: "text-[11px] font-black uppercase tracking-[0.3em] text-primary",
+              nav: "space-x-1 flex items-center",
+              nav_button: cn(
+                buttonVariants({ variant: "outline" }),
+                "h-8 w-8 bg-white/5 border border-white/10 text-primary hover:bg-primary/20 transition-all rounded-md flex items-center justify-center p-0 opacity-100"
+              ),
+              nav_button_previous: "absolute left-1",
+              nav_button_next: "absolute right-1",
+              table: "w-full border-collapse space-y-1",
               head_row: "flex w-full justify-between mb-4",
               head_cell: "text-primary/60 font-black text-[10px] uppercase w-9 text-center",
               row: "flex w-full justify-between mt-2",
               cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
               day: cn(
+                buttonVariants({ variant: "ghost" }),
                 "h-9 w-9 p-0 font-bold text-muted-foreground hover:bg-primary/20 hover:text-primary rounded-none transition-all"
               ),
               day_selected: "bg-primary text-black hover:bg-primary hover:text-black font-black rounded-none",
