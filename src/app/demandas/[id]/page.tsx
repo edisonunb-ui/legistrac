@@ -24,7 +24,8 @@ import {
   Gavel,
   Lock,
   X,
-  CheckCircle2
+  CheckCircle2,
+  RefreshCcw
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -45,7 +46,8 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   sendDemand, 
   returnDemand, 
-  finalizeDemand 
+  finalizeDemand,
+  reopenDemand
 } from "@/lib/demand-service";
 import { generateDemandSummary } from "@/ai/flows/demand-summary-generation";
 import { draftLegislativeAction } from "@/ai/flows/legislative-draft-flow";
@@ -310,6 +312,19 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     }
   };
 
+  const handleReopen = async () => {
+    if (!demand || !user || !db) return;
+    setProcessing(true);
+    try {
+      await reopenDemand(db, demand.id, user.uid, user.uid, "Demanda reaberta para continuidade dos trabalhos.");
+      toast({ title: "Demanda Reaberta", description: "O protocolo retornou para o status Em Trâmite." });
+    } catch (e) {
+      toast({ title: "Erro ao reabrir", variant: "destructive" });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   if (loadingDemand) {
     return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
   }
@@ -456,6 +471,12 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
               {hasPermission('finalizar_demandas') && !demand.finalizada && (
                 <Button variant="outline" className="text-green-500 border-green-500/20 hover:bg-green-500/10 gap-2 font-black uppercase text-[11px] tracking-widest h-14 sm:h-12 w-full sm:w-auto" onClick={handleFinalize} disabled={processing}>
                   <CheckCircle size={16} /> Finalizar
+                </Button>
+              )}
+
+              {hasPermission('reabrir_demandas') && demand.finalizada && (
+                <Button variant="outline" className="text-primary border-primary/20 hover:bg-primary/10 gap-2 font-black uppercase text-[11px] tracking-widest h-14 sm:h-12 w-full sm:w-auto" onClick={handleReopen} disabled={processing}>
+                  <RefreshCcw size={16} /> Reabrir Demanda
                 </Button>
               )}
             </div>
