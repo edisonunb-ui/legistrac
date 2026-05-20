@@ -10,8 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutDashboard, Plus, Trash2, Loader2, Building2, ShieldCheck, Edit2 } from "lucide-react";
+import { LayoutDashboard, Plus, Trash2, Loader2, Building2, ShieldCheck, Edit2, ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -126,29 +127,33 @@ export default function GabinetesPage() {
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <header className="mb-8">
-          <h1 className="text-3xl font-black uppercase tracking-tighter flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-all mb-4 text-[10px] font-black uppercase tracking-[0.3em]">
+            <ChevronLeft size={16} /> Dashboard
+          </Link>
+          <h1 className="text-3xl font-black uppercase tracking-tighter flex items-center gap-2 text-white">
             <Building2 className="text-primary" /> Gestão de <span className="text-primary">Gabinetes</span>
           </h1>
-          <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest mt-2">Crie e gerencie as instâncias isoladas dos vereadores.</p>
+          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest mt-2">Crie e gerencie as instâncias isoladas dos vereadores.</p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <Card className="h-fit bg-card border-slate-900 shadow-2xl">
+          <Card className="h-fit bg-white/5 border-white/5 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
             <CardHeader>
-              <CardTitle className="text-sm font-black uppercase tracking-widest">Novo Gabinete</CardTitle>
-              <CardDescription className="text-[10px] uppercase font-bold">Defina o nome da instância e o vereador responsável.</CardDescription>
+              <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary">Novo Gabinete</CardTitle>
+              <CardDescription className="text-[9px] uppercase font-bold text-muted-foreground">Defina o nome da instância e o vereador responsável.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleAdd} className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Nome da Instância</Label>
-                  <Input placeholder="Ex: Gabinete 01 - Centro" value={nome} onChange={e => setNome(e.target.value)} required className="h-11 bg-slate-900 border-slate-800" />
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Nome da Instância</Label>
+                  <Input placeholder="Ex: Gabinete 01 - Centro" value={nome} onChange={e => setNome(e.target.value)} required className="h-11 bg-black/50 border-white/10 text-white" />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Nome do Vereador</Label>
-                  <Input placeholder="Ex: Silvinho Brandão" value={vereador} onChange={e => setVereador(e.target.value)} required className="h-11 bg-slate-900 border-slate-800" />
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Nome do Vereador</Label>
+                  <Input placeholder="Ex: Silvinho Brandão" value={vereador} onChange={e => setVereador(e.target.value)} required className="h-11 bg-black/50 border-white/10 text-white" />
                 </div>
-                <Button className="w-full font-black uppercase text-xs tracking-widest h-11 shadow-lg shadow-primary/10" type="submit" disabled={adding}>
+                <Button className="w-full font-black uppercase text-xs tracking-widest h-11 shadow-lg shadow-primary/20 bg-primary text-black glow-primary" type="submit" disabled={adding}>
                   {adding ? <Loader2 className="animate-spin" /> : <><Plus className="mr-2" size={18} /> Criar Gabinete</>}
                 </Button>
               </form>
@@ -156,9 +161,9 @@ export default function GabinetesPage() {
           </Card>
 
           <div className="lg:col-span-2 space-y-4">
-            <Card className="bg-card border-slate-900 shadow-2xl overflow-hidden">
-              <CardHeader className="bg-slate-900/30 border-b border-slate-900">
-                <CardTitle className="text-sm font-black uppercase tracking-widest">Gabinetes Ativos</CardTitle>
+            <Card className="bg-white/5 border-white/5 shadow-2xl overflow-hidden">
+              <CardHeader className="bg-white/5 border-b border-white/5">
+                <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary">Gabinetes Ativos</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 pt-6">
                 {loadingCabinets ? (
@@ -171,13 +176,13 @@ export default function GabinetesPage() {
                     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nenhum gabinete cadastrado.</p>
                   </div>
                 ) : cabinets.map((c: any) => (
-                  <div key={c.id} className="flex items-center justify-between p-4 bg-slate-950/50 border border-slate-900 rounded-xl hover:bg-slate-900/50 transition-all group">
+                  <div key={c.id} className="flex items-center justify-between p-4 bg-black/40 border border-white/5 rounded-xl hover:border-primary/30 transition-all group">
                     <div className="flex items-center gap-4">
-                      <div className="p-2 bg-slate-900 border border-slate-800 text-primary rounded-lg shadow-inner">
+                      <div className="p-2 bg-black border border-white/10 text-primary rounded-lg shadow-inner">
                         <ShieldCheck size={20} />
                       </div>
                       <div>
-                        <p className="font-black uppercase text-sm tracking-tight group-hover:text-primary transition-colors">{c.nome}</p>
+                        <p className="font-black uppercase text-sm tracking-tight text-white group-hover:text-primary transition-colors">{c.nome}</p>
                         <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">Responsável: {c.vereador}</p>
                       </div>
                     </div>
@@ -188,23 +193,23 @@ export default function GabinetesPage() {
                             <Edit2 size={18} />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="bg-slate-950 border-slate-900">
+                        <DialogContent className="bg-black border-white/10 text-white">
                           <DialogHeader>
-                            <DialogTitle className="uppercase font-black text-sm tracking-widest">Editar Gabinete</DialogTitle>
+                            <DialogTitle className="uppercase font-black text-sm tracking-widest text-primary">Editar Gabinete</DialogTitle>
                           </DialogHeader>
                           <div className="space-y-4 py-4">
                             <div className="space-y-2">
                               <Label className="text-[10px] font-black uppercase tracking-widest">Nome da Instância</Label>
-                              <Input value={editNome} onChange={e => setEditNome(e.target.value)} className="bg-slate-900 border-slate-800" />
+                              <Input value={editNome} onChange={e => setEditNome(e.target.value)} className="bg-white/5 border-white/10 text-white" />
                             </div>
                             <div className="space-y-2">
                               <Label className="text-[10px] font-black uppercase tracking-widest">Nome do Vereador</Label>
-                              <Input value={editVereador} onChange={e => setEditVereador(e.target.value)} className="bg-slate-900 border-slate-800" />
+                              <Input value={editVereador} onChange={e => setEditVereador(e.target.value)} className="bg-white/5 border-white/10 text-white" />
                             </div>
                           </div>
                           <DialogFooter>
-                            <Button variant="outline" onClick={() => setEditingCabinet(null)} className="font-black uppercase text-[10px]">Cancelar</Button>
-                            <Button onClick={handleUpdate} disabled={updating} className="font-black uppercase text-[10px]">
+                            <Button variant="outline" onClick={() => setEditingCabinet(null)} className="font-black uppercase text-[10px] border-white/10">Cancelar</Button>
+                            <Button onClick={handleUpdate} disabled={updating} className="font-black uppercase text-[10px] bg-primary text-black glow-primary">
                               {updating ? <Loader2 className="animate-spin" /> : "Salvar Alterações"}
                             </Button>
                           </DialogFooter>
@@ -217,15 +222,15 @@ export default function GabinetesPage() {
                             {deletingId === c.id ? <Loader2 className="animate-spin" /> : <Trash2 size={18} />}
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent className="bg-slate-950 border-slate-900">
+                        <AlertDialogContent className="bg-black border-white/10 text-white">
                           <AlertDialogHeader>
-                            <AlertDialogTitle className="uppercase font-black text-sm tracking-widest">Remover Gabinete?</AlertDialogTitle>
-                            <AlertDialogDescription className="text-xs uppercase font-bold">
+                            <AlertDialogTitle className="uppercase font-black text-sm tracking-widest text-destructive">Remover Gabinete?</AlertDialogTitle>
+                            <AlertDialogDescription className="text-[10px] uppercase font-bold text-muted-foreground">
                               Isso removerá a instância. Os dados (demandas/atendimentos) não serão excluídos mas ficarão órfãos de gabinete.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel className="font-black uppercase text-[10px]">Cancelar</AlertDialogCancel>
+                            <AlertDialogCancel className="font-black uppercase text-[10px] border-white/10">Cancelar</AlertDialogCancel>
                             <AlertDialogAction onClick={() => handleDelete(c.id)} className="bg-destructive text-white font-black uppercase text-[10px]">Confirmar</AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>

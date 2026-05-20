@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
@@ -125,94 +124,95 @@ export default function NewCitizenServicePage() {
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
-        <header className="mb-8">
-          <Link href="/atendimentos" className="flex items-center gap-2 text-muted-foreground hover:text-primary mb-4 w-fit text-sm font-bold uppercase tracking-widest">
+        <header className="mb-10">
+          <Link href="/atendimentos" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-all mb-4 text-[10px] font-black uppercase tracking-[0.3em]">
             <ChevronLeft size={16} /> Voltar aos Atendimentos
           </Link>
-          <h1 className="text-3xl font-bold tracking-tight">Novo Atendimento ao <span className="text-primary">Munícipe</span></h1>
+          <h1 className="text-4xl font-black uppercase tracking-tighter text-white">Novo Atendimento ao <span className="text-primary">Munícipe</span></h1>
+          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest mt-1">Gestão de solicitações e base de contatos.</p>
         </header>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <Card className="bg-card border-primary/10 shadow-xl">
+            <Card className="bg-white/5 border-white/5 shadow-2xl overflow-hidden relative">
+              <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
               <CardHeader>
-                <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <User className="text-primary" size={20} /> Perfil do Cidadão
+                <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                  <User size={16} /> Perfil do Cidadão
                 </CardTitle>
-                <CardDescription>Preencha os dados básicos para o banco de dados do gabinete.</CardDescription>
+                <CardDescription className="text-[9px] uppercase font-bold text-muted-foreground">Preencha os dados básicos para o banco de dados do gabinete.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Nome Completo</Label>
-                  <Input required value={formData.municipeNome} onChange={e => setFormData(p => ({ ...p, municipeNome: e.target.value }))} className="bg-background border-primary/10" placeholder="Ex: João da Silva" />
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Nome Completo</Label>
+                  <Input required value={formData.municipeNome} onChange={e => setFormData(p => ({ ...p, municipeNome: e.target.value }))} className="bg-black/50 border-white/10 text-white h-12" placeholder="Ex: João da Silva" />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">WhatsApp / Telefone</Label>
+                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">WhatsApp / Telefone</Label>
                     <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
-                      <Input required value={formData.municipeTelefone} onChange={e => setFormData(p => ({ ...p, municipeTelefone: e.target.value }))} className="pl-9 bg-background border-primary/10" placeholder="(00) 00000-0000" />
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-primary/50" size={16} />
+                      <Input required value={formData.municipeTelefone} onChange={e => setFormData(p => ({ ...p, municipeTelefone: e.target.value }))} className="pl-10 bg-black/50 border-white/10 text-white h-12" placeholder="(00) 00000-0000" />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">Título de Eleitor</Label>
+                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Título de Eleitor</Label>
                     <div className="relative">
-                      <ClipboardList className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
-                      <Input value={formData.municipeTituloEleitoral} onChange={e => setFormData(p => ({ ...p, municipeTituloEleitoral: e.target.value }))} className="pl-9 bg-background border-primary/10" placeholder="Opcional para controle de base" />
+                      <ClipboardList className="absolute left-3 top-1/2 -translate-y-1/2 text-primary/50" size={16} />
+                      <Input value={formData.municipeTituloEleitoral} onChange={e => setFormData(p => ({ ...p, municipeTituloEleitoral: e.target.value }))} className="pl-10 bg-black/50 border-white/10 text-white h-12" placeholder="Opcional" />
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Endereço Residencial</Label>
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Endereço Residencial</Label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-3 text-muted-foreground" size={14} />
-                    <Textarea required value={formData.municipeEndereco} onChange={e => setFormData(p => ({ ...p, municipeEndereco: e.target.value }))} className="pl-9 bg-background border-primary/10 min-h-[80px]" placeholder="Rua, Bairro, Ponto de referência..." />
+                    <MapPin className="absolute left-3 top-3 text-primary/50" size={16} />
+                    <Textarea required value={formData.municipeEndereco} onChange={e => setFormData(p => ({ ...p, municipeEndereco: e.target.value }))} className="pl-10 bg-black/50 border-white/10 text-white min-h-[100px]" placeholder="Rua, Bairro, Ponto de referência..." />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">O que o Munícipe solicita?</Label>
-                  <Textarea required value={formData.descricaoSolicitacao} onChange={e => setFormData(p => ({ ...p, descricaoSolicitacao: e.target.value }))} className="bg-background border-primary/10 min-h-[120px]" placeholder="Descreva aqui o pedido ou problema relatado..." />
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">O que o Munícipe solicita?</Label>
+                  <Textarea required value={formData.descricaoSolicitacao} onChange={e => setFormData(p => ({ ...p, descricaoSolicitacao: e.target.value }))} className="bg-black/50 border-white/10 text-white min-h-[150px]" placeholder="Descreva aqui o pedido ou problema relatado..." />
                 </div>
               </CardContent>
             </Card>
           </div>
 
           <div className="space-y-6">
-            <Card className="bg-card border-primary/10 shadow-xl overflow-hidden">
-              <CardHeader className="bg-primary/5 border-b border-primary/10">
+            <Card className="bg-white/5 border-white/5 shadow-2xl overflow-hidden">
+              <CardHeader className="bg-white/5 border-b border-white/5">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <Send size={16} className="text-primary" /> Gerar Demanda
+                  <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                    <Send size={16} /> Gerar Demanda
                   </CardTitle>
-                  <Switch checked={createInternalDemand} onCheckedChange={setCreateInternalDemand} />
+                  <Switch checked={createInternalDemand} onCheckedChange={setCreateInternalDemand} className="data-[state=checked]:bg-primary" />
                 </div>
-                <CardDescription className="text-[10px] mt-2">Cria automaticamente um processo no sistema de gestão.</CardDescription>
               </CardHeader>
-              <CardContent className={cn("pt-6 space-y-4 transition-opacity", !createInternalDemand && "opacity-20 pointer-events-none")}>
+              <CardContent className={cn("pt-8 space-y-6 transition-opacity", !createInternalDemand && "opacity-20 pointer-events-none")}>
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Prioridade</Label>
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Prioridade</Label>
                   <Select value={formData.prioridadeDemanda} onValueChange={v => setFormData(p => ({ ...p, prioridadeDemanda: v as DemandPriority }))}>
-                    <SelectTrigger className="bg-background border-primary/10 h-9">
+                    <SelectTrigger className="bg-black/50 border-white/10 text-white h-12 font-bold">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALTA">Alta Urgência</SelectItem>
-                      <SelectItem value="MEDIA">Normal</SelectItem>
-                      <SelectItem value="BAIXA">Baixa Prioridade</SelectItem>
+                    <SelectContent className="bg-black border-white/10">
+                      <SelectItem value="ALTA">ALTA URGÊNCIA</SelectItem>
+                      <SelectItem value="MEDIA">NORMAL</SelectItem>
+                      <SelectItem value="BAIXA">BAIXA</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Atribuir ao Assessor</Label>
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Atribuir ao Assessor</Label>
                   <Select value={formData.responsavelDemanda} onValueChange={v => setFormData(p => ({ ...p, responsavelDemanda: v }))}>
-                    <SelectTrigger className="bg-background border-primary/10 h-9">
-                      <SelectValue placeholder="Selecione um responsável" />
+                    <SelectTrigger className="bg-black/50 border-white/10 text-white h-12 font-bold">
+                      <SelectValue placeholder="SELECIONE..." />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-black border-white/10">
                       {allUsers.map((u: any) => (
                         <SelectItem key={u.uid} value={u.uid || u.id}>{u.nome} ({u.perfil})</SelectItem>
                       ))}
@@ -221,19 +221,19 @@ export default function NewCitizenServicePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Prazo de Resolução</Label>
-                  <Input type="date" value={formData.prazoDemanda} onChange={e => setFormData(p => ({ ...p, prazoDemanda: e.target.value }))} className="bg-background border-primary/10 h-9" />
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Prazo de Resolução</Label>
+                  <Input type="date" value={formData.prazoDemanda} onChange={e => setFormData(p => ({ ...p, prazoDemanda: e.target.value }))} className="bg-black/50 border-white/10 text-white h-12 font-bold" />
                 </div>
 
-                <div className="p-3 bg-primary/5 rounded-lg border border-primary/10 flex gap-2">
-                  <AlertCircle size={14} className="text-primary shrink-0 mt-0.5" />
-                  <p className="text-[9px] text-primary/80 leading-relaxed font-medium">
-                    A demanda herdará os dados de contato e a descrição acima para facilitar o trabalho do assessor.
+                <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20 flex gap-3">
+                  <AlertCircle size={16} className="text-primary shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-primary font-black uppercase leading-relaxed tracking-wider">
+                    A demanda herdará os dados de contato e a descrição acima para facilitar o trabalho.
                   </p>
                 </div>
               </CardContent>
-              <CardFooter className="bg-muted/20 pt-6">
-                <Button type="submit" disabled={saving} className="w-full bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20">
+              <CardFooter className="bg-white/5 p-8">
+                <Button type="submit" disabled={saving} className="w-full bg-primary text-black font-black uppercase text-[11px] tracking-widest h-14 glow-primary">
                   {saving ? <Loader2 className="animate-spin" /> : <><Save className="mr-2" size={18} /> Salvar Atendimento</>}
                 </Button>
               </CardFooter>
