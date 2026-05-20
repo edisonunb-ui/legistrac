@@ -20,6 +20,7 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
     if (!ref) {
       setData(null);
       lastPath.current = null;
+      setLoading(false);
       return;
     }
 

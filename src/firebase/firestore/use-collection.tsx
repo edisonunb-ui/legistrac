@@ -24,10 +24,10 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
       return;
     }
 
-    // Gerar uma chave de query estável sem usar JSON.stringify no objeto circular
-    const currentQueryKey = (query as any)._query?.path?.toString() || Math.random().toString();
+    // Estabilização de Query para evitar loops de re-render
+    const currentQueryKey = (query as any)._query?.path?.toString() + (query as any)._query?.filters?.length;
     
-    if (lastQueryKey.current === currentQueryKey && data.length > 0) {
+    if (lastQueryKey.current === currentQueryKey) {
       return;
     }
     
@@ -47,6 +47,9 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
         setError(null);
       },
       (err) => {
+        if (err.code !== 'permission-denied') {
+          console.error("Firestore Collection Error:", err);
+        }
         setError(err);
         setLoading(false);
       }

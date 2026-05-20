@@ -36,6 +36,62 @@ import Link from "next/link";
 const MASTER_EMAIL = "edisonunb@gmail.com";
 const AUDITOR_EMAIL = "alemao@gmail.com";
 
+/**
+ * Sub-componente de cabeçalho para otimizar re-renders do relógio
+ */
+function DashboardHeader({ isGlobal }: { isGlobal: boolean }) {
+  const [dateTime, setDateTime] = useState<{ date: string, time: string } | null>(null);
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      setDateTime({
+        date: new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(now),
+        time: new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(now)
+      });
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <header className="mb-12">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+        <div className="flex-1">
+          <h1 className="text-4xl sm:text-5xl font-black tracking-tighter uppercase leading-tight text-white">
+            Dashboard <span className="text-primary">{isGlobal ? "Global" : "Estratégico"}</span>
+          </h1>
+          <div className="flex flex-wrap items-center gap-4 mt-4">
+            <p className="text-primary text-[10px] sm:text-xs uppercase tracking-[0.3em] font-black bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full glow-primary">Inteligência Parlamentar</p>
+            {dateTime && (
+              <div className="flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-muted-foreground">
+                <CalendarIcon size={14} className="text-primary/60" />
+                <span className="text-white/80">{dateTime.date}</span>
+                <span className="mx-1 text-white/10">|</span>
+                <ClockIcon size={14} className="text-primary/60" />
+                <span className="font-mono text-white/80">{dateTime.time}</span>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:flex gap-4">
+          <Link href="/demandas/new" className="w-full">
+            <Button variant="outline" className="w-full font-black text-[11px] uppercase h-12 px-8 tracking-widest border-white/10 bg-white/5 hover:bg-white/10 text-white">
+              Nova Demanda
+            </Button>
+          </Link>
+          <Link href="/liderancas/new" className="w-full">
+            <Button className="w-full font-black text-[11px] uppercase h-12 px-8 tracking-widest shadow-lg shadow-primary/20 bg-primary text-black hover:opacity-90 glow-primary">
+              Cadastrar Líder
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </header>
+  );
+}
+
 export default function StrategicDashboard() {
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
@@ -44,7 +100,6 @@ export default function StrategicDashboard() {
 
   const [isEditingMeta, setIsEditingMeta] = useState(false);
   const [newMetaValue, setNewMetaValue] = useState("");
-  const [dateTime, setDateTime] = useState<{ date: string, time: string } | null>(null);
 
   const userEmail = useMemo(() => user?.email?.toLowerCase().trim() || null, [user?.email]);
   const isSuperAdmin = useMemo(() => userEmail === MASTER_EMAIL, [userEmail]);
@@ -55,32 +110,6 @@ export default function StrategicDashboard() {
   const { data: profile, loading: loadingProfile } = useDoc(profileRef);
 
   const cabinetId = (profile as any)?.cabinetId;
-
-  useEffect(() => {
-    const updateDateTime = () => {
-      const now = new Date();
-      const dateStr = new Intl.DateTimeFormat('pt-BR', {
-        timeZone: 'America/Sao_Paulo',
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-      }).format(now);
-      
-      const timeStr = new Intl.DateTimeFormat('pt-BR', {
-        timeZone: 'America/Sao_Paulo',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      }).format(now);
-
-      setDateTime({ date: dateStr, time: timeStr });
-    };
-
-    updateDateTime();
-    const interval = setInterval(updateDateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -106,11 +135,8 @@ export default function StrategicDashboard() {
 
   const configRef = useMemoFirebase(() => {
     if (!db) return null;
-    if (hasGlobalView) {
-      return doc(db, "config", "global");
-    } else if (cabinetId) {
-      return doc(db, "gabinetes", cabinetId, "config", "global");
-    }
+    if (hasGlobalView) return doc(db, "config", "global");
+    if (cabinetId) return doc(db, "gabinetes", cabinetId, "config", "global");
     return null;
   }, [db, cabinetId, hasGlobalView]);
   const { data: config } = useDoc<GlobalConfig>(configRef);
@@ -142,7 +168,6 @@ export default function StrategicDashboard() {
       toast({ title: "Valor Inválido", variant: "destructive" });
       return;
     }
-
     try {
       await setDoc(configRef, { 
         metaVotos2026: val, 
@@ -164,40 +189,10 @@ export default function StrategicDashboard() {
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="container mx-auto px-4 py-6 sm:py-10">
-        <header className="mb-12">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-            <div className="flex-1">
-              <h1 className="text-4xl sm:text-5xl font-black tracking-tighter uppercase leading-tight text-white">Dashboard <span className="text-primary">{hasGlobalView ? "Global" : "Estratégico"}</span></h1>
-              <div className="flex flex-wrap items-center gap-4 mt-4">
-                <p className="text-primary text-[10px] sm:text-xs uppercase tracking-[0.3em] font-black bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full glow-primary">Inteligência Parlamentar</p>
-                {dateTime && (
-                  <div className="flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-muted-foreground">
-                    <CalendarIcon size={14} className="text-primary/60" />
-                    <span className="text-white/80">{dateTime.date}</span>
-                    <span className="mx-1 text-white/10">|</span>
-                    <ClockIcon size={14} className="text-primary/60" />
-                    <span className="font-mono text-white/80">{dateTime.time}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:flex gap-4">
-              <Link href="/demandas/new" className="w-full">
-                <Button variant="outline" className="w-full font-black text-[11px] uppercase h-12 px-8 tracking-widest border-white/10 bg-white/5 hover:bg-white/10 transition-all text-white">
-                  Nova Demanda
-                </Button>
-              </Link>
-              <Link href="/liderancas/new" className="w-full">
-                <Button className="w-full font-black text-[11px] uppercase h-12 px-8 tracking-widest shadow-lg shadow-primary/20 bg-primary text-black hover:opacity-90 transition-all glow-primary">
-                  Cadastrar Líder
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </header>
+        <DashboardHeader isGlobal={hasGlobalView} />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          <Card className="bg-white/5 border-white/5 shadow-2xl overflow-hidden group relative">
+          <Card className="bg-white/5 border-white/5 shadow-2xl overflow-hidden relative">
              <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
             <CardContent className="pt-8">
               <p className="text-[10px] font-black uppercase text-muted-foreground mb-2 tracking-[0.2em]">Votos Mapeados</p>
@@ -256,7 +251,7 @@ export default function StrategicDashboard() {
                           <Label className="text-[11px] uppercase font-black tracking-widest text-muted-foreground">Número de Votos</Label>
                           <Input type="number" className="h-14 border-white/10 bg-white/5 font-black text-2xl text-white text-center" value={newMetaValue} onChange={e => setNewMetaValue(e.target.value)} />
                         </div>
-                        <DialogFooter><Button className="w-full h-14 font-black uppercase text-xs tracking-widest bg-primary text-black hover:opacity-90" onClick={handleUpdateMeta}>Salvar Objetivo</Button></DialogFooter>
+                        <DialogFooter><Button className="w-full h-14 font-black uppercase text-xs tracking-widest bg-primary text-black" onClick={handleUpdateMeta}>Salvar Objetivo</Button></DialogFooter>
                       </DialogContent>
                     </Dialog>
                   )}
@@ -282,7 +277,7 @@ export default function StrategicDashboard() {
               ) : 
                 allLeaders.slice(0, 5).map((l: Leader) => (
                   <Link key={l.id} href="/liderancas">
-                    <Card className="bg-white/5 hover:bg-white/10 transition-all border-white/5 hover:border-primary/20 group cursor-pointer active:scale-[0.99] shadow-xl overflow-hidden">
+                    <Card className="bg-white/5 hover:bg-white/10 transition-all border-white/5 hover:border-primary/20 group cursor-pointer active:scale-[0.99] shadow-xl">
                       <CardContent className="p-6 flex items-center justify-between">
                         <div className="flex items-center gap-6">
                           <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center font-black text-lg text-primary border border-primary/20 uppercase">
@@ -297,7 +292,7 @@ export default function StrategicDashboard() {
                             </div>
                           </div>
                         </div>
-                        <ChevronRight size={20} className="text-muted-foreground group-hover:text-primary transition-all group-hover:translate-x-1" />
+                        <ChevronRight size={20} className="text-muted-foreground group-hover:text-primary transition-all" />
                       </CardContent>
                     </Card>
                   </Link>
@@ -314,20 +309,20 @@ export default function StrategicDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 pt-8">
-                <div className="flex justify-between items-center p-5 bg-black/40 rounded-2xl border border-white/5 transition-all hover:border-primary/30 group">
+                <div className="flex justify-between items-center p-5 bg-black/40 rounded-2xl border border-white/5 transition-all hover:border-primary/30">
                   <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Demandas Abertas</span>
                   <span className="font-black text-primary bg-primary/10 border border-primary/20 px-4 py-1.5 rounded-full text-xs">
                     {allDemands.filter(d => d.status === "ABERTO" && !d.deleted).length}
                   </span>
                 </div>
-                <div className="flex justify-between items-center p-5 bg-black/40 rounded-2xl border border-white/5 transition-all hover:border-primary/30 group">
+                <div className="flex justify-between items-center p-5 bg-black/40 rounded-2xl border border-white/5 transition-all hover:border-primary/30">
                   <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Em Trâmite</span>
                   <span className="font-black text-secondary bg-secondary/10 border border-secondary/20 px-4 py-1.5 rounded-full text-xs">
                     {allDemands.filter(d => d.status === "EM_ANDAMENTO" && !d.deleted).length}
                   </span>
                 </div>
                 <Link href="/demandas" className="block mt-6">
-                  <Button variant="ghost" className="w-full text-[11px] font-black uppercase tracking-widest h-12 hover:bg-primary/10 hover:text-primary border border-transparent hover:border-primary/20">
+                  <Button variant="ghost" className="w-full text-[11px] font-black uppercase tracking-widest h-12 hover:bg-primary/10 hover:text-primary">
                     Gerenciar Fluxo <ChevronRight size={16} className="ml-2" />
                   </Button>
                 </Link>

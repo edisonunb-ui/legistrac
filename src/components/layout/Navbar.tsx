@@ -2,7 +2,7 @@
 
 import { useUser, useFirestore, useAuthInstance, useDoc } from "@/firebase";
 import { Button } from "@/components/ui/button";
-import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, Calendar as CalendarIcon, ChevronDown } from "lucide-react";
+import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, ChevronDown } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -34,6 +34,83 @@ import { cn } from "@/lib/utils";
 
 const MASTER_EMAIL = "edisonunb@gmail.com";
 
+/**
+ * Componente de Relógio isolado para evitar re-render da Navbar inteira
+ */
+function ClockDisplay() {
+  const [time, setTime] = useState<string | null>(null);
+  const [fullDate, setFullDate] = useState<string | null>(null);
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      setCurrentDate(now);
+      setTime(new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+      }).format(now));
+      setFullDate(new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        weekday: 'long', day: '2-digit', month: 'long',
+      }).format(now).toUpperCase());
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!time) return null;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 text-[10px] font-black uppercase tracking-widest text-muted-foreground transition-all active:scale-95 group">
+          <Clock size={12} className="text-primary group-hover:glow-primary transition-all" />
+          <span className="font-mono text-white">{time.substring(0, 5)}</span>
+          <ChevronDown size={10} className="opacity-50" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[320px] p-0 bg-black border-white/10 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95" align="end">
+        <div className="p-6 bg-primary border-b border-black/20">
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-[10px] font-black text-black/80 uppercase tracking-widest">{fullDate}</span>
+            <Clock size={14} className="text-black/40" />
+          </div>
+          <h2 className="text-4xl font-black font-mono tracking-tighter text-black leading-none">{time}</h2>
+        </div>
+        <div className="p-6 bg-black">
+          <div className="mb-6 text-center">
+            <span className="text-[11px] font-black uppercase tracking-[0.4em] text-primary">
+              {currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
+            </span>
+          </div>
+          <Calendar
+            mode="single"
+            selected={currentDate}
+            className="p-0"
+            classNames={{
+              months: "w-full",
+              month: "space-y-4 w-full",
+              caption: "hidden", 
+              head_row: "flex w-full justify-between mb-4",
+              head_cell: "text-primary font-black text-[10px] uppercase w-9 text-center",
+              row: "flex w-full justify-between mt-2",
+              cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
+              day: cn(
+                "h-9 w-9 p-0 font-bold text-muted-foreground hover:bg-primary/20 hover:text-primary rounded-none transition-all"
+              ),
+              day_selected: "bg-primary text-black hover:bg-primary hover:text-black font-black rounded-none",
+              day_today: "text-primary border border-primary/30",
+              day_outside: "text-white/5 pointer-events-none",
+            }}
+          />
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function Navbar() {
   const { user } = useUser();
   const db = useFirestore();
@@ -41,39 +118,8 @@ export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [time, setTime] = useState<string | null>(null);
-  const [fullDate, setFullDate] = useState<string | null>(null);
-  const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-    const updateTime = () => {
-      const now = new Date();
-      setCurrentDate(now);
-      
-      setTime(new Intl.DateTimeFormat('pt-BR', {
-        timeZone: 'America/Sao_Paulo',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      }).format(now));
-
-      setFullDate(new Intl.DateTimeFormat('pt-BR', {
-        timeZone: 'America/Sao_Paulo',
-        weekday: 'long',
-        day: '2-digit',
-        month: 'long',
-      }).format(now).toUpperCase());
-    };
-
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const userEmail = user?.email?.toLowerCase().trim();
+  const userEmail = useMemo(() => user?.email?.toLowerCase().trim(), [user?.email]);
   const isSuperAdmin = useMemo(() => userEmail === MASTER_EMAIL, [userEmail]);
 
   const userProfileQuery = useMemo(() => (db && userEmail) ? doc(db, "users", userEmail) : null, [db, userEmail]);
@@ -89,20 +135,18 @@ export function Navbar() {
     router.push("/login");
   };
 
-  const navItems = [
+  const navItems = useMemo(() => [
     { label: "Dashboard", icon: LayoutDashboard, href: "/" },
     { label: "Atendimentos", icon: PhoneIncoming, href: "/atendimentos" },
     { label: "Demandas", icon: ListTodo, href: "/demandas" },
     { label: "Legislativo", icon: Gavel, href: "/legislativo" },
     { label: "Lideranças", icon: Users, href: "/liderancas" },
-  ];
-
-  if (!mounted) return null;
+  ], []);
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-black/80 backdrop-blur-md px-2 sm:px-0">
+    <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-black/80 backdrop-blur-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-2 md:gap-8">
+        <div className="flex items-center gap-8">
           <div className="md:hidden">
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
@@ -149,8 +193,8 @@ export function Navbar() {
               <Target size={18} />
             </div>
             <div className="flex flex-col leading-none">
-              <span className="text-base sm:text-lg font-black tracking-tighter text-white uppercase">Legis<span className="text-primary">Trac</span></span>
-              <span className="text-[8px] sm:text-[9px] text-muted-foreground font-bold uppercase tracking-widest truncate max-w-[100px] sm:max-w-none">
+              <span className="text-lg font-black tracking-tighter text-white uppercase">Legis<span className="text-primary">Trac</span></span>
+              <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest truncate max-w-[150px]">
                 {isSuperAdmin ? "Central SuperAdmin" : (cabinet as any)?.vereador || "Gabinete"}
               </span>
             </div>
@@ -174,58 +218,11 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          {time && (
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 text-[10px] font-black uppercase tracking-widest text-muted-foreground transition-all active:scale-95 group">
-                  <Clock size={12} className="text-primary group-hover:glow-primary transition-all" />
-                  <span className="font-mono text-white">{time.substring(0, 5)}</span>
-                  <ChevronDown size={10} className="opacity-50" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[320px] p-0 bg-black border-white/10 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95" align="end">
-                <div className="p-6 bg-primary border-b border-black/20">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] font-black text-black/80 uppercase tracking-widest">{fullDate}</span>
-                    <Clock size={14} className="text-black/40" />
-                  </div>
-                  <h2 className="text-4xl font-black font-mono tracking-tighter text-black leading-none">{time}</h2>
-                </div>
-                
-                <div className="p-6 bg-black">
-                  <div className="mb-6 text-center">
-                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-primary">
-                      {currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
-                    </span>
-                  </div>
-                  <Calendar
-                    mode="single"
-                    selected={currentDate}
-                    className="p-0"
-                    classNames={{
-                      months: "w-full",
-                      month: "space-y-4 w-full",
-                      caption: "hidden", 
-                      head_row: "flex w-full justify-between mb-4",
-                      head_cell: "text-primary font-black text-[10px] uppercase w-9 text-center",
-                      row: "flex w-full justify-between mt-2",
-                      cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
-                      day: cn(
-                        "h-9 w-9 p-0 font-bold text-muted-foreground hover:bg-primary/20 hover:text-primary rounded-none transition-all"
-                      ),
-                      day_selected: "bg-primary text-black hover:bg-primary hover:text-black font-black rounded-none",
-                      day_today: "text-primary border border-primary/30",
-                      day_outside: "text-white/5 pointer-events-none",
-                    }}
-                  />
-                </div>
-              </PopoverContent>
-            </Popover>
-          )}
+          <ClockDisplay />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-10 w-10 rounded-full border border-white/10 p-0 overflow-hidden hover:bg-white/5 transition-all focus-visible:ring-0">
+              <Button variant="ghost" className="relative h-10 w-10 rounded-full border border-white/10 p-0 overflow-hidden hover:bg-white/5 transition-all">
                 <Avatar className="h-full w-full">
                   <AvatarFallback className="bg-primary/20 text-primary font-black text-xs border border-primary/30">
                     {(profile as any)?.nome?.[0]?.toUpperCase() || (isSuperAdmin ? "SA" : <User size={16} />)}
