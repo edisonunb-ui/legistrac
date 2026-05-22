@@ -102,11 +102,13 @@ export interface LegislativeAction {
   ano: number;
   titulo: string;
   ementa: string;
+  conteudo: string;
   status: "ELABORACAO" | "PROTOCOLADO" | "APROVADO" | "REJEITADO";
   linkOficial?: string;
   dataProtocolo?: Timestamp;
   demandaOrigemId?: string;
   deleted?: boolean;
+  anexos?: Attachment[];
 }
 
 export interface Tramite {
