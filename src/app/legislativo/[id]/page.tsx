@@ -3,7 +3,7 @@
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useStorage } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, use, useEffect, useCallback } from "react";
+import { useState, use, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { doc, updateDoc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
@@ -26,13 +26,15 @@ import {
   X, 
   CheckCircle2, 
   FileUp, 
-  Wand2,
   Download,
-  Trash2,
-  ExternalLink
+  ExternalLink,
+  AlertCircle,
+  ShieldAlert
 } from "lucide-react";
 import Link from "next/link";
 import { Attachment, LegislativeAction } from "@/lib/types";
+
+const MASTER_EMAIL = "edisonunb@gmail.com";
 
 export default function LegislativeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -45,8 +47,14 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
   const [saving, setSaving] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
 
+  // Referência do documento com ID garantido
   const actionRef = useMemoFirebase(() => (id && db) ? doc(db, "legislativo", id) : null, [db, id]);
-  const { data: action, loading: loadingAction } = useDoc<LegislativeAction>(actionRef);
+  const { data: action, loading: loadingAction, error: actionError } = useDoc<LegislativeAction>(actionRef);
+
+  // Perfil do usuário para validação de gabinete
+  const userEmail = user?.email?.toLowerCase().trim();
+  const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
+  const { data: profile } = useDoc(profileRef);
 
   const [formData, setFormData] = useState({
     tipo: "INDICACAO" as any,
@@ -62,6 +70,7 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
   const [files, setFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
 
+  // Sincroniza dados do banco com o formulário local
   useEffect(() => {
     if (action) {
       setFormData({
@@ -77,35 +86,16 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
     }
   }, [action]);
 
-  const extractTextFromDocx = async (file: File) => {
-    setIsParsing(true);
-    try {
-      const mammoth = await import("mammoth");
-      const arrayBuffer = await file.arrayBuffer();
-      const result = await mammoth.extractRawText({ arrayBuffer });
-      if (result.value) {
-        setFormData(prev => ({
-          ...prev,
-          conteudo: result.value
-        }));
-        toast({ title: "Texto Extraído", description: "O conteúdo do Word foi carregado para o campo de texto." });
-      }
-    } catch (error) {
-      toast({ title: "Erro na Leitura", description: "Não foi possível extrair o texto do arquivo.", variant: "destructive" });
-    } finally {
-      setIsParsing(false);
-    }
-  };
+  // Validação de acesso por gabinete
+  const hasAccess = useMemo(() => {
+    if (!action || !profile || userEmail === MASTER_EMAIL) return true;
+    return action.cabinetId === (profile as any).cabinetId;
+  }, [action, profile, userEmail]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files);
       setFiles(prev => [...prev, ...selectedFiles]);
-      
-      const firstFile = selectedFiles[0];
-      if (firstFile.name.toLowerCase().endsWith('.docx')) {
-        extractTextFromDocx(firstFile);
-      }
     }
   }, []);
 
@@ -168,23 +158,46 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
 
       await updateDoc(actionRef, {
         ...formData,
-        ano: parseInt(formData.ano),
+        ano: parseInt(formData.ano) || new Date().getFullYear(),
         anexos: allAttachments,
         updatedAt: serverTimestamp()
       });
 
-      toast({ title: "Documento Atualizado", description: "As alterações foram salvas com sucesso." });
+      toast({ 
+        title: "Protocolo Atualizado", 
+        description: "As alterações no teor e metadados foram salvas.",
+        className: "bg-primary text-black"
+      });
       setFiles([]);
       setUploadProgress({});
     } catch (e: any) {
-      toast({ title: "Erro", description: e.message, variant: "destructive" });
+      toast({ title: "Erro no Salvamento", description: e.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
 
-  if (loadingAction) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
-  if (!action) return <div className="min-h-screen bg-background flex items-center justify-center text-white">Documento não encontrado.</div>;
+  if (loadingAction) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <Loader2 className="animate-spin text-primary" size={40} />
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground animate-pulse">Acessando Arquivos...</p>
+      </div>
+    );
+  }
+
+  if (actionError || !action || !hasAccess) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+        <ShieldAlert size={64} className="text-destructive mb-6 glow-destructive" />
+        <h1 className="text-2xl font-black uppercase tracking-tighter text-white mb-2">Protocolo Inacessível</h1>
+        <p className="text-muted-foreground text-[10px] uppercase tracking-widest max-w-md">O documento solicitado não existe ou você não possui permissões de visualização para este gabinete.</p>
+        <Link href="/legislativo" className="mt-8">
+          <Button variant="outline" className="font-black uppercase text-[11px] h-12 border-white/10">Voltar à Atividade</Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-white">
@@ -198,10 +211,13 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <Badge variant="outline" className="text-[10px] font-black uppercase border-primary/20 text-primary">#{id.substring(0, 8)}</Badge>
-                <Badge className="bg-primary text-black font-black uppercase text-[10px]">{action.status}</Badge>
+                <Badge className={cn(
+                  "font-black uppercase text-[10px] px-3 py-1 text-black",
+                  formData.status === "APROVADO" ? "bg-green-500" : "bg-primary"
+                )}>{formData.status.replace("_", " ")}</Badge>
               </div>
               <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tighter text-white">
-                Editar {action.tipo.replace("_", " ")}
+                Gestão do Inteiro Teor
               </h1>
             </div>
             {formData.linkOficial && (
@@ -220,26 +236,23 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
               <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
               <CardHeader>
                 <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                  <FileText size={16} /> Edição do Inteiro Teor
+                  <FileText size={16} /> Edição de Minuta
                 </CardTitle>
-                <CardDescription className="text-[9px] uppercase font-bold text-muted-foreground">O texto abaixo foi extraído do Word ou redigido aqui. Altere como desejar.</CardDescription>
+                <CardDescription className="text-[9px] uppercase font-bold text-muted-foreground">O texto abaixo pode ser editado ou ditado agora.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Título do Documento</Label>
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Título do Protocolo</Label>
                   <Input required value={formData.titulo} onChange={e => setFormData(p => ({ ...p, titulo: e.target.value }))} className="bg-black/50 border-white/10 text-white h-12 font-bold" />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Ementa (Resumo Oficial)</Label>
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Ementa Oficial</Label>
                   <Textarea required value={formData.ementa} onChange={e => setFormData(p => ({ ...p, ementa: e.target.value }))} className="bg-black/50 border-white/10 text-white min-h-[100px] text-xs leading-relaxed" />
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Inteiro Teor / Ofício</Label>
-                    {isParsing && <span className="text-[8px] font-black text-primary animate-pulse uppercase">Extraindo...</span>}
-                  </div>
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Conteúdo para Protocolo (Inteiro Teor)</Label>
                   <Textarea required value={formData.conteudo} onChange={e => setFormData(p => ({ ...p, conteudo: e.target.value }))} className="bg-black/50 border-white/10 text-white min-h-[450px] text-xs font-mono leading-relaxed" />
                 </div>
               </CardContent>
@@ -248,7 +261,7 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
             <Card className="bg-white/5 border-white/5 shadow-2xl overflow-hidden">
               <CardHeader className="bg-white/5 border-b border-white/5">
                 <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                  <Paperclip size={16} /> Pasta de Anexos
+                  <Paperclip size={16} /> Pasta Digital (Anexos)
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-4">
@@ -267,11 +280,11 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
                     ))}
                   </div>
                 ) : (
-                  <p className="text-center py-6 text-[10px] font-black uppercase text-muted-foreground border border-dashed border-white/5 rounded-xl">Sem anexos.</p>
+                  <p className="text-center py-6 text-[10px] font-black uppercase text-muted-foreground border border-dashed border-white/5 rounded-xl">Nenhum arquivo anexado.</p>
                 )}
 
                 <div className="pt-6 border-t border-white/5 space-y-4">
-                  <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><FileUp size={14} /> Adicionar Novos Arquivos</Label>
+                  <Label className="text-[10px] font-black uppercase text-primary flex items-center gap-2"><FileUp size={14} /> Adicionar Novos Documentos</Label>
                   <Input type="file" multiple onChange={handleFileChange} disabled={saving} className="bg-white/5 border-white/10 h-14 file:bg-primary file:text-black file:font-black file:uppercase file:text-[9px] file:h-full file:mr-4 file:px-4 file:border-none" />
                   
                   {files.length > 0 && (
@@ -282,7 +295,7 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
                             <span className="text-[10px] font-bold truncate uppercase text-white/70">{file.name}</span>
                             <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-destructive/20 hover:text-destructive" onClick={() => removeFile(idx)}><X size={14} /></Button>
                           </div>
-                          {uploadProgress[file.name] !== undefined && <Progress value={uploadProgress[file.name]} className="h-1 bg-white/5" />}
+                          {uploadProgress[file.name] !== undefined && <Progress value={uploadProgress[file.name]} className="h-1 bg-white/5 shadow-primary/20" />}
                         </div>
                       ))}
                     </div>
@@ -296,7 +309,7 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
             <Card className="bg-white/5 border-white/5 shadow-2xl overflow-hidden sticky top-24">
               <CardHeader className="bg-white/5 border-b border-white/5">
                 <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                  <Gavel size={16} /> Controle Oficial
+                  <Gavel size={16} /> Metadados da Ação
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-8 space-y-6">
@@ -317,7 +330,7 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Número Protocolo</Label>
+                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Nº Protocolo</Label>
                     <Input value={formData.numero} onChange={e => setFormData(p => ({ ...p, numero: e.target.value }))} className="bg-black/50 border-white/10 text-white h-12 font-bold" />
                   </div>
                   <div className="space-y-2">
@@ -327,7 +340,7 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Situação Tramitação</Label>
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Status Atual</Label>
                   <Select value={formData.status} onValueChange={v => setFormData(p => ({ ...p, status: v }))}>
                     <SelectTrigger className="bg-black/50 border-white/10 text-white h-12 font-bold uppercase text-[10px] tracking-widest">
                       <SelectValue />
@@ -342,7 +355,7 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Link do Site da Câmara</Label>
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Link no Site da Câmara</Label>
                   <div className="relative">
                     <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-primary/50" size={14} />
                     <Input value={formData.linkOficial} onChange={e => setFormData(p => ({ ...p, linkOficial: e.target.value }))} className="pl-10 bg-black/50 border-white/10 text-white h-12 text-xs" placeholder="URL do sistema legislativo..." />
@@ -350,7 +363,7 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
                 </div>
               </CardContent>
               <CardFooter className="bg-white/5 p-8">
-                <Button type="submit" disabled={saving || isParsing} className="w-full bg-primary text-black font-black uppercase text-[11px] tracking-widest h-14 glow-primary">
+                <Button type="submit" disabled={saving} className="w-full bg-primary text-black font-black uppercase text-[11px] tracking-widest h-14 glow-primary">
                   {saving ? <Loader2 className="animate-spin" /> : <><Save className="mr-2" size={18} /> Salvar Alterações</>}
                 </Button>
               </CardFooter>
