@@ -212,20 +212,28 @@ export function Navbar() {
   ], []);
 
   const BrandLogo = () => {
-    // PRIORIDADE: Marca do Desenvolvedor (Assinatura de Marca)
     if (globalConfig?.developerLogoUrl) {
       return (
         <div className="relative h-10 w-10 overflow-hidden rounded-full border border-primary shadow-lg glow-primary">
-          <Image src={globalConfig.developerLogoUrl} alt="Dev Signature" fill className="object-cover" />
+          <div 
+            className="relative w-full h-full"
+            style={{ transform: `scale(${globalConfig.developerLogoScale || 1})` }}
+          >
+            <Image src={globalConfig.developerLogoUrl} alt="Dev Signature" fill className="object-cover" />
+          </div>
         </div>
       );
     }
-    // FALLBACK: Carimbo do Gabinete ou Ícone Padrão
     const carimboUrl = (cabinet as any)?.carimboUrl;
     if (carimboUrl) {
       return (
         <div className="relative h-10 w-10 overflow-hidden rounded-full border border-primary/30 shadow-lg shadow-primary/10">
-          <Image src={carimboUrl} alt="Selo Oficial" fill className="object-cover" />
+          <div 
+            className="relative w-full h-full"
+            style={{ transform: `scale(${(cabinet as any).carimboScale || 1})` }}
+          >
+            <Image src={carimboUrl} alt="Selo Oficial" fill className="object-cover" />
+          </div>
         </div>
       );
     }

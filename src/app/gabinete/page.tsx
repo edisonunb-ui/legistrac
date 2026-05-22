@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useDoc, useStorage, useMemoFirebase } from "@/firebase";
@@ -11,8 +12,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Save, Loader2, Image as ImageIcon, CheckCircle2, X, ChevronLeft, ShieldCheck, Award, Sparkles } from "lucide-react";
+import { Building2, Save, Loader2, Image as ImageIcon, CheckCircle2, X, ChevronLeft, ShieldCheck, Award, Sparkles, Maximize } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { GlobalConfig } from "@/lib/types";
@@ -28,6 +30,7 @@ export default function CabinetProfilePage() {
   const [saving, setSaving] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [carimboPreview, setCarimboPreview] = useState<string | null>(null);
+  const [scale, setScale] = useState(1);
 
   const userEmail = user?.email?.toLowerCase().trim();
   const isSuperAdmin = userEmail === MASTER_EMAIL;
@@ -45,10 +48,35 @@ export default function CabinetProfilePage() {
   useEffect(() => {
     if (isSuperAdmin && globalConfig?.developerLogoUrl) {
       setCarimboPreview(globalConfig.developerLogoUrl);
+      setScale(globalConfig.developerLogoScale || 1);
     } else if (cabinet?.carimboUrl) {
       setCarimboPreview(cabinet.carimboUrl);
+      setScale(cabinet.carimboScale || 1);
     }
   }, [cabinet, isSuperAdmin, globalConfig]);
+
+  const handleScaleChange = async (val: number[]) => {
+    const newScale = val[0];
+    setScale(newScale);
+    
+    if (!db) return;
+    
+    try {
+      if (isSuperAdmin) {
+        await setDoc(doc(db, "config", "global"), {
+          developerLogoScale: newScale,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      } else if (cabinetRef) {
+        await updateDoc(cabinetRef, {
+          carimboScale: newScale,
+          updatedAt: serverTimestamp()
+        });
+      }
+    } catch (e) {
+      console.error("Erro ao salvar escala:", e);
+    }
+  };
 
   const handleCarimboChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0] && storage && db) {
@@ -88,8 +116,8 @@ export default function CabinetProfilePage() {
             }, { merge: true });
             
             toast({ 
-              title: "Assinatura de Marca Registrada", 
-              description: "Sua logomarca de desenvolvedor agora é a identidade global do sistema.",
+              title: "Assinatura Atualizada", 
+              description: "Sua logomarca global foi salva.",
               className: "bg-primary text-black font-black"
             });
           } else if (cabinetRef) {
@@ -99,7 +127,7 @@ export default function CabinetProfilePage() {
             });
             toast({ 
               title: "Carimbo Configurado", 
-              description: "Sua assinatura redonda agora aparecerá nos documentos.",
+              description: "Sua assinatura foi salva.",
               className: "bg-primary text-black font-black" 
             });
           }
@@ -128,7 +156,7 @@ export default function CabinetProfilePage() {
             <span className="text-primary">{isSuperAdmin ? "Marca Registrada" : "Gabinete"}</span>
           </h1>
           <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest mt-1">
-            {isSuperAdmin ? "Defina a logomarca que aparecerá em todos os seus sistemas." : "Configure o seu carimbo de assinatura oficial."}
+            {isSuperAdmin ? "Defina e ajuste a escala da logomarca global." : "Configure o seu carimbo e ajuste o zoom da imagem."}
           </p>
         </header>
 
@@ -139,57 +167,82 @@ export default function CabinetProfilePage() {
               <CardHeader>
                 <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                   {isSuperAdmin ? <Sparkles size={16} /> : <ShieldCheck size={16} />}
-                  {isSuperAdmin ? "Logomarca do Desenvolvedor (Branding)" : "Carimbo Oficial (Selo de Assinatura)"}
+                  Visualização da Marca
                 </CardTitle>
                 <CardDescription className="text-[9px] uppercase font-bold text-muted-foreground">
-                  {isSuperAdmin 
-                    ? "Sua imagem aparecerá como assinatura de autor (propaganda) em todo o sistema."
-                    : "Envie sua imagem redonda aqui. Ela será usada como selo de autenticidade no Inteiro Teor dos projetos."}
+                  Use o ajuste abaixo para centralizar e dar zoom na parte importante da imagem.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-8 p-10">
-                <div className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-full w-80 h-80 mx-auto bg-black/40 relative group hover:border-primary/40 transition-all overflow-hidden cursor-pointer">
-                  {carimboPreview ? (
-                    <div className="relative w-full h-full p-4">
-                      <Image 
-                        src={carimboPreview} 
-                        alt="Preview Carimbo" 
-                        fill 
-                        className="object-contain" 
+              <CardContent className="space-y-10 p-10">
+                <div className="flex flex-col items-center gap-12">
+                  <div className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-full w-72 h-72 sm:w-80 sm:h-80 mx-auto bg-black/40 relative group hover:border-primary/40 transition-all overflow-hidden cursor-pointer">
+                    {carimboPreview ? (
+                      <div className="relative w-full h-full p-0">
+                        <div 
+                          className="relative w-full h-full transition-transform duration-200"
+                          style={{ transform: `scale(${scale})` }}
+                        >
+                          <Image 
+                            src={carimboPreview} 
+                            alt="Preview Carimbo" 
+                            fill 
+                            className="object-cover" 
+                          />
+                        </div>
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity z-20">
+                          <p className="text-[10px] font-black uppercase text-white">Trocar Imagem</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-4 text-center p-8">
+                        <div className="p-6 bg-white/5 rounded-full text-muted-foreground group-hover:text-primary transition-colors">
+                          {isSuperAdmin ? <Sparkles size={48} /> : <Award size={48} />}
+                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Clique para enviar</p>
+                      </div>
+                    )}
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleCarimboChange} 
+                      className="absolute inset-0 opacity-0 cursor-pointer z-30" 
+                      disabled={saving} 
+                    />
+                  </div>
+
+                  {carimboPreview && (
+                    <div className="w-full max-w-sm space-y-4 bg-black/30 p-6 rounded-2xl border border-white/5">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                          <Maximize size={14} /> Ajuste de Escala (Zoom)
+                        </Label>
+                        <span className="text-[10px] font-mono text-white font-bold">{scale.toFixed(1)}x</span>
+                      </div>
+                      <Slider 
+                        value={[scale]} 
+                        onValueChange={handleScaleChange} 
+                        min={0.5} 
+                        max={5} 
+                        step={0.1}
+                        className="py-4"
                       />
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                        <p className="text-[10px] font-black uppercase text-white">Trocar Imagem</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-4 text-center p-8">
-                      <div className="p-6 bg-white/5 rounded-full text-muted-foreground group-hover:text-primary transition-colors">
-                        {isSuperAdmin ? <Sparkles size={48} /> : <Award size={48} />}
-                      </div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Clique para enviar seu carimbo redondo</p>
+                      <p className="text-[8px] text-muted-foreground uppercase font-bold text-center">Arraste para ampliar o logotipo redondo e esconder bordas brancas.</p>
                     </div>
                   )}
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={handleCarimboChange} 
-                    className="absolute inset-0 opacity-0 cursor-pointer z-10" 
-                    disabled={saving} 
-                  />
                 </div>
 
                 {saving && (
                   <div className="max-w-xs mx-auto space-y-2">
                     <Progress value={uploadProgress} className="h-1.5 bg-white/5" />
-                    <p className="text-[9px] font-black uppercase text-primary text-center">Processando Selo... {Math.round(uploadProgress)}%</p>
+                    <p className="text-[9px] font-black uppercase text-primary text-center">Salvando Imagem... {Math.round(uploadProgress)}%</p>
                   </div>
                 )}
 
                 <div className="p-6 bg-primary/10 rounded-2xl border border-primary/20 flex gap-4">
                   <Award size={20} className="text-primary shrink-0" />
                   <div>
-                    <p className="text-[10px] text-primary font-black uppercase leading-relaxed tracking-wider">Instrução Visual</p>
-                    <p className="text-[9px] text-white/60 uppercase font-bold mt-1">Para o melhor resultado, envie uma imagem com fundo transparente (PNG). O sistema irá posicionar o carimbo automaticamente no layout e nos ofícios.</p>
+                    <p className="text-[10px] text-primary font-black uppercase leading-relaxed tracking-wider">Dica Profissional</p>
+                    <p className="text-[9px] text-white/60 uppercase font-bold mt-1">Imagens redondas com zoom alto ficam melhores nos documentos oficiais. O ajuste acima será aplicado em todo o sistema.</p>
                   </div>
                 </div>
               </CardContent>

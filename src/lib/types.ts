@@ -18,6 +18,7 @@ export interface Cabinet {
   ativo: boolean;
   createdAt: Timestamp;
   carimboUrl?: string;
+  carimboScale?: number;
   updatedAt?: Timestamp;
 }
 
@@ -137,5 +138,6 @@ export interface GlobalConfig {
   metaVotos2026: number;
   cabinetId?: string;
   developerLogoUrl?: string;
+  developerLogoScale?: number;
   developerName?: string;
 }

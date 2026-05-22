@@ -265,13 +265,18 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
                     
                     {cabinet?.carimboUrl && (
                       <div className="mt-12 flex flex-col items-end opacity-90 animate-in fade-in slide-in-from-bottom-4">
-                        <div className="relative w-40 h-40 group">
-                          <Image 
-                            src={cabinet.carimboUrl} 
-                            alt="Carimbo de Assinatura" 
-                            fill 
-                            className="object-contain filter drop-shadow-2xl" 
-                          />
+                        <div className="relative w-40 h-40 group overflow-hidden rounded-full">
+                          <div 
+                            className="relative w-full h-full"
+                            style={{ transform: `scale(${cabinet.carimboScale || 1})` }}
+                          >
+                            <Image 
+                              src={cabinet.carimboUrl} 
+                              alt="Carimbo de Assinatura" 
+                              fill 
+                              className="object-cover filter drop-shadow-2xl" 
+                            />
+                          </div>
                         </div>
                         <div className="mr-6 mt-2 text-center">
                           <div className="h-px w-32 bg-white/20 mb-1" />
