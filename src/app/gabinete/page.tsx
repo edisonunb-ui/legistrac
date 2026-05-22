@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useFirestore, useDoc, useStorage, useMemoFirebase } from "@/firebase";
@@ -11,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, Save, Loader2, Image as ImageIcon, CheckCircle2, X, ChevronLeft, ShieldCheck, Award, Sparkles } from "lucide-react";
 import Link from "next/link";
@@ -54,14 +54,12 @@ export default function CabinetProfilePage() {
     if (e.target.files && e.target.files[0] && storage && db) {
       const file = e.target.files[0];
       
-      // Preview local imediato
       const reader = new FileReader();
       reader.onload = (ev) => setCarimboPreview(ev.target?.result as string);
       reader.readAsDataURL(file);
 
       setSaving(true);
       
-      // Caminho do Storage: Se for Master, salva na marca global. Se for gabinete, na pasta do gabinete.
       const storagePath = isSuperAdmin 
         ? `developer/branding_signature` 
         : `gabinetes/${cabinetId}/carimbo_oficial`;
@@ -83,7 +81,6 @@ export default function CabinetProfilePage() {
           const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
           
           if (isSuperAdmin) {
-            // Atualiza Marca Registrada Global
             await setDoc(doc(db, "config", "global"), {
               developerLogoUrl: downloadUrl,
               developerName: "POWERED BY DEV SIGNATURE",
@@ -96,7 +93,6 @@ export default function CabinetProfilePage() {
               className: "bg-primary text-black font-black"
             });
           } else if (cabinetRef) {
-            // Atualiza Carimbo do Gabinete
             await updateDoc(cabinetRef, {
               carimboUrl: downloadUrl,
               updatedAt: serverTimestamp()
@@ -173,7 +169,7 @@ export default function CabinetProfilePage() {
                       <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Clique para enviar seu carimbo redondo</p>
                     </div>
                   )}
-                  <Input 
+                  <input 
                     type="file" 
                     accept="image/*" 
                     onChange={handleCarimboChange} 
