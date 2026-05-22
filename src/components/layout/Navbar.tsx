@@ -33,7 +33,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Demand } from "@/lib/types";
 
-// Definição global para evitar erros de inicialização (Temporal Dead Zone)
+// Definições globais de e-mails autorizados (fora do componente para evitar erro de inicialização)
 const MASTER_EMAIL = "edisonunb@gmail.com";
 const AUDITOR_EMAIL = "alemao@gmail.com";
 
@@ -114,7 +114,7 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
               row: "flex w-full justify-between mt-1",
               cell: "h-9 w-9 text-center text-sm p-0 relative",
               day: cn(
-                "h-9 w-9 p-0 font-medium text-white/90 aria-selected:opacity-100 hover:bg-white/5 rounded-full transition-all"
+                "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-white/5 rounded-full transition-all"
               ),
               day_selected: "bg-[#4cc9f0] text-black hover:bg-[#4cc9f0] font-bold rounded-full",
               day_today: "text-[#4cc9f0] font-bold",
