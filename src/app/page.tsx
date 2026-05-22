@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useStorage } from "@/firebase";
@@ -63,8 +62,13 @@ function DashboardHeader({ isGlobal, cabinet, globalConfig, onUploadLogo }: { is
   const BrandIcon = () => {
     if (globalConfig?.developerLogoUrl) {
       return (
-        <div className="relative w-24 h-24 rounded-full border-4 border-primary shadow-2xl glow-primary overflow-hidden cursor-pointer group" onClick={onUploadLogo}>
-          <Image src={globalConfig.developerLogoUrl} alt="Dev Signature" fill className="object-cover" />
+        <div className="relative w-28 h-28 rounded-full overflow-hidden cursor-pointer group" onClick={onUploadLogo}>
+          <div 
+            className="relative w-full h-full transition-transform"
+            style={{ transform: `scale(${globalConfig.developerLogoScale || 1.2})` }}
+          >
+            <Image src={globalConfig.developerLogoUrl} alt="Dev Signature" fill className="object-cover" />
+          </div>
           {isGlobal && (
             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
               <Sparkles size={16} className="text-white" />
@@ -74,7 +78,7 @@ function DashboardHeader({ isGlobal, cabinet, globalConfig, onUploadLogo }: { is
       );
     }
     return (
-      <div className="w-24 h-24 rounded-full border-4 border-primary/20 bg-primary/10 flex items-center justify-center text-primary glow-primary cursor-pointer" onClick={onUploadLogo}>
+      <div className="w-28 h-28 rounded-full bg-primary/10 flex items-center justify-center text-primary glow-primary cursor-pointer" onClick={onUploadLogo}>
         <ShieldCheck size={40} />
       </div>
     );
