@@ -29,7 +29,8 @@ import {
   FileUp, 
   Download,
   ExternalLink,
-  ShieldAlert
+  ShieldAlert,
+  Award
 } from "lucide-react";
 import Link from "next/link";
 import { Attachment, LegislativeAction } from "@/lib/types";
@@ -48,11 +49,9 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
   
   const [saving, setSaving] = useState(false);
 
-  // Referência do documento com ID garantido
   const actionRef = useMemoFirebase(() => (id && db) ? doc(db, "legislativo", id) : null, [db, id]);
   const { data: action, loading: loadingAction, error: actionError } = useDoc<LegislativeAction>(actionRef);
 
-  // Perfil do usuário para validação de gabinete
   const userEmail = user?.email?.toLowerCase().trim();
   const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
@@ -75,7 +74,6 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
   const [files, setFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
 
-  // Sincroniza dados do banco com o formulário local
   useEffect(() => {
     if (action) {
       setFormData({
@@ -91,7 +89,6 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
     }
   }, [action]);
 
-  // Validação de acesso por gabinete
   const hasAccess = useMemo(() => {
     if (!action || !profile || userEmail === MASTER_EMAIL) return true;
     return action.cabinetId === (profile as any).cabinetId;
@@ -258,13 +255,29 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
 
                 <div className="space-y-2 relative">
                   <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Conteúdo para Protocolo (Inteiro Teor)</Label>
-                  <div className="relative">
-                    <Textarea required value={formData.conteudo} onChange={e => setFormData(p => ({ ...p, conteudo: e.target.value }))} className="bg-black/50 border-white/10 text-white min-h-[500px] text-xs font-mono leading-relaxed pb-32" />
+                  <div className="relative min-h-[600px] bg-black/50 border border-white/10 rounded-md p-4 flex flex-col">
+                    <Textarea 
+                      required 
+                      value={formData.conteudo} 
+                      onChange={e => setFormData(p => ({ ...p, conteudo: e.target.value }))} 
+                      className="bg-transparent border-none text-white flex-1 text-xs font-mono leading-relaxed focus-visible:ring-0 resize-none" 
+                    />
                     
                     {cabinet?.carimboUrl && (
-                      <div className="absolute bottom-8 right-8 pointer-events-none opacity-50">
-                        <Image src={cabinet.carimboUrl} alt="Assinatura Gabinete" width={150} height={150} className="object-contain" />
-                        <p className="text-[8px] font-black uppercase text-primary text-center mt-2 tracking-widest">Carimbo Oficial</p>
+                      <div className="mt-12 flex flex-col items-end opacity-90 animate-in fade-in slide-in-from-bottom-4">
+                        <div className="relative w-40 h-40 group">
+                          <Image 
+                            src={cabinet.carimboUrl} 
+                            alt="Carimbo de Assinatura" 
+                            fill 
+                            className="object-contain filter drop-shadow-2xl" 
+                          />
+                        </div>
+                        <div className="mr-6 mt-2 text-center">
+                          <div className="h-px w-32 bg-white/20 mb-1" />
+                          <p className="text-[8px] font-black uppercase text-primary tracking-[0.3em]">Selo de Autenticidade</p>
+                          <p className="text-[7px] font-bold uppercase text-muted-foreground mt-0.5">{cabinet.vereador}</p>
+                        </div>
                       </div>
                     )}
                   </div>
