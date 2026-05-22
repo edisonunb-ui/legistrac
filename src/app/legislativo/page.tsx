@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
@@ -128,9 +129,11 @@ export default function LegislativeListPage() {
                           </a>
                         </Button>
                       )}
-                      <Button variant="ghost" size="sm" className="h-9 text-primary hover:bg-primary/10 gap-2 text-[10px] font-black uppercase tracking-widest">
-                        Detalhes <ChevronRight size={14} />
-                      </Button>
+                      <Link href={`/legislativo/${a.id}`}>
+                        <Button variant="ghost" size="sm" className="h-9 text-primary hover:bg-primary/10 gap-2 text-[10px] font-black uppercase tracking-widest">
+                          Detalhes <ChevronRight size={14} />
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 </CardContent>
