@@ -14,7 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Save, Loader2, Image as ImageIcon, CheckCircle2, X, ChevronLeft, ShieldCheck, Award, Sparkles, Maximize } from "lucide-react";
+import { Building2, Save, Loader2, Image as ImageIcon, CheckCircle2, X, ChevronLeft, ShieldCheck, Award, Sparkles, Maximize, Type } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { GlobalConfig } from "@/lib/types";
@@ -31,6 +31,7 @@ export default function CabinetProfilePage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [carimboPreview, setCarimboPreview] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
+  const [devName, setDevName] = useState("");
 
   const userEmail = user?.email?.toLowerCase().trim();
   const isSuperAdmin = userEmail === MASTER_EMAIL;
@@ -46,14 +47,31 @@ export default function CabinetProfilePage() {
   const { data: globalConfig } = useDoc<GlobalConfig>(globalConfigRef);
 
   useEffect(() => {
-    if (isSuperAdmin && globalConfig?.developerLogoUrl) {
-      setCarimboPreview(globalConfig.developerLogoUrl);
+    if (isSuperAdmin && globalConfig) {
+      setCarimboPreview(globalConfig.developerLogoUrl || null);
       setScale(globalConfig.developerLogoScale || 1);
-    } else if (cabinet?.carimboUrl) {
-      setCarimboPreview(cabinet.carimboUrl);
+      setDevName(globalConfig.developerName || "");
+    } else if (cabinet) {
+      setCarimboPreview(cabinet.carimboUrl || null);
       setScale(cabinet.carimboScale || 1);
     }
   }, [cabinet, isSuperAdmin, globalConfig]);
+
+  const handleSaveDevName = async () => {
+    if (!db || !isSuperAdmin) return;
+    setSaving(true);
+    try {
+      await setDoc(doc(db, "config", "global"), {
+        developerName: devName,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      toast({ title: "Texto Atualizado", description: "Sua marca registrada foi salva." });
+    } catch (e) {
+      toast({ title: "Erro ao salvar", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleScaleChange = async (val: number[]) => {
     const newScale = val[0];
@@ -111,7 +129,6 @@ export default function CabinetProfilePage() {
           if (isSuperAdmin) {
             await setDoc(doc(db, "config", "global"), {
               developerLogoUrl: downloadUrl,
-              developerName: "POWERED BY DEV SIGNATURE",
               updatedAt: serverTimestamp()
             }, { merge: true });
             
@@ -232,7 +249,7 @@ export default function CabinetProfilePage() {
                 {saving && (
                   <div className="max-w-xs mx-auto space-y-2">
                     <Progress value={uploadProgress} className="h-1.5 bg-white/5" />
-                    <p className="text-[9px] font-black uppercase text-primary text-center">Salvando Identidade... {Math.round(uploadProgress)}%</p>
+                    <p className="text-[9px] font-black uppercase text-primary text-center">Processando... {Math.round(uploadProgress)}%</p>
                   </div>
                 )}
               </CardContent>
@@ -240,6 +257,35 @@ export default function CabinetProfilePage() {
           </div>
 
           <aside className="space-y-6">
+            {isSuperAdmin && (
+              <Card className="bg-white/5 border-white/5 shadow-2xl overflow-hidden relative">
+                <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
+                <CardHeader>
+                  <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                    <Type size={16} /> Texto da Propaganda
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">O que aparecerá no Dashboard</Label>
+                    <Input 
+                      value={devName} 
+                      onChange={e => setDevName(e.target.value)} 
+                      placeholder="Ex: Nunes Informática" 
+                      className="bg-black/50 border-white/10 text-white"
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleSaveDevName} 
+                    disabled={saving}
+                    className="w-full bg-primary text-black font-black uppercase text-[10px] tracking-widest h-10 glow-primary"
+                  >
+                    {saving ? <Loader2 className="animate-spin" /> : <><Save className="mr-2" size={14} /> Atualizar Texto</>}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             <Card className="bg-white/5 border-white/5 shadow-2xl overflow-hidden">
               <CardHeader className="bg-white/5 border-b border-white/5">
                 <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary">Status do Perfil</CardTitle>
