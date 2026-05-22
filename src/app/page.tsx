@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useStorage } from "@/firebase";
@@ -94,9 +95,6 @@ function DashboardHeader({ isGlobal, cabinet, globalConfig, onUploadLogo }: { is
               Dashboard <span className="text-primary">{isGlobal ? "Global" : "Estratégico"}</span>
             </h1>
             <div className="flex flex-wrap items-center gap-4 mt-4">
-              <p className="text-primary text-[10px] sm:text-xs uppercase tracking-[0.3em] font-black bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full glow-primary">
-                {globalConfig?.developerName || "Inteligência Parlamentar"}
-              </p>
               {dateTime && (
                 <div className="flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-muted-foreground">
                   <CalendarIcon size={14} className="text-primary/60" />
@@ -247,13 +245,12 @@ export default function StrategicDashboard() {
           if (db) {
             await setDoc(doc(db, "config", "global"), {
               developerLogoUrl: downloadUrl,
-              developerName: "POWERED BY DEV SIGNATURE",
               updatedAt: serverTimestamp()
             }, { merge: true });
             
             toast({ 
-              title: "Assinatura de Marca Registrada", 
-              description: "Sua logomarca de desenvolvedor agora é a identidade global do sistema.",
+              title: "Logomarca Atualizada", 
+              description: "Sua identidade visual foi salva com sucesso.",
               className: "bg-primary text-black font-black"
             });
           }
@@ -285,10 +282,10 @@ export default function StrategicDashboard() {
             <DialogContent className="bg-black border-white/10 w-[95vw] sm:max-w-md">
               <DialogHeader>
                 <DialogTitle className="uppercase text-sm font-black tracking-widest text-primary flex items-center gap-2">
-                  <Sparkles size={16} /> Branding do Desenvolvedor
+                  <Sparkles size={16} /> Identidade do Desenvolvedor
                 </DialogTitle>
                 <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground mt-2">
-                  Sua logomarca aparecerá em todos os sistemas como uma assinatura de marca registrada.
+                  Sua logomarca aparecerá em todos os sistemas como sua marca registrada.
                 </DialogDescription>
               </DialogHeader>
               <div className="py-8 space-y-6">
