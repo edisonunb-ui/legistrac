@@ -1,12 +1,13 @@
 
 "use client";
 
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useStorage } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useMemo, useState, useEffect } from "react";
-import { collection, query, doc, setDoc, where } from "firebase/firestore";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { collection, query, doc, setDoc, where, updateDoc, serverTimestamp } from "firebase/firestore";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { Demand, Leader, GlobalConfig } from "@/lib/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
   Users, 
   TrendingUp,
@@ -17,7 +18,10 @@ import {
   Target,
   Clock as ClockIcon,
   Calendar as CalendarIcon,
-  Award
+  Award,
+  Sparkles,
+  ShieldCheck,
+  ImageIcon
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -39,7 +43,7 @@ import Image from "next/image";
 const MASTER_EMAIL = "edisonunb@gmail.com";
 const AUDITOR_EMAIL = "alemao@gmail.com";
 
-function DashboardHeader({ isGlobal, cabinet }: { isGlobal: boolean, cabinet?: any }) {
+function DashboardHeader({ isGlobal, cabinet, globalConfig, onUploadLogo }: { isGlobal: boolean, cabinet?: any, globalConfig?: GlobalConfig, onUploadLogo?: () => void }) {
   const [dateTime, setDateTime] = useState<{ date: string, time: string } | null>(null);
 
   useEffect(() => {
@@ -55,21 +59,39 @@ function DashboardHeader({ isGlobal, cabinet }: { isGlobal: boolean, cabinet?: a
     return () => clearInterval(interval);
   }, []);
 
+  const BrandIcon = () => {
+    if (globalConfig?.developerLogoUrl) {
+      return (
+        <div className="relative w-24 h-24 rounded-full border-4 border-primary shadow-2xl glow-primary overflow-hidden cursor-pointer group" onClick={onUploadLogo}>
+          <Image src={globalConfig.developerLogoUrl} alt="Dev Signature" fill className="object-cover" />
+          {isGlobal && (
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+              <Sparkles size={16} className="text-white" />
+            </div>
+          )}
+        </div>
+      );
+    }
+    return (
+      <div className="w-24 h-24 rounded-full border-4 border-primary/20 bg-primary/10 flex items-center justify-center text-primary glow-primary cursor-pointer" onClick={onUploadLogo}>
+        <ShieldCheck size={40} />
+      </div>
+    );
+  };
+
   return (
     <header className="mb-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
         <div className="flex items-center gap-6">
-          {cabinet?.carimboUrl && (
-            <div className="hidden sm:block relative w-24 h-24 rounded-full border-4 border-primary/20 shadow-2xl glow-primary overflow-hidden">
-              <Image src={cabinet.carimboUrl} alt="Selo Oficial" fill className="object-cover" />
-            </div>
-          )}
+          <BrandIcon />
           <div className="flex-1">
             <h1 className="text-4xl sm:text-5xl font-black tracking-tighter uppercase leading-tight text-white">
               Dashboard <span className="text-primary">{isGlobal ? "Global" : "Estratégico"}</span>
             </h1>
             <div className="flex flex-wrap items-center gap-4 mt-4">
-              <p className="text-primary text-[10px] sm:text-xs uppercase tracking-[0.3em] font-black bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full glow-primary">Inteligência Parlamentar</p>
+              <p className="text-primary text-[10px] sm:text-xs uppercase tracking-[0.3em] font-black bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full glow-primary">
+                {globalConfig?.developerName || "Inteligência Parlamentar"}
+              </p>
               {dateTime && (
                 <div className="flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-muted-foreground">
                   <CalendarIcon size={14} className="text-primary/60" />
@@ -102,11 +124,16 @@ function DashboardHeader({ isGlobal, cabinet }: { isGlobal: boolean, cabinet?: a
 export default function StrategicDashboard() {
   const { user, loading: authLoading } = useUser();
   const db = useFirestore();
+  const storage = useStorage();
   const router = useRouter();
   const { toast } = useToast();
 
   const [isEditingMeta, setIsEditingMeta] = useState(false);
   const [newMetaValue, setNewMetaValue] = useState("");
+  
+  const [isDevBrandingOpen, setIsDevBrandingOpen] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoProgress, setLogoProgress] = useState(0);
 
   const userEmail = useMemo(() => user?.email?.toLowerCase().trim() || null, [user?.email]);
   const isSuperAdmin = useMemo(() => userEmail === MASTER_EMAIL, [userEmail]);
@@ -119,6 +146,9 @@ export default function StrategicDashboard() {
   const cabinetId = (profile as any)?.cabinetId;
   const cabinetRef = useMemoFirebase(() => (cabinetId && db) ? doc(db, "gabinetes", cabinetId) : null, [db, cabinetId]);
   const { data: cabinet } = useDoc(cabinetRef);
+
+  const globalConfigRef = useMemoFirebase(() => (db) ? doc(db, "config", "global") : null, [db]);
+  const { data: globalConfig } = useDoc<GlobalConfig>(globalConfigRef);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -190,6 +220,46 @@ export default function StrategicDashboard() {
     }
   };
 
+  const handleUploadDevLogo = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0] && storage && isSuperAdmin) {
+      const file = e.target.files[0];
+      setUploadingLogo(true);
+      
+      const storageRef = ref(storage, `developer/branding_signature`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          setLogoProgress((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+        },
+        (error) => {
+          toast({ title: "Erro no Branding", description: error.message, variant: "destructive" });
+          setUploadingLogo(false);
+        },
+        async () => {
+          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          if (db) {
+            await setDoc(doc(db, "config", "global"), {
+              developerLogoUrl: downloadUrl,
+              developerName: "POWERED BY DEV SIGNATURE",
+              updatedAt: serverTimestamp()
+            }, { merge: true });
+            
+            toast({ 
+              title: "Assinatura de Marca Registrada", 
+              description: "Sua logomarca de desenvolvedor agora é a identidade global do sistema.",
+              className: "bg-primary text-black font-black"
+            });
+          }
+          setUploadingLogo(false);
+          setLogoProgress(0);
+          setIsDevBrandingOpen(false);
+        }
+      );
+    }
+  }, [storage, db, isSuperAdmin, toast]);
+
   if (authLoading || (loadingProfile && !hasGlobalView)) {
     return <div className="flex items-center justify-center min-h-screen bg-black"><Loader2 className="animate-spin text-primary" /></div>;
   }
@@ -198,7 +268,43 @@ export default function StrategicDashboard() {
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="container mx-auto px-4 py-6 sm:py-10">
-        <DashboardHeader isGlobal={hasGlobalView} cabinet={cabinet} />
+        <DashboardHeader 
+          isGlobal={hasGlobalView} 
+          cabinet={cabinet} 
+          globalConfig={globalConfig} 
+          onUploadLogo={isSuperAdmin ? () => setIsDevBrandingOpen(true) : undefined}
+        />
+
+        {isSuperAdmin && (
+          <Dialog open={isDevBrandingOpen} onOpenChange={setIsDevBrandingOpen}>
+            <DialogContent className="bg-black border-white/10 w-[95vw] sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="uppercase text-sm font-black tracking-widest text-primary flex items-center gap-2">
+                  <Sparkles size={16} /> Branding do Desenvolvedor
+                </DialogTitle>
+                <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground mt-2">
+                  Sua logomarca aparecerá em todos os sistemas como uma assinatura de marca registrada.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-8 space-y-6">
+                <div className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-full w-40 h-40 mx-auto bg-white/5 relative group hover:border-primary/40 transition-all cursor-pointer">
+                  {globalConfig?.developerLogoUrl ? (
+                    <Image src={globalConfig.developerLogoUrl} alt="Dev Logo" fill className="object-cover rounded-full" />
+                  ) : (
+                    <ImageIcon size={32} className="text-muted-foreground" />
+                  )}
+                  <Input type="file" accept="image/*" onChange={handleUploadDevLogo} className="absolute inset-0 opacity-0 cursor-pointer" disabled={uploadingLogo} />
+                </div>
+                {uploadingLogo && (
+                  <div className="space-y-2">
+                    <Progress value={logoProgress} className="h-1 bg-white/5" />
+                    <p className="text-[9px] font-black uppercase text-primary text-center">Registrando Marca... {Math.round(logoProgress)}%</p>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           <Card className="bg-white/5 border-white/5 shadow-2xl overflow-hidden relative">

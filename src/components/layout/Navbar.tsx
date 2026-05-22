@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useUser, useFirestore, useAuthInstance, useDoc, useCollection } from "@/firebase";
+import { useUser, useFirestore, useAuthInstance, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { Button } from "@/components/ui/button";
-import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, ChevronDown, ChevronUp, Play, Plus, Minus, Settings, Award } from "lucide-react";
+import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, ChevronDown, ChevronUp, Play, Plus, Minus, Settings, Award, ShieldCheck } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -33,7 +33,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { Demand } from "@/lib/types";
+import { Demand, GlobalConfig } from "@/lib/types";
 
 const MASTER_EMAIL = "edisonunb@gmail.com";
 const AUDITOR_EMAIL = "alemao@gmail.com";
@@ -166,14 +166,17 @@ export function Navbar() {
   const isAuditor = useMemo(() => userEmail === AUDITOR_EMAIL, [userEmail]);
   const hasGlobalView = isSuperAdmin || isAuditor;
 
-  const userProfileQuery = useMemo(() => (db && userEmail) ? doc(db, "users", userEmail) : null, [db, userEmail]);
+  const userProfileQuery = useMemoFirebase(() => (db && userEmail) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(userProfileQuery);
 
   const cabinetId = (profile as any)?.cabinetId;
-  const cabinetQuery = useMemo(() => (db && cabinetId) ? doc(db, "gabinetes", cabinetId) : null, [db, cabinetId]);
+  const cabinetQuery = useMemoFirebase(() => (db && cabinetId) ? doc(db, "gabinetes", cabinetId) : null, [db, cabinetId]);
   const { data: cabinet } = useDoc(cabinetQuery);
 
-  const demandsQuery = useMemo(() => {
+  const globalConfigRef = useMemoFirebase(() => (db) ? doc(db, "config", "global") : null, [db]);
+  const { data: globalConfig } = useDoc<GlobalConfig>(globalConfigRef);
+
+  const demandsQuery = useMemoFirebase(() => {
     if (!db || (!cabinetId && !hasGlobalView)) return null;
     if (hasGlobalView) return query(collection(db, "demandas"), where("deleted", "==", false));
     return query(
@@ -209,6 +212,15 @@ export function Navbar() {
   ], []);
 
   const BrandLogo = () => {
+    // PRIORIDADE: Marca do Desenvolvedor (Assinatura de Marca)
+    if (globalConfig?.developerLogoUrl) {
+      return (
+        <div className="relative h-10 w-10 overflow-hidden rounded-full border border-primary shadow-lg glow-primary">
+          <Image src={globalConfig.developerLogoUrl} alt="Dev Signature" fill className="object-cover" />
+        </div>
+      );
+    }
+    // FALLBACK: Carimbo do Gabinete ou Ícone Padrão
     const carimboUrl = (cabinet as any)?.carimboUrl;
     if (carimboUrl) {
       return (
@@ -219,7 +231,7 @@ export function Navbar() {
     }
     return (
       <div className="p-1.5 bg-primary/10 rounded-md text-primary border border-primary/20 glow-primary">
-        <Target size={18} />
+        <ShieldCheck size={18} />
       </div>
     );
   };

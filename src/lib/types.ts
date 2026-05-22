@@ -136,4 +136,6 @@ export interface Notification {
 export interface GlobalConfig {
   metaVotos2026: number;
   cabinetId?: string;
+  developerLogoUrl?: string;
+  developerName?: string;
 }
