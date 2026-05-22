@@ -116,8 +116,8 @@ export default function CabinetProfilePage() {
             }, { merge: true });
             
             toast({ 
-              title: "Assinatura Atualizada", 
-              description: "Sua logomarca global foi salva.",
+              title: "Logomarca Atualizada", 
+              description: "A marca oficial do sistema foi salva.",
               className: "bg-primary text-black font-black"
             });
           } else if (cabinetRef) {
@@ -126,8 +126,8 @@ export default function CabinetProfilePage() {
               updatedAt: serverTimestamp()
             });
             toast({ 
-              title: "Carimbo Configurado", 
-              description: "Sua assinatura foi salva.",
+              title: "Identidade Configurada", 
+              description: "A logomarca do gabinete foi salva.",
               className: "bg-primary text-black font-black" 
             });
           }
@@ -152,11 +152,10 @@ export default function CabinetProfilePage() {
             <ChevronLeft size={16} /> Dashboard
           </Link>
           <h1 className="text-4xl sm:text-5xl font-black uppercase tracking-tighter text-white">
-            {isSuperAdmin ? "Assinatura de " : "Perfil do "} 
-            <span className="text-primary">{isSuperAdmin ? "Marca Registrada" : "Gabinete"}</span>
+            Logomarca do <span className="text-primary">Sistema</span>
           </h1>
           <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest mt-1">
-            {isSuperAdmin ? "Defina e ajuste a escala da logomarca global." : "Configure o seu carimbo e ajuste o zoom da imagem."}
+            Esta imagem será usada como a identidade visual (branding) de todo o projeto.
           </p>
         </header>
 
@@ -166,16 +165,15 @@ export default function CabinetProfilePage() {
               <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
               <CardHeader>
                 <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                  {isSuperAdmin ? <Sparkles size={16} /> : <ShieldCheck size={16} />}
-                  Visualização da Marca
+                  <Sparkles size={16} /> Visualização da Marca
                 </CardTitle>
                 <CardDescription className="text-[9px] uppercase font-bold text-muted-foreground">
-                  Use o ajuste abaixo para centralizar e dar zoom na parte importante da imagem.
+                  Ajuste o zoom para que apenas a parte redonda da sua logo preencha o espaço abaixo.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-10 p-10">
                 <div className="flex flex-col items-center gap-12">
-                  <div className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-full w-72 h-72 sm:w-80 sm:h-80 mx-auto bg-black/40 relative group hover:border-primary/40 transition-all overflow-hidden cursor-pointer">
+                  <div className="flex flex-col items-center justify-center border-none rounded-full w-72 h-72 sm:w-80 sm:h-80 mx-auto bg-black/40 relative group overflow-hidden cursor-pointer">
                     {carimboPreview ? (
                       <div className="relative w-full h-full p-0">
                         <div 
@@ -184,19 +182,19 @@ export default function CabinetProfilePage() {
                         >
                           <Image 
                             src={carimboPreview} 
-                            alt="Preview Carimbo" 
+                            alt="Preview Marca" 
                             fill 
                             className="object-cover" 
                           />
                         </div>
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity z-20">
-                          <p className="text-[10px] font-black uppercase text-white">Trocar Imagem</p>
+                          <p className="text-[10px] font-black uppercase text-white">Trocar Logomarca</p>
                         </div>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center gap-4 text-center p-8">
                         <div className="p-6 bg-white/5 rounded-full text-muted-foreground group-hover:text-primary transition-colors">
-                          {isSuperAdmin ? <Sparkles size={48} /> : <Award size={48} />}
+                          <ImageIcon size={48} />
                         </div>
                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Clique para enviar</p>
                       </div>
@@ -226,7 +224,7 @@ export default function CabinetProfilePage() {
                         step={0.1}
                         className="py-4"
                       />
-                      <p className="text-[8px] text-muted-foreground uppercase font-bold text-center">Arraste para ampliar o logotipo redondo e esconder bordas brancas.</p>
+                      <p className="text-[8px] text-muted-foreground uppercase font-bold text-center">Aumente o zoom para esconder as bordas brancas da sua imagem.</p>
                     </div>
                   )}
                 </div>
@@ -234,17 +232,9 @@ export default function CabinetProfilePage() {
                 {saving && (
                   <div className="max-w-xs mx-auto space-y-2">
                     <Progress value={uploadProgress} className="h-1.5 bg-white/5" />
-                    <p className="text-[9px] font-black uppercase text-primary text-center">Salvando Imagem... {Math.round(uploadProgress)}%</p>
+                    <p className="text-[9px] font-black uppercase text-primary text-center">Salvando Identidade... {Math.round(uploadProgress)}%</p>
                   </div>
                 )}
-
-                <div className="p-6 bg-primary/10 rounded-2xl border border-primary/20 flex gap-4">
-                  <Award size={20} className="text-primary shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-primary font-black uppercase leading-relaxed tracking-wider">Dica Profissional</p>
-                    <p className="text-[9px] text-white/60 uppercase font-bold mt-1">Imagens redondas com zoom alto ficam melhores nos documentos oficiais. O ajuste acima será aplicado em todo o sistema.</p>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </div>
@@ -265,12 +255,6 @@ export default function CabinetProfilePage() {
                     {isSuperAdmin ? "DESENVOLVEDOR MASTER" : (profile?.perfil || "ASSESSOR")}
                   </Badge>
                 </div>
-                {!isSuperAdmin && (
-                  <div className="space-y-1">
-                    <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">Titular do Gabinete</p>
-                    <p className="text-[10px] font-bold uppercase text-white/80">{cabinet?.vereador}</p>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </aside>

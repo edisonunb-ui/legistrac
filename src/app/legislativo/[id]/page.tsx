@@ -57,8 +57,6 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
   const { data: profile } = useDoc(profileRef);
 
   const cabinetId = (profile as any)?.cabinetId;
-  const cabinetRef = useMemoFirebase(() => (cabinetId && db) ? doc(db, "gabinetes", cabinetId) : null, [db, cabinetId]);
-  const { data: cabinet } = useDoc(cabinetRef);
 
   const [formData, setFormData] = useState({
     tipo: "INDICACAO" as any,
@@ -262,29 +260,6 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
                       onChange={e => setFormData(p => ({ ...p, conteudo: e.target.value }))} 
                       className="bg-transparent border-none text-white flex-1 text-xs font-mono leading-relaxed focus-visible:ring-0 resize-none" 
                     />
-                    
-                    {cabinet?.carimboUrl && (
-                      <div className="mt-12 flex flex-col items-end opacity-90 animate-in fade-in slide-in-from-bottom-4">
-                        <div className="relative w-40 h-40 group overflow-hidden rounded-full">
-                          <div 
-                            className="relative w-full h-full"
-                            style={{ transform: `scale(${cabinet.carimboScale || 1})` }}
-                          >
-                            <Image 
-                              src={cabinet.carimboUrl} 
-                              alt="Carimbo de Assinatura" 
-                              fill 
-                              className="object-cover filter drop-shadow-2xl" 
-                            />
-                          </div>
-                        </div>
-                        <div className="mr-6 mt-2 text-center">
-                          <div className="h-px w-32 bg-white/20 mb-1" />
-                          <p className="text-[8px] font-black uppercase text-primary tracking-[0.3em]">Selo de Autenticidade</p>
-                          <p className="text-[7px] font-bold uppercase text-muted-foreground mt-0.5">{cabinet.vereador}</p>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               </CardContent>
