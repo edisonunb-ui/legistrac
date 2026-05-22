@@ -3,7 +3,7 @@
 
 import { useUser, useFirestore, useAuthInstance, useDoc, useCollection } from "@/firebase";
 import { Button } from "@/components/ui/button";
-import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, ChevronDown, ChevronUp, Play, Plus, Minus, Settings } from "lucide-react";
+import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, ChevronDown, ChevronUp, Play, Plus, Minus, Settings, Award } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -31,6 +31,7 @@ import { useMemo, useState, useEffect } from "react";
 import { doc, collection, query, where } from "firebase/firestore";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Demand } from "@/lib/types";
 
@@ -109,7 +110,7 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
               head_row: "flex justify-between mb-2",
               head_cell: "text-white/40 font-bold text-[11px] w-9 text-center uppercase",
               row: "flex w-full justify-between mt-1",
-              cell: "h-9 w-9 text-center text-sm p-0 relative",
+              cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
               day: cn(
                 "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-white/5 rounded-full transition-all"
               ),
@@ -207,6 +208,22 @@ export function Navbar() {
     { label: "Lideranças", icon: Users, href: "/liderancas" },
   ], []);
 
+  const BrandLogo = () => {
+    const carimboUrl = (cabinet as any)?.carimboUrl;
+    if (carimboUrl) {
+      return (
+        <div className="relative h-10 w-10 overflow-hidden rounded-full border border-primary/30 shadow-lg shadow-primary/10">
+          <Image src={carimboUrl} alt="Selo Oficial" fill className="object-cover" />
+        </div>
+      );
+    }
+    return (
+      <div className="p-1.5 bg-primary/10 rounded-md text-primary border border-primary/20 glow-primary">
+        <Target size={18} />
+      </div>
+    );
+  };
+
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-black/80 backdrop-blur-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -221,9 +238,7 @@ export function Navbar() {
               <SheetContent side="left" className="w-[300px] p-0 border-r border-white/5 bg-black">
                 <SheetHeader className="p-6 border-b border-white/5 text-left bg-white/5">
                   <SheetTitle className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/20 rounded-lg border border-primary/40">
-                       <Target className="text-primary" size={20} />
-                    </div>
+                    <BrandLogo />
                     <div className="flex flex-col leading-none">
                       <span className="font-black tracking-tight text-white uppercase">Legis<span className="text-primary">Trac</span></span>
                       <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Gabinete Mobile</span>
@@ -252,10 +267,8 @@ export function Navbar() {
             </Sheet>
           </div>
 
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="p-1.5 bg-primary/10 rounded-md text-primary border border-primary/20 glow-primary">
-              <Target size={18} />
-            </div>
+          <Link href="/" className="flex items-center gap-3 group">
+            <BrandLogo />
             <div className="flex flex-col leading-none">
               <span className="text-lg font-black tracking-tighter text-white uppercase">Legis<span className="text-primary">Trac</span></span>
               <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest truncate max-w-[150px]">

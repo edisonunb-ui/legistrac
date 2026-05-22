@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
@@ -15,7 +16,8 @@ import {
   MapPin,
   Target,
   Clock as ClockIcon,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  Award
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -32,14 +34,12 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 const MASTER_EMAIL = "edisonunb@gmail.com";
 const AUDITOR_EMAIL = "alemao@gmail.com";
 
-/**
- * Sub-componente de cabeçalho para otimizar re-renders do relógio
- */
-function DashboardHeader({ isGlobal }: { isGlobal: boolean }) {
+function DashboardHeader({ isGlobal, cabinet }: { isGlobal: boolean, cabinet?: any }) {
   const [dateTime, setDateTime] = useState<{ date: string, time: string } | null>(null);
 
   useEffect(() => {
@@ -58,21 +58,28 @@ function DashboardHeader({ isGlobal }: { isGlobal: boolean }) {
   return (
     <header className="mb-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-        <div className="flex-1">
-          <h1 className="text-4xl sm:text-5xl font-black tracking-tighter uppercase leading-tight text-white">
-            Dashboard <span className="text-primary">{isGlobal ? "Global" : "Estratégico"}</span>
-          </h1>
-          <div className="flex flex-wrap items-center gap-4 mt-4">
-            <p className="text-primary text-[10px] sm:text-xs uppercase tracking-[0.3em] font-black bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full glow-primary">Inteligência Parlamentar</p>
-            {dateTime && (
-              <div className="flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-muted-foreground">
-                <CalendarIcon size={14} className="text-primary/60" />
-                <span className="text-white/80">{dateTime.date}</span>
-                <span className="mx-1 text-white/10">|</span>
-                <ClockIcon size={14} className="text-primary/60" />
-                <span className="font-mono text-white/80">{dateTime.time}</span>
-              </div>
-            )}
+        <div className="flex items-center gap-6">
+          {cabinet?.carimboUrl && (
+            <div className="hidden sm:block relative w-24 h-24 rounded-full border-4 border-primary/20 shadow-2xl glow-primary overflow-hidden">
+              <Image src={cabinet.carimboUrl} alt="Selo Oficial" fill className="object-cover" />
+            </div>
+          )}
+          <div className="flex-1">
+            <h1 className="text-4xl sm:text-5xl font-black tracking-tighter uppercase leading-tight text-white">
+              Dashboard <span className="text-primary">{isGlobal ? "Global" : "Estratégico"}</span>
+            </h1>
+            <div className="flex flex-wrap items-center gap-4 mt-4">
+              <p className="text-primary text-[10px] sm:text-xs uppercase tracking-[0.3em] font-black bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full glow-primary">Inteligência Parlamentar</p>
+              {dateTime && (
+                <div className="flex items-center gap-3 text-[10px] sm:text-xs font-black uppercase tracking-widest text-muted-foreground">
+                  <CalendarIcon size={14} className="text-primary/60" />
+                  <span className="text-white/80">{dateTime.date}</span>
+                  <span className="mx-1 text-white/10">|</span>
+                  <ClockIcon size={14} className="text-primary/60" />
+                  <span className="font-mono text-white/80">{dateTime.time}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:flex gap-4">
@@ -110,6 +117,8 @@ export default function StrategicDashboard() {
   const { data: profile, loading: loadingProfile } = useDoc(profileRef);
 
   const cabinetId = (profile as any)?.cabinetId;
+  const cabinetRef = useMemoFirebase(() => (cabinetId && db) ? doc(db, "gabinetes", cabinetId) : null, [db, cabinetId]);
+  const { data: cabinet } = useDoc(cabinetRef);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -189,7 +198,7 @@ export default function StrategicDashboard() {
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <main className="container mx-auto px-4 py-6 sm:py-10">
-        <DashboardHeader isGlobal={hasGlobalView} />
+        <DashboardHeader isGlobal={hasGlobalView} cabinet={cabinet} />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           <Card className="bg-white/5 border-white/5 shadow-2xl overflow-hidden relative">
