@@ -15,9 +15,10 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, Loader2, Gavel, FileText, Link as LinkIcon, Paperclip, X, CheckCircle2, FileUp } from "lucide-react";
+import { ChevronLeft, Save, Loader2, Gavel, FileText, Link as LinkIcon, Paperclip, X, CheckCircle2, FileUp, Wand2 } from "lucide-react";
 import Link from "next/link";
 import { Attachment } from "@/lib/types";
+import * as mammoth from "mammoth";
 
 export default function NewLegislativeActionPage() {
   const { user } = useUser();
@@ -27,6 +28,7 @@ export default function NewLegislativeActionPage() {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
 
   const [formData, setFormData] = useState({
     tipo: "INDICACAO" as any,
@@ -47,11 +49,43 @@ export default function NewLegislativeActionPage() {
   const { data: profile } = useDoc(profileRef);
   const cabinetId = (profile as any)?.cabinetId;
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+  const extractTextFromDocx = async (file: File) => {
+    setIsParsing(true);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      if (result.value) {
+        setFormData(prev => ({
+          ...prev,
+          conteudo: result.value,
+          titulo: prev.titulo || file.name.replace(/\.[^/.]+$/, "").replace(/_/g, " ")
+        }));
+        toast({ 
+          title: "Texto Importado", 
+          description: "O conteúdo do Word foi extraído para o campo de texto.",
+          className: "bg-primary text-black"
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao extrair texto do DOCX:", error);
+      toast({ title: "Erro na Importação", description: "Não foi possível ler o texto deste arquivo Word.", variant: "destructive" });
+    } finally {
+      setIsParsing(false);
     }
-  }, []);
+  };
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const selectedFiles = Array.from(e.target.files);
+      setFiles(prev => [...prev, ...selectedFiles]);
+
+      // Se for um arquivo DOCX, tenta extrair o texto automaticamente
+      const firstFile = selectedFiles[0];
+      if (firstFile.name.toLowerCase().endsWith('.docx')) {
+        extractTextFromDocx(firstFile);
+      }
+    }
+  }, [toast]);
 
   const removeFile = useCallback((index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
@@ -174,8 +208,15 @@ export default function NewLegislativeActionPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Corpo do Texto (Inteiro Teor)</Label>
-                  <Textarea value={formData.conteudo} onChange={e => setFormData(p => ({ ...p, conteudo: e.target.value }))} className="bg-black/50 border-white/10 text-white min-h-[250px] text-xs font-mono leading-relaxed" placeholder="Redija aqui o texto completo ou descreva que o conteúdo está no anexo..." />
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Corpo do Texto (Inteiro Teor)</Label>
+                    {isParsing && (
+                      <span className="flex items-center gap-2 text-[8px] font-black text-primary animate-pulse uppercase">
+                        <Loader2 className="animate-spin" size={10} /> Importando do Word...
+                      </span>
+                    )}
+                  </div>
+                  <Textarea value={formData.conteudo} onChange={e => setFormData(p => ({ ...p, conteudo: e.target.value }))} className="bg-black/50 border-white/10 text-white min-h-[350px] text-xs font-mono leading-relaxed" placeholder="Redija aqui o texto completo ou descreva que o conteúdo está no anexo..." />
                 </div>
 
                 <div className="p-8 bg-black/40 rounded-2xl border border-white/5 border-dashed space-y-6">
@@ -186,14 +227,24 @@ export default function NewLegislativeActionPage() {
                     <span className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">{files.length} MODELO(S)</span>
                   </div>
                   
-                  <div className="relative">
-                    <Input type="file" multiple onChange={handleFileChange} disabled={saving} className="bg-white/5 border-white/10 h-16 cursor-pointer file:mr-6 file:py-2 file:px-6 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-primary file:text-black hover:file:opacity-90 transition-all" />
+                  <div className="relative group">
+                    <Input type="file" multiple onChange={handleFileChange} disabled={saving || isParsing} className="bg-white/5 border-white/10 h-20 cursor-pointer file:mr-6 file:py-3 file:px-8 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-primary file:text-black hover:file:opacity-90 transition-all" />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-20 group-hover:opacity-100 transition-opacity">
+                      <Wand2 size={24} className="text-primary" />
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20 flex gap-3">
+                    <Wand2 size={16} className="text-primary shrink-0 mt-0.5" />
+                    <p className="text-[10px] text-primary font-black uppercase leading-relaxed tracking-wider">
+                      Dica: Ao selecionar um arquivo .DOCX, o sistema tentará extrair o texto automaticamente para o campo acima.
+                    </p>
                   </div>
                   
                   {files.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
                       {files.map((file, idx) => (
-                        <div key={idx} className="bg-white/5 p-4 rounded-xl border border-white/10 flex flex-col gap-3">
+                        <div key={idx} className="bg-white/5 p-4 rounded-xl border border-white/10 flex flex-col gap-3 group/item hover:border-primary/40 transition-all">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3 overflow-hidden">
                               <Paperclip size={16} className="text-primary shrink-0" />
@@ -269,7 +320,7 @@ export default function NewLegislativeActionPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Link Oficial (Opcional)</Label>
+                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Link Oficiais (Câmara)</Label>
                   <div className="relative">
                     <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-primary/50" size={14} />
                     <Input value={formData.linkOficial} onChange={e => setFormData(p => ({ ...p, linkOficial: e.target.value }))} className="pl-10 bg-black/50 border-white/10 text-white h-12 text-xs" placeholder="URL da Câmara..." />
@@ -277,7 +328,7 @@ export default function NewLegislativeActionPage() {
                 </div>
               </CardContent>
               <CardFooter className="bg-white/5 p-8">
-                <Button type="submit" disabled={saving || isFinished} className="w-full bg-primary text-black font-black uppercase text-[11px] tracking-widest h-14 glow-primary">
+                <Button type="submit" disabled={saving || isFinished || isParsing} className="w-full bg-primary text-black font-black uppercase text-[11px] tracking-widest h-14 glow-primary">
                   {saving ? <Loader2 className="animate-spin" /> : isFinished ? <CheckCircle2 /> : <><Save className="mr-2" size={18} /> Salvar Documento</>}
                 </Button>
               </CardFooter>
