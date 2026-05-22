@@ -18,7 +18,6 @@ import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, Save, Loader2, Gavel, FileText, Link as LinkIcon, Paperclip, X, CheckCircle2, FileUp, Wand2 } from "lucide-react";
 import Link from "next/link";
 import { Attachment } from "@/lib/types";
-import * as mammoth from "mammoth";
 
 export default function NewLegislativeActionPage() {
   const { user } = useUser();
@@ -52,6 +51,8 @@ export default function NewLegislativeActionPage() {
   const extractTextFromDocx = async (file: File) => {
     setIsParsing(true);
     try {
+      // Importação dinâmica para evitar erro de módulo no Turbopack/Next.js
+      const mammoth = await import("mammoth");
       const arrayBuffer = await file.arrayBuffer();
       const result = await mammoth.extractRawText({ arrayBuffer });
       if (result.value) {
@@ -79,13 +80,12 @@ export default function NewLegislativeActionPage() {
       const selectedFiles = Array.from(e.target.files);
       setFiles(prev => [...prev, ...selectedFiles]);
 
-      // Se for um arquivo DOCX, tenta extrair o texto automaticamente
       const firstFile = selectedFiles[0];
       if (firstFile.name.toLowerCase().endsWith('.docx')) {
         extractTextFromDocx(firstFile);
       }
     }
-  }, [toast]);
+  }, []);
 
   const removeFile = useCallback((index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
