@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ChevronLeft, 
@@ -28,11 +29,11 @@ import {
   FileUp, 
   Download,
   ExternalLink,
-  AlertCircle,
   ShieldAlert
 } from "lucide-react";
 import Link from "next/link";
 import { Attachment, LegislativeAction } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const MASTER_EMAIL = "edisonunb@gmail.com";
 
@@ -45,7 +46,6 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
   const { toast } = useToast();
   
   const [saving, setSaving] = useState(false);
-  const [isParsing, setIsParsing] = useState(false);
 
   // Referência do documento com ID garantido
   const actionRef = useMemoFirebase(() => (id && db) ? doc(db, "legislativo", id) : null, [db, id]);
@@ -189,7 +189,7 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
   if (actionError || !action || !hasAccess) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
-        <ShieldAlert size={64} className="text-destructive mb-6 glow-destructive" />
+        <ShieldAlert size={64} className="text-destructive mb-6" />
         <h1 className="text-2xl font-black uppercase tracking-tighter text-white mb-2">Protocolo Inacessível</h1>
         <p className="text-muted-foreground text-[10px] uppercase tracking-widest max-w-md">O documento solicitado não existe ou você não possui permissões de visualização para este gabinete.</p>
         <Link href="/legislativo" className="mt-8">
@@ -295,7 +295,7 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
                             <span className="text-[10px] font-bold truncate uppercase text-white/70">{file.name}</span>
                             <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-destructive/20 hover:text-destructive" onClick={() => removeFile(idx)}><X size={14} /></Button>
                           </div>
-                          {uploadProgress[file.name] !== undefined && <Progress value={uploadProgress[file.name]} className="h-1 bg-white/5 shadow-primary/20" />}
+                          {uploadProgress[file.name] !== undefined && <Progress value={uploadProgress[file.name]} className="h-1 bg-white/5" />}
                         </div>
                       ))}
                     </div>
