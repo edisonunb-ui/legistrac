@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useUser, useFirestore, useAuthInstance, useDoc, useCollection } from "@/firebase";
 import { Button } from "@/components/ui/button";
-import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, ChevronDown, ChevronUp, Play, Plus, Minus } from "lucide-react";
+import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, ChevronDown, ChevronUp, Play, Plus, Minus, Settings } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -33,13 +34,9 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Demand } from "@/lib/types";
 
-// Definições globais de e-mails autorizados (fora do componente para evitar erro de inicialização)
 const MASTER_EMAIL = "edisonunb@gmail.com";
 const AUDITOR_EMAIL = "alemao@gmail.com";
 
-/**
- * Componente de Relógio / Calendário estilo "Foco"
- */
 function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
   const [time, setTime] = useState<string | null>(null);
   const [fullDate, setFullDate] = useState<string | null>(null);
@@ -307,6 +304,9 @@ export function Navbar() {
               <DropdownMenuSeparator className="bg-white/5" />
               <DropdownMenuItem onClick={() => router.push("/usuarios")} className="p-3 hover:bg-white/5 cursor-pointer font-bold uppercase text-[10px] tracking-widest text-white/80 hover:text-primary">
                 <Users size={14} className="mr-3 text-primary" /> Equipe do Gabinete
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/gabinete")} className="p-3 hover:bg-white/5 cursor-pointer font-bold uppercase text-[10px] tracking-widest text-white/80 hover:text-primary">
+                <Settings size={14} className="mr-3 text-primary" /> Perfil do Gabinete
               </DropdownMenuItem>
               {isSuperAdmin && (
                 <DropdownMenuItem onClick={() => router.push("/gabinetes")} className="p-3 hover:bg-white/5 cursor-pointer font-bold uppercase text-[10px] tracking-widest text-white/80 hover:text-primary">

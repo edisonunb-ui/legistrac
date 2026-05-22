@@ -34,6 +34,7 @@ import {
 import Link from "next/link";
 import { Attachment, LegislativeAction } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 const MASTER_EMAIL = "edisonunb@gmail.com";
 
@@ -55,6 +56,10 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
   const userEmail = user?.email?.toLowerCase().trim();
   const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
+
+  const cabinetId = (profile as any)?.cabinetId;
+  const cabinetRef = useMemoFirebase(() => (cabinetId && db) ? doc(db, "gabinetes", cabinetId) : null, [db, cabinetId]);
+  const { data: cabinet } = useDoc(cabinetRef);
 
   const [formData, setFormData] = useState({
     tipo: "INDICACAO" as any,
@@ -251,9 +256,18 @@ export default function LegislativeDetailPage({ params }: { params: Promise<{ id
                   <Textarea required value={formData.ementa} onChange={e => setFormData(p => ({ ...p, ementa: e.target.value }))} className="bg-black/50 border-white/10 text-white min-h-[100px] text-xs leading-relaxed" />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 relative">
                   <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Conteúdo para Protocolo (Inteiro Teor)</Label>
-                  <Textarea required value={formData.conteudo} onChange={e => setFormData(p => ({ ...p, conteudo: e.target.value }))} className="bg-black/50 border-white/10 text-white min-h-[450px] text-xs font-mono leading-relaxed" />
+                  <div className="relative">
+                    <Textarea required value={formData.conteudo} onChange={e => setFormData(p => ({ ...p, conteudo: e.target.value }))} className="bg-black/50 border-white/10 text-white min-h-[500px] text-xs font-mono leading-relaxed pb-32" />
+                    
+                    {cabinet?.carimboUrl && (
+                      <div className="absolute bottom-8 right-8 pointer-events-none opacity-50">
+                        <Image src={cabinet.carimboUrl} alt="Assinatura Gabinete" width={150} height={150} className="object-contain" />
+                        <p className="text-[8px] font-black uppercase text-primary text-center mt-2 tracking-widest">Carimbo Oficial</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>

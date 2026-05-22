@@ -17,6 +17,8 @@ export interface Cabinet {
   vereador: string;
   ativo: boolean;
   createdAt: Timestamp;
+  carimboUrl?: string;
+  updatedAt?: Timestamp;
 }
 
 export interface Attachment {
