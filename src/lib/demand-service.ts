@@ -5,12 +5,16 @@ import {
   serverTimestamp, 
   runTransaction,
   Firestore,
-  getDoc
+  getDoc,
+  query,
+  where,
+  getDocs,
+  limit
 } from "firebase/firestore";
-import { DemandPriority, DemandStatus, UserRole, Attachment } from "./types";
+import { DemandPriority, DemandStatus, UserRole, Attachment, DemandType } from "./types";
 
 /**
- * Cria uma nova demanda e registra o trâmite inicial.
+ * Cria uma nova demanda ou chamado HelpDesk.
  */
 export async function createDemand(
   db: Firestore,
@@ -23,6 +27,8 @@ export async function createDemand(
     prioridade: DemandPriority;
     responsavelId?: string;
     anexos?: Attachment[];
+    tipo?: DemandType;
+    assuntoPredefinido?: string;
   }
 ) {
   if (!userId) throw new Error("Usuário não identificado.");
@@ -32,9 +38,22 @@ export async function createDemand(
   const tramiteRef = doc(collection(db, "tramites"));
   const targetResponsavel = data.responsavelId || userId;
 
+  // Se for HelpDesk, tentamos achar o gabinete de TI
+  let targetCabinetId = data.cabinetId;
+  if (data.tipo === 'HELPDESK') {
+    const tiCabinetQuery = query(collection(db, "gabinetes"), where("isTI", "==", true), limit(1));
+    const tiSnap = await getDocs(tiCabinetQuery);
+    if (!tiSnap.empty) {
+      targetCabinetId = tiSnap.docs[0].id;
+    }
+  }
+
   const demandData = {
     id: demandRef.id,
     cabinetId: data.cabinetId,
+    targetCabinetId: targetCabinetId,
+    tipo: data.tipo || "COMUM",
+    assuntoPredefinido: data.assuntoPredefinido || "",
     titulo: data.titulo,
     descricao: data.descricao,
     prazo: data.prazo,
@@ -57,7 +76,7 @@ export async function createDemand(
       de: userId,
       para: targetResponsavel,
       acao: "ENVIO",
-      observacao: "Demanda inicial registrada no sistema.",
+      observacao: data.tipo === 'HELPDESK' ? `Chamado de TI aberto: ${data.assuntoPredefinido}` : "Demanda inicial registrada no sistema.",
       data: serverTimestamp(),
       anexos: data.anexos || []
     });
@@ -92,14 +111,16 @@ export async function sendDemand(
     const demandData = demandDoc.data();
     const cabinetId = demandData.cabinetId;
 
-    // SEGURANÇA: Busca o registro do usuário para validar o gabinete.
-    const usersRef = collection(db, "users");
-    const targetUserSnap = await transaction.get(doc(usersRef, para));
-    
-    if (targetUserSnap.exists()) {
-      const targetData = targetUserSnap.data();
-      if (targetData.cabinetId !== cabinetId) {
-        throw new Error("VIOLAÇÃO DE SEGURANÇA: Tentativa de tramitação entre gabinetes diferentes.");
+    // Se não for HelpDesk, validar gabinete. Se for HelpDesk, permitir trâmite com o Gabinete de TI
+    if (demandData.tipo !== 'HELPDESK') {
+      const usersRef = collection(db, "users");
+      const targetUserSnap = await transaction.get(doc(usersRef, para));
+      
+      if (targetUserSnap.exists()) {
+        const targetData = targetUserSnap.data();
+        if (targetData.cabinetId !== cabinetId) {
+          throw new Error("VIOLAÇÃO DE SEGURANÇA: Tentativa de tramitação entre gabinetes diferentes.");
+        }
       }
     }
 
@@ -211,7 +232,7 @@ export async function finalizeDemand(
     });
 
     transaction.set(tramiteRef, {
-      demandaId,
+      demandaId: demandaId,
       cabinetId: cabinetId,
       de: userId,
       para: userId,
@@ -259,7 +280,7 @@ export async function reopenDemand(
     });
 
     transaction.set(tramiteRef, {
-      demandaId,
+      demandaId: demandaId,
       cabinetId: cabinetId,
       de: userId,
       para: responsavelId,

@@ -16,6 +16,7 @@ export interface Cabinet {
   nome: string;
   vereador: string;
   ativo: boolean;
+  isTI?: boolean; // Identifica o gabinete como central de suporte
   createdAt: Timestamp;
   carimboUrl?: string;
   carimboScale?: number;
@@ -48,10 +49,14 @@ export interface UserProfile {
 
 export type DemandStatus = "ABERTO" | "EM_ANDAMENTO" | "AGUARDANDO_VEREADORA" | "FINALIZADO";
 export type DemandPriority = "BAIXA" | "MEDIA" | "ALTA";
+export type DemandType = "COMUM" | "HELPDESK";
 
 export interface Demand {
   id: string;
   cabinetId: string;
+  targetCabinetId?: string; // Para quem a demanda foi enviada (Ex: TI)
+  tipo: DemandType;
+  assuntoPredefinido?: string;
   titulo: string;
   descricao: string;
   criadoPor: string;
@@ -117,9 +122,10 @@ export interface LegislativeAction {
 export interface Tramite {
   id: string;
   demandaId: string;
+  cabinetId: string;
   de: string;
   para: string;
-  acao: "ENVIO" | "DEVOLUCAO" | "FINALIZACAO" | "REABERTURA";
+  acao: "ENVIO" | "DEVOLUCAO" | "FINALIZACAO" | "REABERTURA" | "COMENTARIO";
   observacao: string;
   data: Timestamp;
   anexos?: Attachment[];

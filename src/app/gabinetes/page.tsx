@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useFirestore, useCollection, useUser } from "@/firebase";
@@ -9,8 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutDashboard, Plus, Trash2, Loader2, Building2, ShieldCheck, Edit2, ChevronLeft } from "lucide-react";
+import { LayoutDashboard, Plus, Trash2, Loader2, Building2, ShieldCheck, Edit2, ChevronLeft, LifeBuoy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -42,6 +44,7 @@ export default function GabinetesPage() {
   const { toast } = useToast();
   const [nome, setNome] = useState("");
   const [vereador, setVereador] = useState("");
+  const [isTI, setIsTI] = useState(false);
   const [adding, setAdding] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -49,6 +52,7 @@ export default function GabinetesPage() {
   const [editingCabinet, setEditingCabinet] = useState<any>(null);
   const [editNome, setEditNome] = useState("");
   const [editVereador, setEditVereador] = useState("");
+  const [editIsTI, setEditIsTI] = useState(false);
 
   const isSuperAdmin = user?.email === MASTER_EMAIL;
 
@@ -69,12 +73,14 @@ export default function GabinetesPage() {
       await addDoc(collection(db, "gabinetes"), {
         nome,
         vereador,
+        isTI,
         ativo: true,
         createdAt: serverTimestamp()
       });
       toast({ title: "Gabinete Criado", description: `O gabinete de ${vereador} foi isolado com sucesso.` });
       setNome("");
       setVereador("");
+      setIsTI(false);
     } catch (e) {
       toast({ title: "Erro", description: "Falha ao criar gabinete.", variant: "destructive" });
     } finally {
@@ -86,6 +92,7 @@ export default function GabinetesPage() {
     setEditingCabinet(cabinet);
     setEditNome(cabinet.nome);
     setEditVereador(cabinet.vereador);
+    setEditIsTI(cabinet.isTI || false);
   };
 
   const handleUpdate = async () => {
@@ -95,6 +102,7 @@ export default function GabinetesPage() {
       await updateDoc(doc(db, "gabinetes", editingCabinet.id), {
         nome: editNome,
         vereador: editVereador,
+        isTI: editIsTI,
         updatedAt: serverTimestamp()
       });
       toast({ title: "Gabinete Atualizado" });
@@ -153,6 +161,13 @@ export default function GabinetesPage() {
                   <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Nome do Vereador</Label>
                   <Input placeholder="Ex: Silvinho Brandão" value={vereador} onChange={e => setVereador(e.target.value)} required className="h-11 bg-black/50 border-white/10 text-white" />
                 </div>
+                <div className="flex items-center justify-between p-3 bg-black/30 rounded-lg border border-white/5">
+                   <div className="space-y-0.5">
+                    <Label className="text-[9px] font-bold uppercase tracking-widest text-primary">Setor de TI (HelpDesk)</Label>
+                    <p className="text-[8px] text-muted-foreground uppercase">Este gabinete receberá os chamados de todos os outros.</p>
+                   </div>
+                   <Switch checked={isTI} onCheckedChange={setIsTI} />
+                </div>
                 <Button className="w-full font-black uppercase text-xs tracking-widest h-11 shadow-lg shadow-primary/20 bg-primary text-black glow-primary" type="submit" disabled={adding}>
                   {adding ? <Loader2 className="animate-spin" /> : <><Plus className="mr-2" size={18} /> Criar Gabinete</>}
                 </Button>
@@ -179,10 +194,12 @@ export default function GabinetesPage() {
                   <div key={c.id} className="flex items-center justify-between p-4 bg-black/40 border border-white/5 rounded-xl hover:border-primary/30 transition-all group">
                     <div className="flex items-center gap-4">
                       <div className="p-2 bg-black border border-white/10 text-primary rounded-lg shadow-inner">
-                        <ShieldCheck size={20} />
+                        {c.isTI ? <LifeBuoy size={20} className="text-secondary" /> : <ShieldCheck size={20} />}
                       </div>
                       <div>
-                        <p className="font-black uppercase text-sm tracking-tight text-white group-hover:text-primary transition-colors">{c.nome}</p>
+                        <p className="font-black uppercase text-sm tracking-tight text-white group-hover:text-primary transition-colors">
+                          {c.nome} {c.isTI && <span className="ml-2 text-[8px] bg-secondary px-2 py-0.5 rounded text-white">MODO TI</span>}
+                        </p>
                         <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">Responsável: {c.vereador}</p>
                       </div>
                     </div>
@@ -205,6 +222,10 @@ export default function GabinetesPage() {
                             <div className="space-y-2">
                               <Label className="text-[10px] font-black uppercase tracking-widest">Nome do Vereador</Label>
                               <Input value={editVereador} onChange={e => setEditVereador(e.target.value)} className="bg-white/5 border-white/10 text-white" />
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                              <Label className="text-[10px] font-black uppercase tracking-widest">Central de Suporte TI</Label>
+                              <Switch checked={editIsTI} onCheckedChange={setEditIsTI} />
                             </div>
                           </div>
                           <DialogFooter>

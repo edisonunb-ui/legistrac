@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useUser, useFirestore, useAuthInstance, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { Button } from "@/components/ui/button";
-import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, ChevronDown, ChevronUp, Play, Plus, Minus, Settings, Award, ShieldCheck } from "lucide-react";
+import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, ChevronDown, ChevronUp, Play, Plus, Minus, Settings, Award, ShieldCheck, LifeBuoy } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -208,6 +209,7 @@ export function Navbar() {
     { label: "Demandas", icon: ListTodo, href: "/demandas" },
     { label: "Legislativo", icon: Gavel, href: "/legislativo" },
     { label: "Lideranças", icon: Users, href: "/liderancas" },
+    { label: "HelpDesk TI", icon: LifeBuoy, href: "/helpdesk/new" },
   ], []);
 
   const BrandLogo = () => {

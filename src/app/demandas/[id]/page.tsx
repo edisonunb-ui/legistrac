@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useUser, useFirestore, useDoc, useCollection, useStorage } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useEffect, useState, useMemo, use, useCallback } from "react";
-import { doc, collection, query, where, Timestamp, addDoc } from "firebase/firestore";
+import { doc, collection, query, where, Timestamp, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { Tramite, Attachment, UserPermissions } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,9 @@ import {
   Lock,
   X,
   CheckCircle2,
-  RefreshCcw
+  RefreshCcw,
+  MessageSquare,
+  LifeBuoy
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -102,12 +105,14 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const { data: profile } = useDoc(profileRef);
 
   const cabinetId = (profile as any)?.cabinetId;
+  const isTIUser = (profile as any)?.cabinetId === (demand as any)?.targetCabinetId;
 
   const isAccessDenied = useMemo(() => {
     if (loadingDemand || !demand || isMasterAdmin) return false;
+    if (demand.tipo === 'HELPDESK' && isTIUser) return false;
     if (!cabinetId) return true;
     return (demand as any).cabinetId !== cabinetId;
-  }, [demand, cabinetId, isMasterAdmin, loadingDemand]);
+  }, [demand, cabinetId, isMasterAdmin, loadingDemand, isTIUser]);
 
   const usersQuery = useMemo(() => {
     if (!db || !user) return null;
@@ -197,6 +202,36 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
       }
     }
     return attachments;
+  };
+
+  const handleComment = async () => {
+    if (!obs || !db || !user || !demand) return;
+    setProcessing(true);
+    try {
+      const newAttachments = await uploadFiles();
+      await addDoc(collection(db, "tramites"), {
+        demandaId: demand.id,
+        cabinetId: cabinetId || demand.cabinetId,
+        de: user.uid,
+        para: demand.responsavelAtual,
+        acao: "COMENTARIO",
+        observacao: obs,
+        data: serverTimestamp(),
+        anexos: newAttachments
+      });
+
+      await updateDoc(demandRef!, {
+        dataAtualizacao: serverTimestamp()
+      });
+
+      toast({ title: "Comentário enviado" });
+      setObs("");
+      setFiles([]);
+    } catch (e) {
+      toast({ title: "Erro ao comentar", variant: "destructive" });
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const handleGenerateSummary = async () => {
@@ -344,7 +379,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
 
   const isResponsible = demand.responsavelAtual === user?.uid;
   const isVereador = (profile as any)?.perfil === "ADMIN";
-  const canTramitar = isResponsible || isMasterAdmin || isVereador;
+  const canTramitar = isResponsible || isMasterAdmin || isVereador || isTIUser;
   const filteredCollaborators = allUsers.filter(u => u.uid !== user?.uid && u.email?.toLowerCase() !== user?.email?.toLowerCase());
 
   return (
@@ -359,6 +394,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-8">
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-4">
+                {demand.tipo === 'HELPDESK' && <div className="p-2 bg-secondary/20 text-secondary rounded-lg"><LifeBuoy size={24} /></div>}
                 <h1 className="text-3xl sm:text-4xl font-black uppercase leading-tight tracking-tighter text-white">{demand.titulo}</h1>
                 <Badge className={cn(
                   "uppercase text-[10px] font-black tracking-widest px-4 py-1.5 text-black",
@@ -375,38 +411,41 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                 <Badge variant={demand.prioridade === "ALTA" ? "destructive" : "secondary"} className="text-[9px] font-black uppercase tracking-widest">
                   {demand.prioridade} PRIORIDADE
                 </Badge>
+                {demand.tipo === 'HELPDESK' && <Badge className="bg-secondary text-white text-[9px] font-black uppercase tracking-widest">HELP-DESK TI</Badge>}
               </div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="gap-2 font-black uppercase text-[11px] tracking-widest h-14 sm:h-12 w-full sm:w-auto border-white/10 text-white hover:bg-white/5"><Sparkles size={16} className="text-primary" /> Redigir IA</Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl w-[95vw] bg-black border-white/10 shadow-2xl">
-                  <DialogHeader>
-                    <DialogTitle className="font-black uppercase tracking-widest text-primary text-xl">Assistente Legislativo IA</DialogTitle>
-                    <DialogDescription className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mt-2">Transformação inteligente de demanda em documento oficial.</DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-6 py-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <Button variant="outline" size="sm" className="font-black uppercase text-[10px] h-12" onClick={() => handleDraftLegislative('INDICACAO')} disabled={drafting}>Indicação</Button>
-                      <Button variant="outline" size="sm" className="font-black uppercase text-[10px] h-12" onClick={() => handleDraftLegislative('REQUERIMENTO')} disabled={drafting}>Requerimento</Button>
-                      <Button variant="outline" size="sm" className="font-black uppercase text-[10px] h-12" onClick={() => handleDraftLegislative('PROJETO_LEI')} disabled={drafting}>Projeto de Lei</Button>
-                    </div>
-                    {drafting && <div className="text-center py-12"><Loader2 className="animate-spin mx-auto mb-4 text-primary" /><p className="text-[11px] text-muted-foreground font-black uppercase tracking-widest">Processando Inteligência...</p></div>}
-                    {aiDraft && (
-                      <div className="space-y-3 animate-in fade-in slide-in-from-top-4">
-                        <Label className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Minuta Gerada:</Label>
-                        <Textarea value={aiDraft.content} readOnly className="h-[300px] text-xs font-mono bg-white/5 border-white/10 text-white/90 leading-relaxed" />
+              {demand.tipo !== 'HELPDESK' && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="gap-2 font-black uppercase text-[11px] tracking-widest h-14 sm:h-12 w-full sm:w-auto border-white/10 text-white hover:bg-white/5"><Sparkles size={16} className="text-primary" /> Redigir IA</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl w-[95vw] bg-black border-white/10 shadow-2xl">
+                    <DialogHeader>
+                      <DialogTitle className="font-black uppercase tracking-widest text-primary text-xl">Assistente Legislativo IA</DialogTitle>
+                      <DialogDescription className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mt-2">Transformação inteligente de demanda em documento oficial.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-6 py-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <Button variant="outline" size="sm" className="font-black uppercase text-[10px] h-12" onClick={() => handleDraftLegislative('INDICACAO')} disabled={drafting}>Indicação</Button>
+                        <Button variant="outline" size="sm" className="font-black uppercase text-[10px] h-12" onClick={() => handleDraftLegislative('REQUERIMENTO')} disabled={drafting}>Requerimento</Button>
+                        <Button variant="outline" size="sm" className="font-black uppercase text-[10px] h-12" onClick={() => handleDraftLegislative('PROJETO_LEI')} disabled={drafting}>Projeto de Lei</Button>
                       </div>
-                    )}
-                  </div>
-                  <DialogFooter>
-                    {aiDraft && <Button className="font-black uppercase text-[11px] tracking-widest w-full bg-primary text-black h-14 glow-primary" onClick={handleSaveDraft} disabled={processing}>Salvar na Atividade Legislativa</Button>}
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                      {drafting && <div className="text-center py-12"><Loader2 className="animate-spin mx-auto mb-4 text-primary" /><p className="text-[11px] text-muted-foreground font-black uppercase tracking-widest">Processando Inteligência...</p></div>}
+                      {aiDraft && (
+                        <div className="space-y-3 animate-in fade-in slide-in-from-top-4">
+                          <Label className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Minuta Gerada:</Label>
+                          <Textarea value={aiDraft.content} readOnly className="h-[300px] text-xs font-mono bg-white/5 border-white/10 text-white/90 leading-relaxed" />
+                        </div>
+                      )}
+                    </div>
+                    <DialogFooter>
+                      {aiDraft && <Button className="font-black uppercase text-[11px] tracking-widest w-full bg-primary text-black h-14 glow-primary" onClick={handleSaveDraft} disabled={processing}>Salvar na Atividade Legislativa</Button>}
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )}
 
               {canTramitar && !demand.finalizada && (
                 <Dialog open={sendModalOpen} onOpenChange={setSendModalOpen}>
@@ -491,14 +530,22 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                 <CardTitle className="text-[11px] font-black uppercase tracking-[0.4em] flex items-center gap-3 text-primary">
                   <Info size={16} /> Descritivo do Protocolo
                 </CardTitle>
-                <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10 h-10 w-10 p-0" onClick={handleGenerateSummary} disabled={summarizing}>
-                  {summarizing ? <Loader2 className="animate-spin h-5 w-5" /> : <Sparkles size={18} />}
-                </Button>
+                {demand.tipo !== 'HELPDESK' && (
+                  <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10 h-10 w-10 p-0" onClick={handleGenerateSummary} disabled={summarizing}>
+                    {summarizing ? <Loader2 className="animate-spin h-5 w-5" /> : <Sparkles size={18} />}
+                  </Button>
+                )}
               </CardHeader>
               <CardContent className="space-y-8 p-8">
                 {summary && (
                   <div className="p-6 bg-primary/10 border border-primary/20 rounded-2xl animate-in slide-in-from-top-4">
                     <p className="text-sm sm:text-base leading-relaxed text-primary italic font-black">"{summary}"</p>
+                  </div>
+                )}
+                {demand.assuntoPredefinido && (
+                  <div className="p-4 bg-secondary/10 border border-secondary/20 rounded-xl mb-6">
+                    <p className="text-[10px] font-black uppercase text-secondary tracking-widest mb-1">Assunto Pré-cadastrado:</p>
+                    <p className="text-white font-black text-lg uppercase tracking-tight">{demand.assuntoPredefinido}</p>
                   </div>
                 )}
                 <div className="whitespace-pre-wrap text-white/90 text-base sm:text-lg leading-relaxed font-medium">
@@ -508,38 +555,76 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
             </Card>
 
             <Card className="border-white/5 bg-white/5 shadow-2xl overflow-hidden">
-              <CardHeader className="bg-white/5 border-b border-white/5 px-8 py-6">
+              <CardHeader className="bg-white/5 border-b border-white/5 px-8 py-6 flex flex-row items-center justify-between">
                 <CardTitle className="text-[11px] font-black uppercase tracking-[0.4em] flex items-center gap-3 text-primary">
-                  <History size={16} /> Linha do Tempo de Trâmite
+                  <History size={16} /> Histórico / Chat de Atendimento
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-10 p-8">
-                {tramites.map((t: Tramite, idx: number) => (
-                  <div key={t.id} className="relative flex gap-8">
-                    {idx !== tramites.length - 1 && <div className="absolute left-[0.9rem] top-10 bottom-0 w-px bg-white/5" />}
-                    <div className="w-8 h-8 rounded-xl bg-black border border-white/10 flex items-center justify-center shrink-0 z-10 shadow-2xl group">
-                      <div className="w-2.5 h-2.5 rounded-full bg-primary glow-primary" />
+              <CardContent className="p-8 space-y-10">
+                {!demand.finalizada && (
+                  <div className="bg-white/5 p-6 rounded-2xl border border-white/10 space-y-4">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><MessageSquare size={14} /> Adicionar Mensagem / Comentário</Label>
+                    <Textarea 
+                      placeholder="Escreva sua mensagem para o técnico ou assessor..." 
+                      value={obs} 
+                      onChange={e => setObs(e.target.value)} 
+                      className="bg-black/50 border-white/10 text-white min-h-[100px]"
+                    />
+                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between pt-2">
+                       <div className="w-full sm:w-auto">
+                          <Input type="file" multiple onChange={handleFileChange} className="bg-transparent border-none text-[10px] file:bg-white/10 file:text-white file:border-none file:rounded-lg" />
+                       </div>
+                       <Button onClick={handleComment} disabled={processing || !obs} className="bg-primary text-black font-black uppercase text-[10px] px-8 h-10 glow-primary w-full sm:w-auto">
+                          {processing ? <Loader2 className="animate-spin" /> : "Enviar Comentário"}
+                       </Button>
                     </div>
-                    <div className="flex-1 pb-4">
-                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                        <h4 className="font-black text-[11px] uppercase tracking-widest text-primary">{t.acao}</h4>
-                        <span className="text-[10px] font-black text-muted-foreground uppercase">{t.data?.toDate().toLocaleString()}</span>
-                      </div>
-                      <p className="text-sm text-white/70 mt-3 bg-black/40 p-4 rounded-2xl border border-white/5 italic leading-relaxed">
-                        {t.observacao}
-                      </p>
-                      {t.anexos && t.anexos.length > 0 && (
-                        <div className="flex flex-wrap gap-3 mt-4">
-                          {t.anexos.map((a, i) => (
-                            <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-[10px] font-black uppercase bg-white/5 px-4 py-2 rounded-xl border border-white/10 hover:border-primary/40 transition-all text-white/80">
-                              <Paperclip size={12} className="text-primary" /> {a.nome}
-                            </a>
+                    {files.length > 0 && (
+                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+                          {files.map((f, i) => (
+                             <div key={i} className="text-[9px] font-black uppercase bg-black/40 p-2 rounded-lg border border-white/5 flex justify-between items-center">
+                                <span className="truncate pr-2">{f.name}</span>
+                                <button onClick={() => removeFile(i)} className="text-destructive"><X size={12}/></button>
+                             </div>
                           ))}
-                        </div>
-                      )}
-                    </div>
+                       </div>
+                    )}
                   </div>
-                ))}
+                )}
+
+                <div className="space-y-10">
+                  {tramites.map((t: Tramite, idx: number) => (
+                    <div key={t.id} className="relative flex gap-8">
+                      {idx !== tramites.length - 1 && <div className="absolute left-[0.9rem] top-10 bottom-0 w-px bg-white/5" />}
+                      <div className="w-8 h-8 rounded-xl bg-black border border-white/10 flex items-center justify-center shrink-0 z-10 shadow-2xl group">
+                        <div className={cn(
+                          "w-2.5 h-2.5 rounded-full glow-primary",
+                          t.acao === "COMENTARIO" ? "bg-secondary" : "bg-primary"
+                        )} />
+                      </div>
+                      <div className="flex-1 pb-4">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                          <h4 className={cn(
+                            "font-black text-[11px] uppercase tracking-widest",
+                            t.acao === "COMENTARIO" ? "text-secondary" : "text-primary"
+                          )}>{t.acao}</h4>
+                          <span className="text-[10px] font-black text-muted-foreground uppercase">{t.data?.toDate().toLocaleString()}</span>
+                        </div>
+                        <p className="text-sm text-white/70 mt-3 bg-black/40 p-4 rounded-2xl border border-white/5 italic leading-relaxed">
+                          {t.observacao}
+                        </p>
+                        {t.anexos && t.anexos.length > 0 && (
+                          <div className="flex flex-wrap gap-3 mt-4">
+                            {t.anexos.map((a, i) => (
+                              <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-[10px] font-black uppercase bg-white/5 px-4 py-2 rounded-xl border border-white/10 hover:border-primary/40 transition-all text-white/80">
+                                <Paperclip size={12} className="text-primary" /> {a.nome}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -581,7 +666,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                 <div className="space-y-2">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Agente Responsável</p>
                   <div className="flex items-center gap-3 text-lg font-black uppercase tracking-tight text-white">
-                    <UserIcon size={18} className="text-primary" /> {allUsers.find(u => u.uid === demand.responsavelAtual || u.id === demand.responsavelAtual)?.nome || 'Pendente'}
+                    <UserIcon size={18} className="text-primary" /> {allUsers.find(u => u.uid === demand.responsavelAtual || u.id === demand.responsavelAtual)?.nome || (demand.tipo === 'HELPDESK' ? 'Equipe TI' : 'Pendente')}
                   </div>
                 </div>
                 <div className="pt-4 border-t border-white/5">

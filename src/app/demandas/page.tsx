@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
@@ -12,7 +13,8 @@ import {
   Calendar, 
   ChevronLeft,
   AlertCircle,
-  Plus
+  Plus,
+  LifeBuoy
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +35,7 @@ export default function DemandListPage() {
   const { user } = useUser();
   const db = useFirestore();
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState<"TODAS" | "MINHAS">("MINHAS");
+  const [filterType, setFilterType] = useState<"TODAS" | "MINHAS" | "HELPDESK">("MINHAS");
   const [statusFilter, setStatusFilter] = useState("TODOS");
 
   const userEmail = useMemo(() => user?.email?.toLowerCase().trim() || null, [user?.email]);
@@ -44,15 +46,27 @@ export default function DemandListPage() {
   const cabinetId = (profile as any)?.cabinetId;
   const isVereador = (profile as any)?.perfil === "ADMIN";
 
+  const cabinetsQuery = useMemo(() => db ? collection(db, "gabinetes") : null, [db]);
+  const { data: cabinets = [] } = useCollection(cabinetsQuery);
+  const myCabinet = cabinets.find((c: any) => c.id === cabinetId);
+  const isTIUser = myCabinet?.isTI === true;
+
   const demandsQuery = useMemoFirebase(() => {
     if (!db || (!cabinetId && !isMasterAdmin)) return null;
+    
+    // Se for usuário de TI, ele pode ver todos os HelpDesks
+    if (isTIUser && filterType === 'HELPDESK') {
+      return query(collection(db, "demandas"), where("tipo", "==", "HELPDESK"), orderBy("dataAtualizacao", "desc"));
+    }
+
     if (isMasterAdmin) return query(collection(db, "demandas"), orderBy("dataAtualizacao", "desc"));
+    
     return query(
       collection(db, "demandas"), 
       where("cabinetId", "==", cabinetId),
       orderBy("dataAtualizacao", "desc")
     );
-  }, [db, cabinetId, isMasterAdmin]);
+  }, [db, cabinetId, isMasterAdmin, isTIUser, filterType]);
   
   const { data: allDemandsRaw = [], loading } = useCollection(demandsQuery);
 
@@ -60,7 +74,11 @@ export default function DemandListPage() {
     let result = allDemandsRaw.filter((d: any) => !d.deleted);
 
     if (filterType === "MINHAS" && user && !isMasterAdmin) {
-      result = result.filter((d: Demand) => d.responsavelAtual === user.uid);
+      result = result.filter((d: Demand) => d.responsavelAtual === user.uid || (d.tipo === 'HELPDESK' && d.cabinetId === cabinetId));
+    }
+
+    if (filterType === "HELPDESK" && !isTIUser) {
+      result = result.filter((d: Demand) => d.tipo === "HELPDESK");
     }
 
     if (searchTerm) {
@@ -76,7 +94,7 @@ export default function DemandListPage() {
     }
 
     return result;
-  }, [allDemandsRaw, filterType, searchTerm, statusFilter, user?.uid, isMasterAdmin]);
+  }, [allDemandsRaw, filterType, searchTerm, statusFilter, user?.uid, isMasterAdmin, isTIUser, cabinetId]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -88,12 +106,22 @@ export default function DemandListPage() {
               <ChevronLeft size={16} /> Dashboard
             </Link>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mt-4">
-              <h1 className="text-4xl sm:text-5xl font-black uppercase tracking-tighter leading-none text-white">Gestão de <span className="text-primary">Demandas</span></h1>
-              <Link href="/demandas/new" className="w-full sm:w-auto">
-                <Button className="w-full sm:w-auto font-black uppercase text-[11px] tracking-widest h-14 px-10 shadow-lg shadow-primary/20 bg-primary text-black hover:opacity-90 transition-all glow-primary">
-                  <Plus className="mr-2" size={18} /> Nova Demanda
-                </Button>
-              </Link>
+              <h1 className="text-4xl sm:text-5xl font-black uppercase tracking-tighter leading-none text-white">
+                {isTIUser && filterType === 'HELPDESK' ? "Chamados de " : "Gestão de "}
+                <span className="text-primary">{isTIUser && filterType === 'HELPDESK' ? "Suporte TI" : "Demandas"}</span>
+              </h1>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link href="/helpdesk/new" className="w-full sm:w-auto">
+                  <Button variant="outline" className="w-full sm:w-auto font-black uppercase text-[10px] tracking-widest h-14 px-8 border-secondary text-secondary hover:bg-secondary/10">
+                    <LifeBuoy className="mr-2" size={16} /> Abrir Chamado TI
+                  </Button>
+                </Link>
+                <Link href="/demandas/new" className="w-full sm:w-auto">
+                  <Button className="w-full sm:w-auto font-black uppercase text-[11px] tracking-widest h-14 px-10 shadow-lg shadow-primary/20 bg-primary text-black hover:opacity-90 transition-all glow-primary">
+                    <Plus className="mr-2" size={18} /> Nova Demanda
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
 
@@ -114,6 +142,7 @@ export default function DemandListPage() {
                 <SelectContent className="bg-black border-white/10">
                   <SelectItem value="MINHAS">Minhas</SelectItem>
                   {(isVereador || isMasterAdmin) && <SelectItem value="TODAS">Gabinete</SelectItem>}
+                  {isTIUser && <SelectItem value="HELPDESK">Chamados TI</SelectItem>}
                 </SelectContent>
               </Select>
 
@@ -147,13 +176,16 @@ export default function DemandListPage() {
                 <Card className="h-full border-white/5 bg-white/5 hover:border-primary/40 transition-all flex flex-col group active:scale-[0.98] shadow-2xl relative overflow-hidden">
                   <div className={cn(
                     "absolute top-0 left-0 w-1 h-full",
-                    demand.prioridade === "ALTA" ? "bg-red-500" : "bg-primary"
+                    demand.tipo === 'HELPDESK' ? "bg-secondary" : (demand.prioridade === "ALTA" ? "bg-red-500" : "bg-primary")
                   )} />
                   <CardHeader className="pb-4 pt-8">
                     <div className="flex items-start justify-between gap-3 mb-4">
-                      <Badge variant={demand.prioridade === "ALTA" ? "destructive" : "secondary"} className="text-[9px] font-black uppercase tracking-widest px-3 py-1">
-                        {demand.prioridade}
-                      </Badge>
+                      <div className="flex gap-2">
+                        <Badge variant={demand.prioridade === "ALTA" ? "destructive" : "secondary"} className="text-[9px] font-black uppercase tracking-widest px-3 py-1">
+                          {demand.prioridade}
+                        </Badge>
+                        {demand.tipo === 'HELPDESK' && <Badge className="bg-secondary text-white text-[9px] font-black uppercase px-3 py-1">TI</Badge>}
+                      </div>
                       <span className="text-[9px] font-mono font-black text-muted-foreground bg-white/5 px-2 py-1 rounded border border-white/5">
                         #{demand.id.substring(0, 8)}
                       </span>
@@ -168,7 +200,9 @@ export default function DemandListPage() {
                         <Calendar size={14} className="text-primary/70" /> {new Date(demand.prazo).toLocaleDateString()}
                       </div>
                       <div className="flex items-center gap-1">
-                        {demand.anexos && demand.anexos.length > 0 && <Badge variant="outline" className="text-[8px] font-black uppercase h-5 text-primary border-primary/20">DOCUMENTO</Badge>}
+                         {isTIUser && demand.tipo === 'HELPDESK' && (
+                           <span className="text-[8px] text-primary font-black uppercase">Origem: {cabinets.find(c => c.id === demand.cabinetId)?.vereador}</span>
+                         )}
                       </div>
                     </div>
                     
