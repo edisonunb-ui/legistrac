@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, Send, Loader2, Monitor, Printer, Wifi, ShieldAlert, Cpu, HelpCircle } from "lucide-react";
 import Link from "next/link";
 import { collection, query, where, doc, limit, getDocs } from "firebase/firestore";
+import { cn } from "@/lib/utils";
 
 const HELP_TOPICS = [
   { id: "impressora", label: "Impressora não imprime", icon: Printer },
@@ -53,16 +54,13 @@ export default function NewHelpDeskPage() {
 
     setSaving(true);
     try {
-      // Localizar Gabinete de TI
+      // Localizar Gabinete de TI para garantir que existe uma central configurada
       const tiCabinetQuery = query(collection(db, "gabinetes"), where("isTI", "==", true), limit(1));
       const tiSnap = await getDocs(tiCabinetQuery);
       
       if (tiSnap.empty) {
         throw new Error("Gabinete de TI não configurado no sistema. Contate o administrador.");
       }
-
-      const tiCabinet = tiSnap.docs[0].data();
-      const tiCabinetId = tiSnap.docs[0].id;
 
       const demandId = await createDemand(db, user.uid, {
         cabinetId,
@@ -127,12 +125,14 @@ export default function NewHelpDeskPage() {
 
                   <div className="space-y-3">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Relato Adicional (Opcional)</Label>
-                    <Textarea 
-                      value={formData.descricao} 
-                      onChange={e => setFormData(p => ({ ...p, descricao: e.target.value }))}
-                      placeholder="Descreva detalhes como patrimônio do computador, sala ou urgência específica..."
-                      className="min-h-[150px] bg-black/50 border-white/10 text-white"
-                    />
+                    <div className="bg-black/50 p-1 rounded-xl">
+                       <Textarea 
+                         value={formData.descricao} 
+                         onChange={e => setFormData(p => ({ ...p, descricao: e.target.value }))}
+                         placeholder="Descreva detalhes como patrimônio do computador, sala ou urgência específica..."
+                         className="min-h-[150px] bg-transparent border-none text-white focus-visible:ring-0"
+                       />
+                    </div>
                   </div>
                 </CardContent>
                 <CardFooter className="bg-white/5 p-8">

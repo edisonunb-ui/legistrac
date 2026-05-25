@@ -54,7 +54,7 @@ export default function DemandListPage() {
   const demandsQuery = useMemoFirebase(() => {
     if (!db || (!cabinetId && !isMasterAdmin)) return null;
     
-    // Se for usuário de TI, ele pode ver todos os HelpDesks
+    // Se for usuário de TI e estiver na aba HelpDesk, ele pode ver todos os chamados
     if (isTIUser && filterType === 'HELPDESK') {
       return query(collection(db, "demandas"), where("tipo", "==", "HELPDESK"), orderBy("dataAtualizacao", "desc"));
     }

@@ -38,7 +38,7 @@ export async function createDemand(
   const tramiteRef = doc(collection(db, "tramites"));
   const targetResponsavel = data.responsavelId || userId;
 
-  // Se for HelpDesk, tentamos achar o gabinete de TI
+  // Se for HelpDesk, tentamos achar o gabinete de TI para vincular como destino
   let targetCabinetId = data.cabinetId;
   if (data.tipo === 'HELPDESK') {
     const tiCabinetQuery = query(collection(db, "gabinetes"), where("isTI", "==", true), limit(1));

@@ -109,6 +109,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
 
   const isAccessDenied = useMemo(() => {
     if (loadingDemand || !demand || isMasterAdmin) return false;
+    // HelpDesk permite acesso ao Gabinete de TI destino
     if (demand.tipo === 'HELPDESK' && isTIUser) return false;
     if (!cabinetId) return true;
     return (demand as any).cabinetId !== cabinetId;
