@@ -1,9 +1,10 @@
+
 "use client";
 
-import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
+import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
-import { collection, query, where, doc, updateDoc } from "firebase/firestore";
+import { collection, query, where, doc, updateDoc, orderBy } from "firebase/firestore";
 import { UserRole, UserPermissions, UserProfile } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Loader2, Trash2, ChevronLeft, Building2, Edit2, ShieldCheck, Mail, Key, ShieldAlert } from "lucide-react";
+import { Users, Loader2, Trash2, ChevronLeft, Building2, Edit2, ShieldCheck, Mail, Key, ShieldAlert, Search, Filter } from "lucide-react";
 import { provisionarMembro, excluirUsuario } from "@/app/actions/provisionamento";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -54,6 +55,9 @@ export default function UserManagementPage() {
   const db = useFirestore();
   const { toast } = useToast();
   
+  const [searchTerm, setSearchTerm] = useState("");
+  const [cabinetFilter, setCabinetFilter] = useState("TODOS");
+
   const [newEmail, setNewEmail] = useState("");
   const [newName, setNewName] = useState("");
   const [newRole, setNewRole] = useState<UserRole>("ASSESSOR");
@@ -65,6 +69,7 @@ export default function UserManagementPage() {
     gerenciar_equipe: false,
     reabrir_demandas: false
   });
+  
   const [isAdding, setIsAdding] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -86,7 +91,7 @@ export default function UserManagementPage() {
   const isAuditor = userEmail === AUDITOR_EMAIL;
   const hasGlobalView = isMasterAdmin || isAuditor;
   
-  const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
+  const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
   const cabinetId = (profile as any)?.cabinetId;
@@ -94,18 +99,32 @@ export default function UserManagementPage() {
   const cabinetsQuery = useMemo(() => db ? collection(db, "gabinetes") : null, [db]);
   const { data: cabinets = [] } = useCollection(cabinetsQuery);
 
-  const usersQuery = useMemo(() => {
+  const usersQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    if (hasGlobalView) return query(collection(db, "users"));
-    if (cabinetId) return query(collection(db, "users"), where("cabinetId", "==", cabinetId));
+    if (hasGlobalView) return query(collection(db, "users"), orderBy("nome", "asc"));
+    if (cabinetId) return query(collection(db, "users"), where("cabinetId", "==", cabinetId), orderBy("nome", "asc"));
     return null;
-  }, [db, user, hasGlobalView, cabinetId]);
+  }, [db, user?.uid, hasGlobalView, cabinetId]);
 
   const { data: rawUsers = [], loading: usersLoading } = useCollection(usersQuery);
 
-  const activeUsers = useMemo(() => {
-    return rawUsers.filter((u: any) => !u.deleted || hasGlobalView);
-  }, [rawUsers, hasGlobalView]);
+  const filteredUsers = useMemo(() => {
+    let result = rawUsers.filter((u: any) => !u.deleted || hasGlobalView);
+
+    if (cabinetFilter !== "TODOS" && hasGlobalView) {
+      result = result.filter((u: any) => u.cabinetId === cabinetFilter);
+    }
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter((u: any) => 
+        (u.nome || "").toLowerCase().includes(term) || 
+        (u.email || u.id || "").toLowerCase().includes(term)
+      );
+    }
+
+    return result;
+  }, [rawUsers, hasGlobalView, cabinetFilter, searchTerm]);
 
   const handleRoleChange = (role: UserRole, isEdit = false) => {
     const isAdminRole = role === "ADMIN" || role === "SUPER_ADMIN";
@@ -226,10 +245,15 @@ export default function UserManagementPage() {
           </Link>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
             <div>
-              <h1 className="text-4xl font-black uppercase tracking-tighter text-white">Equipe do <span className="text-primary">Gabinete</span></h1>
+              <h1 className="text-4xl font-black uppercase tracking-tighter text-white">Equipe do <span className="text-primary">{hasGlobalView ? "Sistema" : "Gabinete"}</span></h1>
               <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest mt-1">Gestão de acesso, cargos e níveis de poder.</p>
             </div>
-            {hasGlobalView && <Link href="/gabinetes" className="w-full sm:w-auto"><Button variant="outline" className="w-full sm:w-auto gap-2 font-black uppercase text-[10px] tracking-widest border-white/10 text-white"><Building2 size={16} /> Instâncias Isoladas</Button></Link>}
+            {hasGlobalView && (
+              <div className="flex items-center gap-3 bg-primary/10 px-4 py-2 rounded-xl border border-primary/20">
+                <ShieldCheck className="text-primary" size={18} />
+                <span className="text-[10px] font-black text-primary uppercase tracking-widest">Acesso Global Master</span>
+              </div>
+            )}
           </div>
         </header>
 
@@ -301,12 +325,37 @@ export default function UserManagementPage() {
           </Card>
 
           <div className="lg:col-span-2 space-y-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                <Input 
+                  placeholder="Pesquisar membro por nome ou e-mail..." 
+                  className="pl-12 h-14 bg-white/5 border-white/10 text-white font-bold" 
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
+              </div>
+              {hasGlobalView && (
+                <div className="w-full md:w-64">
+                  <Select value={cabinetFilter} onValueChange={setCabinetFilter}>
+                    <SelectTrigger className="h-14 bg-white/5 border-white/10 text-white font-bold uppercase text-[10px] tracking-widest">
+                      <div className="flex items-center gap-2"><Filter size={14} /> <SelectValue placeholder="Filtrar Gabinete" /></div>
+                    </SelectTrigger>
+                    <SelectContent className="bg-black border-white/10">
+                      <SelectItem value="TODOS">Todos os Gabinetes</SelectItem>
+                      {cabinets.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.vereador}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
             <Card className="bg-white/5 border-white/5 shadow-2xl overflow-hidden">
               <CardHeader className="bg-white/5 border-b border-white/5 flex flex-row items-center justify-between py-6">
                 <CardTitle className="text-[11px] font-black uppercase tracking-[0.3em] flex items-center gap-3 text-primary">
                   <ShieldCheck size={18} /> Membros Ativos
                 </CardTitle>
-                <Badge variant="outline" className="text-[9px] font-black uppercase border-primary/20 text-primary">{activeUsers.length} Agentes</Badge>
+                <Badge variant="outline" className="text-[9px] font-black uppercase border-primary/20 text-primary">{filteredUsers.length} Agentes</Badge>
               </CardHeader>
               <CardContent className="pt-8 space-y-4">
                 {usersLoading ? (
@@ -314,15 +363,16 @@ export default function UserManagementPage() {
                     <Loader2 className="animate-spin text-primary" size={32} />
                     <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.3em] animate-pulse">Sincronizando Lista...</p>
                   </div>
-                ) : activeUsers.length === 0 ? (
+                ) : filteredUsers.length === 0 ? (
                   <div className="text-center py-24 bg-black/20 rounded-3xl border-2 border-dashed border-white/5">
                     <Users size={48} className="mx-auto text-muted-foreground opacity-10 mb-4" />
-                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Nenhum assessor registrado no momento.</p>
+                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Nenhum membro encontrado.</p>
                   </div>
-                ) : activeUsers.map((u: any) => {
+                ) : filteredUsers.map((u: any) => {
                   const currentEmail = (u.email || u.id || "").toLowerCase().trim();
                   const isThisUserMaster = currentEmail === MASTER_EMAIL;
                   const isThisUserAuditor = currentEmail === AUDITOR_EMAIL;
+                  const userCabinet = cabinets.find((c: any) => c.id === u.cabinetId);
                   
                   return (
                     <div key={u.id} className={cn(
@@ -347,8 +397,8 @@ export default function UserManagementPage() {
                               {isThisUserAuditor ? "AUDITOR GLOBAL" : (u.perfil === "ADMIN" ? "VEREADOR" : u.perfil)}
                             </Badge>
                             {hasGlobalView && (
-                              <Badge variant="outline" className="text-[8px] font-black uppercase border-primary/20 text-primary px-2 py-0.5">
-                                Instância: {cabinets.find((c:any) => c.id === u.cabinetId)?.vereador || 'Central'}
+                              <Badge variant="outline" className="text-[8px] font-black uppercase border-primary/20 text-primary px-2 py-0.5 flex items-center gap-1">
+                                <Building2 size={10} /> {userCabinet?.vereador || 'Sem Gabinete'}
                               </Badge>
                             )}
                           </div>
