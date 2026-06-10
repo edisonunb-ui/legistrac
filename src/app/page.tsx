@@ -21,7 +21,8 @@ import {
   Award,
   Sparkles,
   ShieldCheck,
-  ImageIcon
+  ImageIcon,
+  UserPlus
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -432,12 +433,17 @@ export default function StrategicDashboard() {
                     {allDemands.filter(d => d.status === "ABERTO" && !d.deleted).length}
                   </span>
                 </div>
-                <div className="flex justify-between items-center p-5 bg-black/40 rounded-2xl border border-white/5 transition-all hover:border-primary/30">
-                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Em Trâmite</span>
-                  <span className="font-black text-secondary bg-secondary/10 border border-secondary/20 px-4 py-1.5 rounded-full text-xs">
-                    {allDemands.filter(d => d.status === "EM_ANDAMENTO" && !d.deleted).length}
-                  </span>
-                </div>
+                
+                <Link href="/usuarios" className="block">
+                  <div className="flex justify-between items-center p-5 bg-primary/10 rounded-2xl border border-primary/20 transition-all hover:bg-primary/20 group">
+                    <div className="flex items-center gap-3">
+                      <Users size={16} className="text-primary" />
+                      <span className="text-[10px] font-black text-primary uppercase tracking-widest">Gestão de Equipe</span>
+                    </div>
+                    <ChevronRight size={16} className="text-primary group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </Link>
+
                 <Link href="/demandas" className="block mt-6">
                   <Button variant="ghost" className="w-full text-[11px] font-black uppercase tracking-widest h-12 hover:bg-primary/10 hover:text-primary">
                     Gerenciar Fluxo <ChevronRight size={16} className="ml-2" />
