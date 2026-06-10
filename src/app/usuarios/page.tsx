@@ -35,7 +35,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogTrigger,
-  DialogDescription
+  DialogDescription as DialogDesc
 } from "@/components/ui/dialog";
 
 const PERMISSION_LABELS: Record<keyof UserPermissions, string> = {
@@ -400,16 +400,16 @@ export default function UserManagementPage() {
           </div>
         </div>
 
-        {/* MODAL DE EDIÇÃO DE USUÁRIO - FORA DO MAPA PARA ESTABILIDADE */}
+        {/* MODAL DE EDIÇÃO DE USUÁRIO */}
         <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
           <DialogContent className="max-w-2xl w-[95vw] bg-black border-white/10 text-white shadow-2xl">
             <DialogHeader>
               <DialogTitle className="font-black uppercase tracking-widest text-primary text-xl flex items-center gap-3">
                 <Edit2 size={20} /> Ajustar Nível de Poder
               </DialogTitle>
-              <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground mt-2">
+              <DialogDesc className="text-[10px] uppercase font-bold text-muted-foreground mt-2">
                 Modifique as permissões de {editingUser?.nome} no sistema.
-              </DialogDescription>
+              </DialogDesc>
             </DialogHeader>
             <div className="space-y-8 py-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
