@@ -21,7 +21,8 @@ import {
   Trash2, 
   Loader2,
   ClipboardList,
-  AlertCircle
+  AlertCircle,
+  Mail
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -83,7 +84,8 @@ export default function CitizenServiceListPage() {
     return services.filter((s: CitizenService) => 
       s.municipeNome.toLowerCase().includes(term) ||
       s.municipeTelefone.includes(term) ||
-      s.municipeEndereco.toLowerCase().includes(term)
+      s.municipeEndereco.toLowerCase().includes(term) ||
+      (s as any).municipeEmail?.toLowerCase().includes(term)
     );
   }, [rawServices, searchTerm]);
 
@@ -132,7 +134,7 @@ export default function CitizenServiceListPage() {
         <div className="mb-8 relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
           <input 
-            placeholder="Buscar por nome, telefone ou endereço..." 
+            placeholder="Buscar por nome, e-mail, telefone ou endereço..." 
             className="w-full h-14 bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 text-sm font-bold text-white focus:outline-none focus:border-primary/50 transition-all" 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -189,6 +191,11 @@ export default function CitizenServiceListPage() {
                     <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                       <Phone size={14} className="text-primary/70" /> {s.municipeTelefone}
                     </div>
+                    {s.municipeEmail && (
+                      <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                        <Mail size={14} className="text-primary/70" /> {s.municipeEmail}
+                      </div>
+                    )}
                     <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground truncate">
                       <MapPin size={14} className="text-primary/70 shrink-0" /> {s.municipeEndereco}
                     </div>

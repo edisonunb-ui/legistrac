@@ -81,6 +81,7 @@ export interface CitizenService {
   municipeEndereco: string;
   municipeTituloEleitoral: string;
   municipeTelefone: string;
+  municipeEmail?: string;
   descricaoSolicitacao: string;
   dataAtendimento: Timestamp;
   atendidoPor: string;

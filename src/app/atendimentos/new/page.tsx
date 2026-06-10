@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
@@ -13,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Save, Loader2, User, Phone, MapPin, ClipboardList, Send, AlertCircle } from "lucide-react";
+import { ChevronLeft, Save, Loader2, User, Phone, MapPin, ClipboardList, Send, AlertCircle, Mail } from "lucide-react";
 import Link from "next/link";
 import { DemandPriority } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ export default function NewCitizenServicePage() {
     municipeEndereco: "",
     municipeTituloEleitoral: "",
     municipeTelefone: "",
+    municipeEmail: "",
     descricaoSolicitacao: "",
     prioridadeDemanda: "MEDIA" as DemandPriority,
     responsavelDemanda: "",
@@ -69,7 +71,7 @@ export default function NewCitizenServicePage() {
             id: demandaId,
             cabinetId: cabinetId,
             titulo: `[ATENDIMENTO] ${formData.municipeNome}`,
-            descricao: `SOLICITAÇÃO DO MUNÍCIPE: ${formData.municipeNome}\nTEL: ${formData.municipeTelefone}\nEND: ${formData.municipeEndereco}\n\nDESCRIÇÃO:\n${formData.descricaoSolicitacao}`,
+            descricao: `SOLICITAÇÃO DO MUNÍCIPE: ${formData.municipeNome}\nTEL: ${formData.municipeTelefone}\nEMAIL: ${formData.municipeEmail || 'NÃO INFORMADO'}\nEND: ${formData.municipeEndereco}\n\nDESCRIÇÃO:\n${formData.descricaoSolicitacao}`,
             prazo: formData.prazoDemanda || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             prioridade: formData.prioridadeDemanda,
             criadoPor: user.uid,
@@ -103,6 +105,7 @@ export default function NewCitizenServicePage() {
           municipeEndereco: formData.municipeEndereco,
           municipeTituloEleitoral: formData.municipeTituloEleitoral,
           municipeTelefone: formData.municipeTelefone,
+          municipeEmail: formData.municipeEmail,
           descricaoSolicitacao: formData.descricaoSolicitacao,
           dataAtendimento: serverTimestamp(),
           atendidoPor: user.uid,
@@ -143,9 +146,18 @@ export default function NewCitizenServicePage() {
                 <CardDescription className="text-[9px] uppercase font-bold text-muted-foreground">Preencha os dados básicos para o banco de dados do gabinete.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Nome Completo</Label>
-                  <Input required value={formData.municipeNome} onChange={e => setFormData(p => ({ ...p, municipeNome: e.target.value }))} className="bg-black/50 border-white/10 text-white h-12" placeholder="Ex: João da Silva" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Nome Completo</Label>
+                    <Input required value={formData.municipeNome} onChange={e => setFormData(p => ({ ...p, municipeNome: e.target.value }))} className="bg-black/50 border-white/10 text-white h-12" placeholder="Ex: João da Silva" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">E-mail</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-primary/50" size={16} />
+                      <Input type="email" value={formData.municipeEmail} onChange={e => setFormData(p => ({ ...p, municipeEmail: e.target.value }))} className="pl-10 bg-black/50 border-white/10 text-white h-12" placeholder="Ex: joao@email.com" />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
