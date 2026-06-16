@@ -112,11 +112,6 @@ export default function CitizenServiceListPage() {
     }
   };
 
-  const handleMalaDireta = () => {
-    // Abrir em nova aba para impressão
-    window.open('/atendimentos/print', '_blank');
-  };
-
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
@@ -131,13 +126,14 @@ export default function CitizenServiceListPage() {
               <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest mt-1">Gestão de solicitações e base de contatos.</p>
             </div>
             <div className="flex gap-3">
-              <Button 
-                onClick={handleMalaDireta}
-                variant="outline"
-                className="border-white/10 text-white font-black uppercase text-[10px] tracking-widest h-12 px-6 hover:bg-white/5"
-              >
-                <Printer size={16} className="mr-2 text-primary" /> Mala Direta
-              </Button>
+              <Link href="/atendimentos/print" target="_blank">
+                <Button 
+                  variant="outline"
+                  className="border-white/10 text-white font-black uppercase text-[10px] tracking-widest h-12 px-6 hover:bg-white/5"
+                >
+                  <Printer size={16} className="mr-2 text-primary" /> Mala Direta
+                </Button>
+              </Link>
               <Link href="/atendimentos/new">
                 <Button className="bg-primary text-black font-black uppercase text-[11px] tracking-widest h-12 px-8 shadow-lg shadow-primary/20 hover:opacity-90 glow-primary">
                   <Plus className="mr-2" size={18} /> Novo Atendimento

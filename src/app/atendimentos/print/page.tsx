@@ -25,10 +25,11 @@ export default function MalaDiretaPrintPage() {
   const isMasterAdmin = userEmail === MASTER_EMAIL;
 
   const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
-  const { data: profile } = useDoc(profileRef);
+  const { data: profile, loading: loadingProfile } = useDoc(profileRef);
   const cabinetId = (profile as any)?.cabinetId;
 
   const servicesQuery = useMemoFirebase(() => {
+    // Só monta a query se os dados do perfil já tiverem carregado (para saber o cabinetId) ou se for Master
     if (!db || (!cabinetId && !isMasterAdmin)) return null;
     
     if (isMasterAdmin) {
@@ -42,15 +43,17 @@ export default function MalaDiretaPrintPage() {
     );
   }, [db, isMasterAdmin, cabinetId]);
   
-  const { data: services = [], loading } = useCollection<CitizenService>(servicesQuery);
+  const { data: services = [], loading: loadingServices } = useCollection<CitizenService>(servicesQuery);
 
   const activeServices = useMemo(() => services.filter(s => !s.deleted), [services]);
 
-  if (loading) {
+  const isLoading = loadingProfile || loadingServices;
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4 text-black">
-        <Loader2 className="animate-spin" size={32} />
-        <p className="text-xs font-bold uppercase tracking-widest">Sincronizando Base de Dados...</p>
+        <Loader2 className="animate-spin text-primary" size={32} />
+        <p className="text-xs font-black uppercase tracking-widest text-gray-400">Sincronizando Base de Dados...</p>
       </div>
     );
   }
