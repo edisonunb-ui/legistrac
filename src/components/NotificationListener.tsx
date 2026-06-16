@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -16,7 +17,7 @@ export function NotificationListener() {
   const alertedIds = useRef<Set<string>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Consulta estabilizada para evitar loop infinito
+  // Consulta estabilizada para buscar apenas notificações não lidas
   const notifQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(
@@ -45,6 +46,11 @@ export function NotificationListener() {
         if (!notif.id || alertedIds.current.has(notif.id)) return;
         alertedIds.current.add(notif.id);
 
+        // Marca como lida imediatamente ao exibir para evitar loops e repetições em novas sessões
+        if (db && notif.id) {
+          updateDoc(doc(db, "notificacoes", notif.id), { lida: true });
+        }
+
         if (audioRef.current) {
           audioRef.current.play().catch(() => {});
         }
@@ -57,20 +63,17 @@ export function NotificationListener() {
                 {notif.mensagem}
               </p>
               <p className="text-[9px] font-bold uppercase tracking-widest opacity-70">
-                Toque para abrir a demanda
+                Toque para abrir os detalhes
               </p>
             </div>
           ),
           className: "bg-primary border-primary-foreground/20 text-primary-foreground shadow-2xl",
-          duration: 10000, 
+          duration: 8000, 
           action: (
             <ToastAction 
               altText="Abrir Demanda"
               className="bg-black text-white hover:bg-black/80 font-bold border-none px-4 h-9"
-              onClick={async () => {
-                if (db && notif.id) {
-                  await updateDoc(doc(db, "notificacoes", notif.id), { lida: true });
-                }
+              onClick={() => {
                 if (notif.demandaId) {
                   router.push(`/demandas/${notif.demandaId}`);
                 }

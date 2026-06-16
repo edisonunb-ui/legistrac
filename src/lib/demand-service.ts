@@ -216,7 +216,6 @@ export async function finalizeDemand(
 ) {
   const demandRef = doc(db, "demandas", demandaId);
   const tramiteRef = doc(collection(db, "tramites"));
-  const notificationRef = doc(collection(db, "notificacoes"));
 
   await runTransaction(db, async (transaction) => {
     const demandDoc = await transaction.get(demandRef);
@@ -241,14 +240,7 @@ export async function finalizeDemand(
       data: serverTimestamp(),
     });
 
-    transaction.set(notificationRef, {
-      userId: criadorId,
-      cabinetId: cabinetId,
-      mensagem: `Demanda finalizada: ${demandData.titulo}`,
-      demandaId,
-      lida: false,
-      data: serverTimestamp(),
-    });
+    // Removido o disparo de notificação para demandas finalizadas a pedido do usuário
   });
 }
 
