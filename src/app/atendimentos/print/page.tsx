@@ -2,16 +2,24 @@
 "use client";
 
 import { useFirestore, useCollection, useUser, useDoc, useMemoFirebase } from "@/firebase";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { collection, query, orderBy, doc, where } from "firebase/firestore";
 import { CitizenService } from "@/lib/types";
-import { Loader2, Phone, MapPin, ClipboardList, User } from "lucide-react";
+import { Loader2, Phone, MapPin, ClipboardList, User, Mail, FileText, LayoutGrid, List, CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const MASTER_EMAIL = "edisonunb@gmail.com";
+
+type PrintMode = "STICKER" | "REPORT";
 
 export default function MalaDiretaPrintPage() {
   const { user } = useUser();
   const db = useFirestore();
+
+  const [printMode, setPrintMode] = useState<PrintMode>("STICKER");
+  const [showPhone, setShowPhone] = useState(true);
+  const [showVoterId, setShowVoterId] = useState(true);
+  const [showEmail, setShowEmail] = useState(false);
 
   const userEmail = useMemo(() => user?.email?.toLowerCase().trim() || null, [user?.email]);
   const isMasterAdmin = userEmail === MASTER_EMAIL;
@@ -38,20 +46,11 @@ export default function MalaDiretaPrintPage() {
 
   const activeServices = useMemo(() => services.filter(s => !s.deleted), [services]);
 
-  useEffect(() => {
-    if (!loading && activeServices.length > 0) {
-      // Pequeno delay para garantir que o render terminou antes de abrir a caixa de impressão
-      setTimeout(() => {
-        window.print();
-      }, 1000);
-    }
-  }, [loading, activeServices]);
-
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4 text-black">
         <Loader2 className="animate-spin" size={32} />
-        <p className="text-xs font-bold uppercase tracking-widest">Preparando Mala Direta...</p>
+        <p className="text-xs font-bold uppercase tracking-widest">Sincronizando Base de Dados...</p>
       </div>
     );
   }
@@ -74,50 +73,124 @@ export default function MalaDiretaPrintPage() {
         }
       `}</style>
 
-      <div className="no-print mb-8 p-4 bg-gray-100 rounded-lg flex items-center justify-between">
-        <div>
-          <h1 className="font-bold text-lg uppercase">Visualização de Mala Direta</h1>
-          <p className="text-xs text-gray-500">{activeServices.length} etiquetas prontas para impressão.</p>
-        </div>
-        <button 
-          onClick={() => window.print()}
-          className="bg-black text-white px-6 py-2 rounded-md font-bold text-xs uppercase"
-        >
-          Imprimir Agora
-        </button>
-      </div>
+      {/* PAINEL DE CONFIGURAÇÃO (APENAS TELA) */}
+      <div className="no-print mb-12 p-6 bg-gray-50 border border-gray-200 rounded-2xl shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+          <div className="space-y-1">
+            <h1 className="font-black text-xl uppercase tracking-tighter">Configurador de Impressão</h1>
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{activeServices.length} munícipes na fila.</p>
+          </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        {activeServices.map((s) => (
-          <div key={s.id} className="border border-gray-300 p-6 rounded-md flex flex-col gap-3 min-h-[160px] break-inside-avoid">
-            <div className="flex items-start gap-3">
-              <User size={16} className="shrink-0 mt-1" />
-              <h3 className="font-bold text-sm uppercase leading-tight">{s.municipeNome}</h3>
-            </div>
-            
-            <div className="flex items-start gap-3 text-[11px]">
-              <MapPin size={14} className="shrink-0 mt-0.5" />
-              <p className="uppercase leading-relaxed">{s.municipeEndereco}</p>
-            </div>
-
-            <div className="flex items-center gap-3 text-[11px]">
-              <Phone size={14} className="shrink-0" />
-              <p className="font-bold">{s.municipeTelefone}</p>
-            </div>
-
-            <div className="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between text-[9px] font-bold text-gray-600 uppercase">
-              <div className="flex items-center gap-1.5">
-                <ClipboardList size={12} />
-                TÍTULO: {s.municipeTituloEleitoral || 'NÃO INFORMADO'}
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="space-y-2">
+              <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Layout de Saída</p>
+              <div className="flex bg-gray-200 p-1 rounded-xl gap-1">
+                <button 
+                  onClick={() => setPrintMode("STICKER")}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all",
+                    printMode === "STICKER" ? "bg-white text-black shadow-sm" : "text-gray-500 hover:text-gray-700"
+                  )}
+                >
+                  <LayoutGrid size={14} /> Etiqueta Adesiva
+                </button>
+                <button 
+                  onClick={() => setPrintMode("REPORT")}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all",
+                    printMode === "REPORT" ? "bg-white text-black shadow-sm" : "text-gray-500 hover:text-gray-700"
+                  )}
+                >
+                  <List size={14} /> Relatório Completo
+                </button>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Campos Adicionais</p>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input type="checkbox" checked={showPhone} onChange={e => setShowPhone(e.target.checked)} className="rounded border-gray-300 text-black focus:ring-0 h-4 w-4" />
+                  <span className="text-[10px] font-bold uppercase group-hover:text-black text-gray-600">WhatsApp</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input type="checkbox" checked={showVoterId} onChange={e => setShowVoterId(e.target.checked)} className="rounded border-gray-300 text-black focus:ring-0 h-4 w-4" />
+                  <span className="text-[10px] font-bold uppercase group-hover:text-black text-gray-600">Título</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input type="checkbox" checked={showEmail} onChange={e => setShowEmail(e.target.checked)} className="rounded border-gray-300 text-black focus:ring-0 h-4 w-4" />
+                  <span className="text-[10px] font-bold uppercase group-hover:text-black text-gray-600">E-mail</span>
+                </label>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => window.print()}
+              className="bg-black text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-gray-800 transition-all shadow-lg"
+            >
+              Imprimir Agora
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ÁREA DE IMPRESSÃO */}
+      <div className={cn(
+        "w-full",
+        printMode === "STICKER" ? "grid grid-cols-2 gap-6" : "space-y-4"
+      )}>
+        {activeServices.map((s) => (
+          <div key={s.id} className={cn(
+            "border border-gray-200 p-6 rounded-lg flex flex-col gap-3 break-inside-avoid transition-all",
+            printMode === "STICKER" ? "min-h-[180px] justify-between" : "min-h-0 bg-white"
+          )}>
+            <div className="space-y-1">
+              <div className="flex items-start gap-3">
+                <User size={16} className="shrink-0 mt-0.5 text-gray-400" />
+                <h3 className="font-black text-sm uppercase leading-tight">{s.municipeNome}</h3>
+              </div>
+              
+              <div className="flex items-start gap-3 text-[11px] text-gray-700">
+                <MapPin size={14} className="shrink-0 mt-0.5 text-gray-400" />
+                <p className="uppercase leading-relaxed">{s.municipeEndereco}</p>
+              </div>
+            </div>
+
+            {(showPhone || showEmail || showVoterId) && (
+              <div className={cn(
+                "pt-3 border-t border-gray-100 flex flex-wrap gap-4",
+                printMode === "STICKER" ? "justify-between" : "justify-start"
+              )}>
+                {showPhone && (
+                  <div className="flex items-center gap-2 text-[10px] font-bold">
+                    <Phone size={12} className="text-gray-400" />
+                    <span>{s.municipeTelefone}</span>
+                  </div>
+                )}
+
+                {showEmail && s.municipeEmail && (
+                  <div className="flex items-center gap-2 text-[10px] font-bold">
+                    <Mail size={12} className="text-gray-400" />
+                    <span className="lowercase">{s.municipeEmail}</span>
+                  </div>
+                )}
+
+                {showVoterId && (
+                  <div className="flex items-center gap-2 text-[10px] font-black uppercase text-gray-500">
+                    <ClipboardList size={12} className="text-gray-400" />
+                    <span>TÍTULO: {s.municipeTituloEleitoral || '---'}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
 
       {activeServices.length === 0 && (
-        <div className="text-center py-20">
-          <p className="text-sm font-bold uppercase text-gray-400">Nenhum registro para imprimir.</p>
+        <div className="text-center py-40 border-2 border-dashed border-gray-100 rounded-3xl">
+          <FileText size={48} className="mx-auto text-gray-200 mb-4" />
+          <p className="text-sm font-black uppercase tracking-widest text-gray-300">Nenhum registro selecionado para impressão.</p>
         </div>
       )}
     </div>
