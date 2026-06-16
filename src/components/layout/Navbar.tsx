@@ -220,7 +220,13 @@ export function Navbar() {
             className="relative w-full h-full"
             style={{ transform: `scale(${globalConfig.developerLogoScale || 1.2})` }}
           >
-            <Image src={globalConfig.developerLogoUrl} alt="Dev Signature" fill className="object-cover" />
+            <Image 
+              src={globalConfig.developerLogoUrl} 
+              alt="Dev Signature" 
+              fill 
+              sizes="48px"
+              className="object-cover" 
+            />
           </div>
         </div>
       );
@@ -233,7 +239,13 @@ export function Navbar() {
             className="relative w-full h-full"
             style={{ transform: `scale(${(cabinet as any).carimboScale || 1.2})` }}
           >
-            <Image src={carimboUrl} alt="Selo Oficial" fill className="object-cover" />
+            <Image 
+              src={carimboUrl} 
+              alt="Selo Oficial" 
+              fill 
+              sizes="48px"
+              className="object-cover" 
+            />
           </div>
         </div>
       );

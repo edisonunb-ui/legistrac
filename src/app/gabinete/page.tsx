@@ -183,6 +183,7 @@ export default function CabinetProfilePage() {
                             src={carimboPreview} 
                             alt="Preview Marca" 
                             fill 
+                            sizes="(max-width: 768px) 288px, 320px"
                             className="object-cover" 
                           />
                         </div>

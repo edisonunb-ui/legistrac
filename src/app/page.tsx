@@ -69,7 +69,13 @@ function DashboardHeader({ isGlobal, cabinet, globalConfig, onUploadLogo }: { is
             className="relative w-full h-full transition-transform"
             style={{ transform: `scale(${globalConfig.developerLogoScale || 1.2})` }}
           >
-            <Image src={globalConfig.developerLogoUrl} alt="Dev Signature" fill className="object-cover" />
+            <Image 
+              src={globalConfig.developerLogoUrl} 
+              alt="Dev Signature" 
+              fill 
+              sizes="112px"
+              className="object-cover" 
+            />
           </div>
           {isGlobal && (
             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
@@ -292,7 +298,13 @@ export default function StrategicDashboard() {
               <div className="py-8 space-y-6">
                 <div className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-full w-40 h-40 mx-auto bg-white/5 relative group hover:border-primary/40 transition-all cursor-pointer">
                   {globalConfig?.developerLogoUrl ? (
-                    <Image src={globalConfig.developerLogoUrl} alt="Dev Logo" fill className="object-cover rounded-full" />
+                    <Image 
+                      src={globalConfig.developerLogoUrl} 
+                      alt="Dev Logo" 
+                      fill 
+                      sizes="160px"
+                      className="object-cover rounded-full" 
+                    />
                   ) : (
                     <ImageIcon size={32} className="text-muted-foreground" />
                   )}
