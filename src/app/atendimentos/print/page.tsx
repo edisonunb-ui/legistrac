@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useFirestore, useCollection, useUser, useDoc, useMemoFirebase } from "@/firebase";
+import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from "@/firebase";
 import { useEffect, useMemo, useState } from "react";
 import { collection, query, orderBy, doc, where } from "firebase/firestore";
 import { CitizenService } from "@/lib/types";
@@ -58,19 +58,24 @@ export default function MalaDiretaPrintPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white p-8 text-black font-sans">
+    <div className="min-h-screen bg-white p-4 sm:p-8 text-black font-sans">
       <style jsx global>{`
         @media print {
           @page {
             size: A4;
-            margin: 1cm;
+            margin: 0.5cm;
           }
           body {
             background: white !important;
             color: black !important;
+            padding: 0 !important;
           }
           .no-print {
             display: none !important;
+          }
+          .print-container {
+            padding: 0 !important;
+            margin: 0 !important;
           }
         }
       `}</style>
@@ -79,7 +84,7 @@ export default function MalaDiretaPrintPage() {
       <div className="no-print mb-12 p-6 bg-gray-50 border border-gray-200 rounded-2xl shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
           <div className="space-y-1">
-            <h1 className="font-black text-xl uppercase tracking-tighter">Configurador de Impressão</h1>
+            <h1 className="font-black text-xl uppercase tracking-tighter text-black">Configurador de Impressão</h1>
             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{activeServices.length} munícipes na fila.</p>
           </div>
 
@@ -138,48 +143,48 @@ export default function MalaDiretaPrintPage() {
 
       {/* ÁREA DE IMPRESSÃO */}
       <div className={cn(
-        "w-full",
-        printMode === "STICKER" ? "grid grid-cols-2 gap-6" : "space-y-4"
+        "w-full print-container",
+        printMode === "STICKER" ? "grid grid-cols-2 gap-3" : "space-y-2"
       )}>
         {activeServices.map((s) => (
           <div key={s.id} className={cn(
-            "border border-gray-200 p-6 rounded-lg flex flex-col gap-3 break-inside-avoid transition-all",
-            printMode === "STICKER" ? "min-h-[180px] justify-between" : "min-h-0 bg-white"
+            "border border-gray-200 p-4 rounded-lg flex flex-col gap-2 break-inside-avoid transition-all",
+            printMode === "STICKER" ? "min-h-0" : "min-h-0 bg-white"
           )}>
-            <div className="space-y-1">
-              <div className="flex items-start gap-3">
-                <User size={16} className="shrink-0 mt-0.5 text-gray-400" />
+            <div className="space-y-0.5">
+              <div className="flex items-start gap-2">
+                <User size={14} className="shrink-0 mt-0.5 text-gray-400 no-print" />
                 <h3 className="font-black text-sm uppercase leading-tight">{s.municipeNome}</h3>
               </div>
               
-              <div className="flex items-start gap-3 text-[11px] text-gray-700">
-                <MapPin size={14} className="shrink-0 mt-0.5 text-gray-400" />
+              <div className="flex items-start gap-2 text-[10px] text-gray-700">
+                <MapPin size={12} className="shrink-0 mt-0.5 text-gray-400 no-print" />
                 <p className="uppercase leading-relaxed">{s.municipeEndereco}</p>
               </div>
             </div>
 
             {(showPhone || showEmail || showVoterId) && (
               <div className={cn(
-                "pt-3 border-t border-gray-100 flex flex-wrap gap-4",
-                printMode === "STICKER" ? "justify-between" : "justify-start"
+                "pt-2 border-t border-gray-100 flex flex-wrap gap-x-4 gap-y-1",
+                printMode === "STICKER" ? "justify-start" : "justify-start"
               )}>
                 {showPhone && (
-                  <div className="flex items-center gap-2 text-[10px] font-bold">
-                    <Phone size={12} className="text-gray-400" />
+                  <div className="flex items-center gap-1.5 text-[9px] font-bold">
+                    <Phone size={10} className="text-gray-400 no-print" />
                     <span>{s.municipeTelefone}</span>
                   </div>
                 )}
 
                 {showEmail && s.municipeEmail && (
-                  <div className="flex items-center gap-2 text-[10px] font-bold">
-                    <Mail size={12} className="text-gray-400" />
+                  <div className="flex items-center gap-1.5 text-[9px] font-bold">
+                    <Mail size={10} className="text-gray-400 no-print" />
                     <span className="lowercase">{s.municipeEmail}</span>
                   </div>
                 )}
 
                 {showVoterId && (
-                  <div className="flex items-center gap-2 text-[10px] font-black uppercase text-gray-500">
-                    <ClipboardList size={12} className="text-gray-400" />
+                  <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-gray-500">
+                    <ClipboardList size={10} className="text-gray-400 no-print" />
                     <span>TÍTULO: {s.municipeTituloEleitoral || '---'}</span>
                   </div>
                 )}
