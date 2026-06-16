@@ -29,7 +29,6 @@ export default function MalaDiretaPrintPage() {
   const cabinetId = (profile as any)?.cabinetId;
 
   const servicesQuery = useMemoFirebase(() => {
-    // Só monta a query se os dados do perfil já tiverem carregado (para saber o cabinetId) ou se for Master
     if (!db || (!cabinetId && !isMasterAdmin)) return null;
     
     if (isMasterAdmin) {
@@ -110,7 +109,7 @@ export default function MalaDiretaPrintPage() {
             </div>
 
             <div className="space-y-2">
-              <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Campos Adicionais</p>
+              <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Escolha o que imprimir</p>
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2 cursor-pointer group">
                   <input type="checkbox" checked={showPhone} onChange={e => setShowPhone(e.target.checked)} className="rounded border-gray-300 text-black focus:ring-0 h-4 w-4" />
