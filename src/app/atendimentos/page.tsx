@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useFirestore, useCollection, useUser, useDoc } from "@/firebase";
+import { useFirestore, useCollection, useUser, useDoc, useMemoFirebase } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
 import { collection, query, orderBy, doc, deleteDoc, where, updateDoc } from "firebase/firestore";
@@ -54,13 +54,12 @@ export default function CitizenServiceListPage() {
   const isAuditor = userEmail === AUDITOR_EMAIL;
   const hasGlobalView = isMasterAdmin || isAuditor;
 
-  const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
+  const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
-  const isAdmin = (profile as any)?.perfil === "ADMIN" || (profile as any)?.perfil === "SUPER_ADMIN" || hasGlobalView;
   const cabinetId = (profile as any)?.cabinetId;
 
-  const servicesQuery = useMemo(() => {
+  const servicesQuery = useMemoFirebase(() => {
     if (!db || (!cabinetId && !hasGlobalView)) return null;
     
     if (hasGlobalView) {

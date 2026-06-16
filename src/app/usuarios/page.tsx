@@ -5,7 +5,7 @@ import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from "@
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
 import { collection, query, where, doc, updateDoc, orderBy } from "firebase/firestore";
-import { UserRole, UserPermissions, UserProfile } from "@/lib/types";
+import { UserRole, UserPermissions } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,17 +86,16 @@ export default function UserManagementPage() {
     reabrir_demandas: false
   });
 
-  const userEmail = user?.email?.toLowerCase().trim();
+  const userEmail = useMemo(() => user?.email?.toLowerCase().trim() || null, [user?.email]);
   const isMasterAdmin = userEmail === MASTER_EMAIL;
   const isAuditor = userEmail === AUDITOR_EMAIL;
   const hasGlobalView = isMasterAdmin || isAuditor;
   
   const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
-
   const cabinetId = (profile as any)?.cabinetId;
 
-  const cabinetsQuery = useMemo(() => db ? collection(db, "gabinetes") : null, [db]);
+  const cabinetsQuery = useMemoFirebase(() => db ? collection(db, "gabinetes") : null, [db]);
   const { data: cabinets = [] } = useCollection(cabinetsQuery);
 
   const usersQuery = useMemoFirebase(() => {
@@ -450,7 +449,6 @@ export default function UserManagementPage() {
           </div>
         </div>
 
-        {/* MODAL DE EDIÇÃO DE USUÁRIO */}
         <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
           <DialogContent className="max-w-2xl w-[95vw] bg-black border-white/10 text-white shadow-2xl">
             <DialogHeader>
