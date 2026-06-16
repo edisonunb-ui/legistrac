@@ -22,7 +22,8 @@ import {
   Loader2,
   ClipboardList,
   AlertCircle,
-  Mail
+  Mail,
+  Printer
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useRouter } from "next/navigation";
 
 const MASTER_EMAIL = "edisonunb@gmail.com";
 const AUDITOR_EMAIL = "alemao@gmail.com";
@@ -46,6 +48,7 @@ export default function CitizenServiceListPage() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -109,6 +112,11 @@ export default function CitizenServiceListPage() {
     }
   };
 
+  const handleMalaDireta = () => {
+    // Abrir em nova aba para impressão
+    window.open('/atendimentos/print', '_blank');
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
@@ -122,11 +130,20 @@ export default function CitizenServiceListPage() {
               <h1 className="text-4xl font-black tracking-tighter uppercase text-white">Atendimento ao <span className="text-primary">Munícipe</span></h1>
               <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest mt-1">Gestão de solicitações e base de contatos.</p>
             </div>
-            <Link href="/atendimentos/new">
-              <Button className="bg-primary text-black font-black uppercase text-[11px] tracking-widest h-12 px-8 shadow-lg shadow-primary/20 hover:opacity-90 glow-primary">
-                <Plus className="mr-2" size={18} /> Novo Atendimento
+            <div className="flex gap-3">
+              <Button 
+                onClick={handleMalaDireta}
+                variant="outline"
+                className="border-white/10 text-white font-black uppercase text-[10px] tracking-widest h-12 px-6 hover:bg-white/5"
+              >
+                <Printer size={16} className="mr-2 text-primary" /> Mala Direta
               </Button>
-            </Link>
+              <Link href="/atendimentos/new">
+                <Button className="bg-primary text-black font-black uppercase text-[11px] tracking-widest h-12 px-8 shadow-lg shadow-primary/20 hover:opacity-90 glow-primary">
+                  <Plus className="mr-2" size={18} /> Novo Atendimento
+                </Button>
+              </Link>
+            </div>
           </div>
         </header>
 
