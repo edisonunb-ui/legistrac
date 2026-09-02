@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
@@ -46,7 +45,7 @@ export default function DemandListPage() {
   const cabinetId = (profile as any)?.cabinetId;
   const isVereador = (profile as any)?.perfil === "ADMIN";
 
-  const cabinetsQuery = useMemo(() => db ? collection(db, "gabinetes") : null, [db]);
+  const cabinetsQuery = useMemoFirebase(() => db ? collection(db, "gabinetes") : null, [db]);
   const { data: cabinets = [] } = useCollection(cabinetsQuery);
   const myCabinet = cabinets.find((c: any) => c.id === cabinetId);
   const isTIUser = myCabinet?.isTI === true;

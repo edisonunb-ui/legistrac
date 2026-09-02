@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
+import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
 import { collection, query, where, doc } from "firebase/firestore";
@@ -30,11 +29,11 @@ export default function LegislativeListPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const userEmail = user?.email?.toLowerCase().trim();
-  const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
+  const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
   const cabinetId = (profile as any)?.cabinetId;
 
-  const actionsQuery = useMemo(() => {
+  const actionsQuery = useMemoFirebase(() => {
     if (!db || !cabinetId) return null;
     return query(collection(db, "legislativo"), where("cabinetId", "==", cabinetId));
   }, [db, cabinetId]);

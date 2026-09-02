@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useUser, useFirestore, useDoc, useCollection, useStorage } from "@/firebase";
+import { useUser, useFirestore, useDoc, useCollection, useStorage, useMemoFirebase } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useEffect, useState, useMemo, use, useCallback } from "react";
 import { doc, collection, query, where, Timestamp, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
@@ -83,13 +82,13 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const userEmail = user?.email?.toLowerCase().trim();
   const isMasterAdmin = userEmail === MASTER_EMAIL;
 
-  const demandRef = useMemo(() => (id && db) ? doc(db, "demandas", id) : null, [db, id]);
+  const demandRef = useMemoFirebase(() => (id && db) ? doc(db, "demandas", id) : null, [db, id]);
   const { data: demand, loading: loadingDemand } = useDoc(demandRef);
 
-  const tramitesQuery = useMemo(() => (id && db && user) ? query(
+  const tramitesQuery = useMemoFirebase(() => (id && db && user) ? query(
     collection(db, "tramites"), 
     where("demandaId", "==", id)
-  ) : null, [db, id, user]);
+  ) : null, [db, id, user?.uid]);
   
   const { data: tramitesRaw = [] } = useCollection(tramitesQuery);
 
@@ -101,7 +100,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     });
   }, [tramitesRaw]);
 
-  const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
+  const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
 
   const cabinetId = (profile as any)?.cabinetId;
@@ -115,7 +114,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     return (demand as any).cabinetId !== cabinetId;
   }, [demand, cabinetId, isMasterAdmin, loadingDemand, isTIUser]);
 
-  const usersQuery = useMemo(() => {
+  const usersQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     const targetCabinetId = cabinetId || (demand as any)?.cabinetId;
     if (!targetCabinetId) return null;
@@ -125,7 +124,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
       where("cabinetId", "==", targetCabinetId),
       where("deleted", "==", false)
     );
-  }, [db, user, cabinetId, demand]);
+  }, [db, user?.uid, cabinetId, demand?.cabinetId]);
 
   const { data: allUsersRaw = [] } = useCollection(usersQuery);
 
@@ -133,7 +132,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     return [...allUsersRaw].sort((a: any, b: any) => (a.nome || "").localeCompare(b.nome || ""));
   }, [allUsersRaw]);
 
-  const cabinetQuery = useMemo(() => (db && (cabinetId || (demand as any)?.cabinetId)) ? doc(db, "gabinetes", cabinetId || (demand as any)?.cabinetId) : null, [db, cabinetId, demand]);
+  const cabinetQuery = useMemoFirebase(() => (db && (cabinetId || (demand as any)?.cabinetId)) ? doc(db, "gabinetes", cabinetId || (demand as any)?.cabinetId) : null, [db, cabinetId, demand?.cabinetId]);
   const { data: cabinet } = useDoc(cabinetQuery);
 
   const hasPermission = (perm: keyof UserPermissions) => {

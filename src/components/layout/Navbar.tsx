@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useFirestore, useAuthInstance, useDoc, useCollection, useMemoFirebase } from "@/firebase";
@@ -41,14 +40,15 @@ const AUDITOR_EMAIL = "alemao@gmail.com";
 function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
   const [time, setTime] = useState<string | null>(null);
   const [fullDate, setFullDate] = useState<string | null>(null);
-  const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  const [viewMonth, setViewMonth] = useState<Date>(new Date());
+  const [currentDate, setCurrentDate] = useState<Date | undefined>(undefined);
+  const [viewMonth, setViewMonth] = useState<Date | undefined>(undefined);
   const [minutes, setMinutes] = useState(30);
 
   useEffect(() => {
     const update = () => {
       const now = new Date();
       setCurrentDate(now);
+      if (!viewMonth) setViewMonth(now);
       setTime(new Intl.DateTimeFormat('pt-BR', {
         timeZone: 'America/Sao_Paulo',
         hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
@@ -62,7 +62,7 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [viewMonth]);
 
   if (!time) return null;
 
@@ -84,45 +84,47 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
         </div>
 
         <div className="px-2 pb-2">
-          <Calendar
-            mode="single"
-            month={viewMonth}
-            onMonthChange={setViewMonth}
-            selected={currentDate}
-            showOutsideDays={true}
-            className="p-3"
-            modifiers={{
-              deadline: demandDates
-            }}
-            modifiersClassNames={{
-              deadline: "after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-primary after:rounded-full"
-            }}
-            classNames={{
-              months: "space-y-4",
-              month: "space-y-4",
-              caption: "flex justify-between items-center px-2 pb-4 relative",
-              caption_label: "text-sm font-bold text-white lowercase",
-              nav: "flex items-center gap-2",
-              nav_button: cn(
-                "h-6 w-6 bg-transparent p-0 text-white/40 hover:text-white transition-colors"
-              ),
-              table: "w-full border-collapse space-y-1",
-              head_row: "flex justify-between mb-2",
-              head_cell: "text-white/40 font-bold text-[11px] w-9 text-center uppercase",
-              row: "flex w-full justify-between mt-1",
-              cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-              day: cn(
-                "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-white/5 rounded-full transition-all"
-              ),
-              day_selected: "bg-[#4cc9f0] text-black hover:bg-[#4cc9f0] font-bold rounded-full",
-              day_today: "text-[#4cc9f0] font-bold",
-              day_outside: "text-white/10",
-            }}
-            components={{
-              IconLeft: () => <ChevronUp size={16} className="rotate-[-45deg]" />,
-              IconRight: () => <ChevronDown size={16} className="rotate-[-45deg]" />,
-            }}
-          />
+          {currentDate && (
+            <Calendar
+              mode="single"
+              month={viewMonth}
+              onMonthChange={setViewMonth}
+              selected={currentDate}
+              showOutsideDays={true}
+              className="p-3"
+              modifiers={{
+                deadline: demandDates
+              }}
+              modifiersClassNames={{
+                deadline: "after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-primary after:rounded-full"
+              }}
+              classNames={{
+                months: "space-y-4",
+                month: "space-y-4",
+                caption: "flex justify-between items-center px-2 pb-4 relative",
+                caption_label: "text-sm font-bold text-white lowercase",
+                nav: "flex items-center gap-2",
+                nav_button: cn(
+                  "h-6 w-6 bg-transparent p-0 text-white/40 hover:text-white transition-colors"
+                ),
+                table: "w-full border-collapse space-y-1",
+                head_row: "flex justify-between mb-2",
+                head_cell: "text-white/40 font-bold text-[11px] w-9 text-center uppercase",
+                row: "flex w-full justify-between mt-1",
+                cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                day: cn(
+                  "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-white/5 rounded-full transition-all"
+                ),
+                day_selected: "bg-[#4cc9f0] text-black hover:bg-[#4cc9f0] font-bold rounded-full",
+                day_today: "text-[#4cc9f0] font-bold",
+                day_outside: "text-white/10",
+              }}
+              components={{
+                IconLeft: () => <ChevronUp size={16} className="rotate-[-45deg]" />,
+                IconRight: () => <ChevronDown size={16} className="rotate-[-45deg]" />,
+              }}
+            />
+          )}
         </div>
 
         <div className="p-4 bg-black/20 flex items-center justify-between border-t border-white/5">

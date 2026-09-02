@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useFirestore, useCollection, useUser, useDoc } from "@/firebase";
+import { useFirestore, useCollection, useUser, useDoc, useMemoFirebase } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useState, useMemo } from "react";
 import { collection, query, where, doc } from "firebase/firestore";
@@ -20,17 +19,17 @@ export default function LeadersPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const userEmail = user?.email?.toLowerCase().trim();
-  const profileRef = useMemo(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
+  const profileRef = useMemoFirebase(() => (userEmail && db) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(profileRef);
   const cabinetId = (profile as any)?.cabinetId;
   const isMasterAdmin = user?.email === "edisonunb@gmail.com";
 
-  const leadersQuery = useMemo(() => {
+  const leadersQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     if (isMasterAdmin) return query(collection(db, "liderancas"));
     if (cabinetId) return query(collection(db, "liderancas"), where("cabinetId", "==", cabinetId));
     return null;
-  }, [db, user, isMasterAdmin, cabinetId]);
+  }, [db, user?.uid, isMasterAdmin, cabinetId]);
 
   const { data: leaders = [], loading } = useCollection(leadersQuery);
 
