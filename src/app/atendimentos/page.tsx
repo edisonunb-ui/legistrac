@@ -23,7 +23,8 @@ import {
   ClipboardList,
   AlertCircle,
   Mail,
-  Printer
+  Printer,
+  Filter
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -122,8 +123,8 @@ export default function CitizenServiceListPage() {
           </Link>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
-              <h1 className="text-4xl font-black tracking-tighter uppercase text-white">Atendimento ao <span className="text-primary">Munícipe</span></h1>
-              <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest mt-1">Gestão de solicitações e base de contatos.</p>
+              <h1 className="text-4xl font-black tracking-tighter uppercase text-white">Base de <span className="text-primary">Munícipes</span></h1>
+              <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest mt-1">Gestão de contatos e CRM do Gabinete.</p>
             </div>
             <div className="flex gap-3">
               <Link href="/atendimentos/print" target="_blank">
@@ -136,21 +137,26 @@ export default function CitizenServiceListPage() {
               </Link>
               <Link href="/atendimentos/new">
                 <Button className="bg-primary text-black font-black uppercase text-[11px] tracking-widest h-12 px-8 shadow-lg shadow-primary/20 hover:opacity-90 glow-primary">
-                  <Plus className="mr-2" size={18} /> Novo Atendimento
+                  <Plus className="mr-2" size={18} /> Registrar Atendimento
                 </Button>
               </Link>
             </div>
           </div>
         </header>
 
-        <div className="mb-8 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-          <input 
-            placeholder="Buscar por nome, e-mail, telefone ou endereço..." 
-            className="w-full h-14 bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 text-sm font-bold text-white focus:outline-none focus:border-primary/50 transition-all" 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="mb-8 flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+            <input 
+              placeholder="Buscar por nome, e-mail, telefone ou endereço..." 
+              className="w-full h-14 bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 text-sm font-bold text-white focus:outline-none focus:border-primary/50 transition-all" 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Button variant="outline" className="h-14 px-6 border-white/5 bg-white/5 text-white font-black uppercase text-[10px] tracking-widest">
+            <Filter size={16} className="mr-2" /> Filtrar Bairro
+          </Button>
         </div>
 
         {loading ? (
@@ -162,7 +168,7 @@ export default function CitizenServiceListPage() {
         ) : filteredServices.length === 0 ? (
           <div className="text-center py-32 bg-white/5 rounded-3xl border-2 border-dashed border-white/5">
             <AlertCircle size={48} className="mx-auto text-muted-foreground mb-4 opacity-20" />
-            <h3 className="text-xs font-black uppercase tracking-[0.4em] text-muted-foreground">Nenhum atendimento encontrado</h3>
+            <h3 className="text-xs font-black uppercase tracking-[0.4em] text-muted-foreground">Nenhum registro encontrado</h3>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -183,9 +189,9 @@ export default function CitizenServiceListPage() {
                         </AlertDialogTrigger>
                         <AlertDialogContent className="bg-black border-white/10">
                           <AlertDialogHeader>
-                            <AlertDialogTitle className="text-white font-black uppercase tracking-tight">Excluir Registro?</AlertDialogTitle>
+                            <AlertDialogTitle className="text-white font-black uppercase tracking-tight">Remover Cadastro?</AlertDialogTitle>
                             <AlertDialogDescription className="text-muted-foreground text-xs uppercase font-bold">
-                              Esta ação removerá o atendimento do sistema.
+                              Esta ação removerá o munícipe da base ativa.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -213,22 +219,22 @@ export default function CitizenServiceListPage() {
                     </div>
                   </div>
                   
-                  <div className="p-4 bg-black/40 rounded-2xl text-xs line-clamp-3 border-l-2 border-primary/30 text-white/70 italic leading-relaxed">
+                  <div className="p-4 bg-black/40 rounded-2xl text-xs line-clamp-3 border-l-2 border-primary/30 text-white/70 italic leading-relaxed shadow-inner">
                     "{s.descricaoSolicitacao}"
                   </div>
 
                   <div className="pt-6 border-t border-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-[9px] font-black text-muted-foreground uppercase tracking-widest">
-                      <ClipboardList size={12} className="text-primary/50" /> {s.municipeTituloEleitoral || 'S/ TÍTULO'}
+                      <ClipboardList size={12} className="text-primary/50" /> {s.municipeTituloEleitoral || 'SEM TÍTULO'}
                     </div>
                     {s.demandaId ? (
                       <Link href={`/demandas/${s.demandaId}`}>
-                        <Button variant="ghost" size="sm" className="h-9 text-primary hover:bg-primary/10 gap-2 text-[10px] font-black uppercase tracking-widest">
-                          Ver Demanda <ChevronRight size={14} />
+                        <Button variant="ghost" size="sm" className="h-9 text-primary hover:bg-primary/10 gap-2 text-[10px] font-black uppercase tracking-widest border border-primary/10">
+                          Timeline <ChevronRight size={14} />
                         </Button>
                       </Link>
                     ) : (
-                      <span className="text-[9px] text-muted-foreground font-black uppercase tracking-widest opacity-20">Sem Demanda</span>
+                      <span className="text-[9px] text-muted-foreground font-black uppercase tracking-widest opacity-20">Arquivado</span>
                     )}
                   </div>
                 </CardContent>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useFirestore, useDoc, useCollection, useStorage, useMemoFirebase } from "@/firebase";
@@ -27,7 +28,8 @@ import {
   CheckCircle2,
   RefreshCcw,
   MessageSquare,
-  LifeBuoy
+  LifeBuoy,
+  Briefcase
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -108,7 +110,6 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
 
   const isAccessDenied = useMemo(() => {
     if (loadingDemand || !demand || isMasterAdmin) return false;
-    // HelpDesk permite acesso ao Gabinete de TI destino
     if (demand.tipo === 'HELPDESK' && isTIUser) return false;
     if (!cabinetId) return true;
     return (demand as any).cabinetId !== cabinetId;
@@ -224,11 +225,11 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
         dataAtualizacao: serverTimestamp()
       });
 
-      toast({ title: "Comentário enviado" });
+      toast({ title: "Registro atualizado" });
       setObs("");
       setFiles([]);
     } catch (e) {
-      toast({ title: "Erro ao comentar", variant: "destructive" });
+      toast({ title: "Erro ao registrar", variant: "destructive" });
     } finally {
       setProcessing(false);
     }
@@ -280,7 +281,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
         demandaOrigemId: demand?.id,
         dataCriacao: Timestamp.now()
       });
-      toast({ title: "Sucesso", description: "Documento salvo na Atividade Legislativa." });
+      toast({ title: "Sucesso", description: "Protocolo salvo na Atividade Legislativa." });
       setAiDraft(null);
     } catch (e) {
       toast({ title: "Erro ao salvar", variant: "destructive" });
@@ -291,20 +292,18 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
 
   const handleSend = async () => {
     if (!demand || !user || !selectedUser || !db) {
-      toast({ title: "Atenção", description: "Selecione um destinatário.", variant: "destructive" });
+      toast({ title: "Atenção", description: "Selecione o destinatário.", variant: "destructive" });
       return;
     }
     setProcessing(true);
     try {
       const targetUser = allUsers.find((u: any) => u.uid === selectedUser || u.email === selectedUser);
-      if (!targetUser) {
-        throw new Error("Usuário destino não encontrado.");
-      }
+      if (!targetUser) throw new Error("Usuário não encontrado.");
 
       const newAttachments = await uploadFiles();
       await sendDemand(db, demand.id, user.uid, targetUser.uid || targetUser.email, obs, targetUser.perfil, newAttachments);
       
-      toast({ title: "Sucesso", description: "Demanda tramitada com sucesso." });
+      toast({ title: "Sucesso", description: "Protocolo tramitado com sucesso." });
       setSendModalOpen(false);
       setObs("");
       setSelectedUser("");
@@ -321,7 +320,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     setProcessing(true);
     try {
       const newAttachments = await uploadFiles();
-      await returnDemand(db, demand.id, user.uid, demand.criadoPor, obs || "Devolvida para revisão.", newAttachments);
+      await returnDemand(db, demand.id, user.uid, demand.criadoPor, obs || "Retorno para revisão de origem.", newAttachments);
       toast({ title: "Sucesso", description: "Demanda devolvida." });
       setSendModalOpen(false);
       setObs("");
@@ -337,8 +336,8 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     if (!demand || !user || !db) return;
     setProcessing(true);
     try {
-      await finalizeDemand(db, demand.id, user.uid, demand.criadoPor, obs || "Finalizada com sucesso.");
-      toast({ title: "Sucesso", description: "Demanda finalizada." });
+      await finalizeDemand(db, demand.id, user.uid, demand.criadoPor, obs || "Encerramento definitivo do protocolo.");
+      toast({ title: "Protocolo Finalizado", description: "O registro foi movido para o arquivo morto." });
       setObs("");
     } catch (e) {
       toast({ title: "Erro", description: "Falha ao finalizar.", variant: "destructive" });
@@ -351,8 +350,8 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
     if (!demand || !user || !db) return;
     setProcessing(true);
     try {
-      await reopenDemand(db, demand.id, user.uid, user.uid, "Demanda reaberta para continuidade dos trabalhos.");
-      toast({ title: "Demanda Reaberta", description: "O protocolo retornou para o status Em Trâmite." });
+      await reopenDemand(db, demand.id, user.uid, user.uid, "Protocolo reaberto para diligências adicionais.");
+      toast({ title: "Sucesso", description: "Demanda reativada." });
     } catch (e) {
       toast({ title: "Erro ao reabrir", variant: "destructive" });
     } finally {
@@ -367,10 +366,10 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   if (isAccessDenied) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
-        <div className="p-6 bg-primary/10 rounded-full mb-6 text-primary glow-primary"><Lock size={48} /></div>
-        <h1 className="text-2xl font-black uppercase tracking-tighter mb-2 text-white">Acesso Negado</h1>
-        <p className="text-muted-foreground text-[10px] uppercase tracking-widest mb-10">Esta demanda pertence a outro gabinete.</p>
-        <Button onClick={() => router.push("/demandas")} className="bg-primary text-black font-black uppercase text-[11px] tracking-widest px-12 h-12 glow-primary">Voltar Agora</Button>
+        <Lock size={64} className="text-primary mb-6 glow-primary" />
+        <h1 className="text-2xl font-black uppercase tracking-tighter text-white mb-2">Protocolo Sigiloso</h1>
+        <p className="text-muted-foreground text-[10px] uppercase tracking-widest max-w-md">Este registro pertence a outro gabinete isolado.</p>
+        <Button onClick={() => router.push("/demandas")} className="mt-8 bg-primary text-black font-black uppercase text-[11px] h-12 px-10">Voltar Agora</Button>
       </div>
     );
   }
@@ -383,19 +382,20 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
   const filteredCollaborators = allUsers.filter(u => u.uid !== user?.uid && u.email?.toLowerCase() !== user?.email?.toLowerCase());
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-white">
       <Navbar />
       <main className="container mx-auto px-4 py-8 sm:py-12">
+        {/* HEADER OFICIAL (Inspirado em SAPL/Infoleg) */}
         <header className="mb-12 flex flex-col gap-6">
           <Link href="/demandas" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-all w-fit text-[10px] font-black uppercase tracking-[0.3em]">
-            <ChevronLeft size={16} /> Voltar ao Painel
+            <ChevronLeft size={16} /> Painel de Protocolos
           </Link>
           
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-8">
+          <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-8">
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-4">
                 {demand.tipo === 'HELPDESK' && <div className="p-2 bg-secondary/20 text-secondary rounded-lg"><LifeBuoy size={24} /></div>}
-                <h1 className="text-3xl sm:text-4xl font-black uppercase leading-tight tracking-tighter text-white">{demand.titulo}</h1>
+                <h1 className="text-3xl sm:text-5xl font-black uppercase leading-tight tracking-tighter text-white">{demand.titulo}</h1>
                 <Badge className={cn(
                   "uppercase text-[10px] font-black tracking-widest px-4 py-1.5 text-black",
                   demand.status === "ABERTO" && "bg-primary glow-primary",
@@ -406,25 +406,27 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                   {demand.status.replace("_", " ")}
                 </Badge>
               </div>
-              <div className="flex items-center gap-3">
-                <p className="text-[10px] text-primary font-black uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">Protocolo: #{demand.id.substring(0, 8)}</p>
-                <Badge variant={demand.prioridade === "ALTA" ? "destructive" : "secondary"} className="text-[9px] font-black uppercase tracking-widest">
-                  {demand.prioridade} PRIORIDADE
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2 text-[10px] text-primary font-black uppercase tracking-widest bg-primary/5 px-3 py-1.5 rounded-full border border-primary/20">
+                   <Briefcase size={12} /> PROTOCOLO: #{demand.id.substring(0, 8)}
+                </div>
+                <Badge variant={demand.prioridade === "ALTA" ? "destructive" : "secondary"} className="text-[9px] font-black uppercase tracking-widest px-3">
+                  {demand.prioridade} URGÊNCIA
                 </Badge>
-                {demand.tipo === 'HELPDESK' && <Badge className="bg-secondary text-white text-[9px] font-black uppercase tracking-widest">HELP-DESK TI</Badge>}
+                {demand.tipo === 'HELPDESK' && <Badge className="bg-secondary text-white text-[9px] font-black uppercase">TI GABINETE</Badge>}
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
               {demand.tipo !== 'HELPDESK' && (
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="gap-2 font-black uppercase text-[11px] tracking-widest h-14 sm:h-12 w-full sm:w-auto border-white/10 text-white hover:bg-white/5"><Sparkles size={16} className="text-primary" /> Redigir IA</Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl w-[95vw] bg-black border-white/10 shadow-2xl">
+                  <DialogContent className="max-w-3xl w-[95vw] bg-black border-white/10 shadow-2xl">
                     <DialogHeader>
                       <DialogTitle className="font-black uppercase tracking-widest text-primary text-xl">Assistente Legislativo IA</DialogTitle>
-                      <DialogDescription className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mt-2">Transformação inteligente de demanda em documento oficial.</DialogDescription>
+                      <DialogDescription className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mt-2">Converta esta demanda em uma ação legislativa oficial.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-6 py-6">
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -436,12 +438,12 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                       {aiDraft && (
                         <div className="space-y-3 animate-in fade-in slide-in-from-top-4">
                           <Label className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Minuta Gerada:</Label>
-                          <Textarea value={aiDraft.content} readOnly className="h-[300px] text-xs font-mono bg-white/5 border-white/10 text-white/90 leading-relaxed" />
+                          <Textarea value={aiDraft.content} readOnly className="h-[400px] text-xs font-mono bg-white/5 border-white/10 text-white/90 leading-relaxed shadow-inner" />
                         </div>
                       )}
                     </div>
                     <DialogFooter>
-                      {aiDraft && <Button className="font-black uppercase text-[11px] tracking-widest w-full bg-primary text-black h-14 glow-primary" onClick={handleSaveDraft} disabled={processing}>Salvar na Atividade Legislativa</Button>}
+                      {aiDraft && <Button className="font-black uppercase text-[11px] tracking-widest w-full bg-primary text-black h-14 glow-primary" onClick={handleSaveDraft} disabled={processing}>Salvar na Memória Legislativa</Button>}
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -450,15 +452,15 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
               {canTramitar && !demand.finalizada && (
                 <Dialog open={sendModalOpen} onOpenChange={setSendModalOpen}>
                   <DialogTrigger asChild>
-                    <Button className="gap-2 font-black uppercase text-[11px] tracking-widest h-14 sm:h-12 w-full sm:w-auto bg-primary text-black glow-primary"><Send size={16} /> Tramitar</Button>
+                    <Button className="gap-2 font-black uppercase text-[11px] tracking-widest h-14 sm:h-12 w-full sm:w-auto bg-primary text-black glow-primary"><Send size={16} /> Despachar</Button>
                   </DialogTrigger>
                   <DialogContent className="w-[95vw] sm:max-w-2xl bg-black border-white/10 shadow-2xl overflow-y-auto max-h-[90vh]">
-                    <DialogHeader><DialogTitle className="font-black uppercase tracking-widest text-primary">Despacho de Demanda</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle className="font-black uppercase tracking-widest text-primary">Despacho de Protocolo</DialogTitle></DialogHeader>
                     <div className="space-y-6 py-6">
                       <div className="space-y-3">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Destinatário</Label>
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Assessor Destinatário</Label>
                         <Select onValueChange={setSelectedUser} value={selectedUser}>
-                          <SelectTrigger className="h-14 bg-white/5 border-white/10 text-white font-bold"><SelectValue placeholder="Selecione o assessor" /></SelectTrigger>
+                          <SelectTrigger className="h-14 bg-white/5 border-white/10 text-white font-bold"><SelectValue placeholder="Selecione o responsável" /></SelectTrigger>
                           <SelectContent className="bg-black border-white/10">
                             {filteredCollaborators.map((u: any) => (
                               <SelectItem key={u.uid || u.id} value={u.uid || u.id}>{u.nome} ({u.perfil})</SelectItem>
@@ -467,14 +469,14 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                         </Select>
                       </div>
                       <div className="space-y-3">
-                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Observações Técnicas / Relato Parcial</Label>
-                        <Textarea placeholder="Descreva o que foi feito até agora e o motivo do encaminhamento..." value={obs} onChange={e => setObs(e.target.value)} className="bg-white/5 border-white/10 min-h-[120px] text-white" />
+                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Relato / Observações de Trâmite</Label>
+                        <Textarea placeholder="Descreva o motivo do despacho ou status da solicitação..." value={obs} onChange={e => setObs(e.target.value)} className="bg-white/5 border-white/10 min-h-[120px] text-white" />
                       </div>
 
                       <div className="p-6 bg-white/5 rounded-2xl border border-white/10 space-y-4">
                         <div className="flex items-center justify-between">
                           <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                            <Paperclip size={14} /> Anexar Novos Documentos
+                            <Paperclip size={14} /> Juntar Documentos
                           </Label>
                           <span className="text-[9px] text-muted-foreground font-black uppercase">{files.length} selecionado(s)</span>
                         </div>
@@ -500,7 +502,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                     <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-white/5">
                       <Button variant="outline" className="w-full font-black uppercase text-[11px] h-14" onClick={handleReturn} disabled={processing}>Devolver Origem</Button>
                       <Button className="w-full font-black uppercase text-[11px] bg-primary text-black h-14 glow-primary" onClick={handleSend} disabled={processing || !selectedUser || !obs}>
-                        {processing ? <Loader2 className="animate-spin" /> : "Confirmar Envio"}
+                        {processing ? <Loader2 className="animate-spin" /> : "Confirmar Despacho"}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -509,13 +511,13 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
               
               {hasPermission('finalizar_demandas') && !demand.finalizada && (
                 <Button variant="outline" className="text-green-500 border-green-500/20 hover:bg-green-500/10 gap-2 font-black uppercase text-[11px] tracking-widest h-14 sm:h-12 w-full sm:w-auto" onClick={handleFinalize} disabled={processing}>
-                  <CheckCircle size={16} /> Finalizar
+                  <CheckCircle size={16} /> Encerrar Protocolo
                 </Button>
               )}
 
               {hasPermission('reabrir_demandas') && demand.finalizada && (
                 <Button variant="outline" className="text-primary border-primary/20 hover:bg-primary/10 gap-2 font-black uppercase text-[11px] tracking-widest h-14 sm:h-12 w-full sm:w-auto" onClick={handleReopen} disabled={processing}>
-                  <RefreshCcw size={16} /> Reabrir Demanda
+                  <RefreshCcw size={16} /> Reativar Demanda
                 </Button>
               )}
             </div>
@@ -523,12 +525,13 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+          {/* COLUNA PRINCIPAL: TEXTO E HISTÓRICO (Best of SAPL) */}
           <div className="lg:col-span-2 space-y-8">
             <Card className="border-white/5 bg-white/5 shadow-2xl overflow-hidden relative">
               <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
               <CardHeader className="flex flex-row items-center justify-between border-b border-white/5 bg-white/5 px-8 py-6">
                 <CardTitle className="text-[11px] font-black uppercase tracking-[0.4em] flex items-center gap-3 text-primary">
-                  <Info size={16} /> Descritivo do Protocolo
+                  <Info size={16} /> Relato da Demanda
                 </CardTitle>
                 {demand.tipo !== 'HELPDESK' && (
                   <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10 h-10 w-10 p-0" onClick={handleGenerateSummary} disabled={summarizing}>
@@ -544,7 +547,7 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                 )}
                 {demand.assuntoPredefinido && (
                   <div className="p-4 bg-secondary/10 border border-secondary/20 rounded-xl mb-6">
-                    <p className="text-[10px] font-black uppercase text-secondary tracking-widest mb-1">Assunto Pré-cadastrado:</p>
+                    <p className="text-[10px] font-black uppercase text-secondary tracking-widest mb-1">Classificação Técnica:</p>
                     <p className="text-white font-black text-lg uppercase tracking-tight">{demand.assuntoPredefinido}</p>
                   </div>
                 )}
@@ -555,39 +558,29 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
             </Card>
 
             <Card className="border-white/5 bg-white/5 shadow-2xl overflow-hidden">
-              <CardHeader className="bg-white/5 border-b border-white/5 px-8 py-6 flex flex-row items-center justify-between">
+              <CardHeader className="bg-white/5 border-b border-white/5 px-8 py-6">
                 <CardTitle className="text-[11px] font-black uppercase tracking-[0.4em] flex items-center gap-3 text-primary">
-                  <History size={16} /> Histórico / Chat de Atendimento
+                  <History size={16} /> Memória de Trâmite (Timeline)
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-8 space-y-10">
                 {!demand.finalizada && (
                   <div className="bg-white/5 p-6 rounded-2xl border border-white/10 space-y-4">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><MessageSquare size={14} /> Adicionar Mensagem / Comentário</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2"><MessageSquare size={14} /> Registrar Novo Trâmite / Observação</Label>
                     <Textarea 
-                      placeholder="Escreva sua mensagem para o técnico ou assessor..." 
+                      placeholder="Descreva o andamento técnico ou resposta parcial..." 
                       value={obs} 
                       onChange={e => setObs(e.target.value)} 
                       className="bg-black/50 border-white/10 text-white min-h-[100px]"
                     />
                     <div className="flex flex-col sm:flex-row gap-4 items-center justify-between pt-2">
                        <div className="w-full sm:w-auto">
-                          <Input type="file" multiple onChange={handleFileChange} className="bg-transparent border-none text-[10px] file:bg-white/10 file:text-white file:border-none file:rounded-lg" />
+                          <Input type="file" multiple onChange={handleFileChange} className="bg-transparent border-none text-[10px] file:bg-white/10 file:text-white file:border-none file:rounded-lg cursor-pointer" />
                        </div>
                        <Button onClick={handleComment} disabled={processing || !obs} className="bg-primary text-black font-black uppercase text-[10px] px-8 h-10 glow-primary w-full sm:w-auto">
-                          {processing ? <Loader2 className="animate-spin" /> : "Enviar Comentário"}
+                          {processing ? <Loader2 className="animate-spin" /> : "Registrar na Timeline"}
                        </Button>
                     </div>
-                    {files.length > 0 && (
-                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
-                          {files.map((f, i) => (
-                             <div key={i} className="text-[9px] font-black uppercase bg-black/40 p-2 rounded-lg border border-white/5 flex justify-between items-center">
-                                <span className="truncate pr-2">{f.name}</span>
-                                <button onClick={() => removeFile(i)} className="text-destructive"><X size={12}/></button>
-                             </div>
-                          ))}
-                       </div>
-                    )}
                   </div>
                 )}
 
@@ -597,8 +590,8 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                       {idx !== tramites.length - 1 && <div className="absolute left-[0.9rem] top-10 bottom-0 w-px bg-white/5" />}
                       <div className="w-8 h-8 rounded-xl bg-black border border-white/10 flex items-center justify-center shrink-0 z-10 shadow-2xl group">
                         <div className={cn(
-                          "w-2.5 h-2.5 rounded-full glow-primary",
-                          t.acao === "COMENTARIO" ? "bg-secondary" : "bg-primary"
+                          "w-2.5 h-2.5 rounded-full",
+                          t.acao === "COMENTARIO" ? "bg-secondary glow-secondary" : "bg-primary glow-primary"
                         )} />
                       </div>
                       <div className="flex-1 pb-4">
@@ -609,13 +602,13 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                           )}>{t.acao}</h4>
                           <span className="text-[10px] font-black text-muted-foreground uppercase">{t.data?.toDate().toLocaleString()}</span>
                         </div>
-                        <p className="text-sm text-white/70 mt-3 bg-black/40 p-4 rounded-2xl border border-white/5 italic leading-relaxed">
+                        <p className="text-sm text-white/70 mt-3 bg-black/40 p-4 rounded-2xl border border-white/5 italic leading-relaxed shadow-inner">
                           {t.observacao}
                         </p>
                         {t.anexos && t.anexos.length > 0 && (
                           <div className="flex flex-wrap gap-3 mt-4">
                             {t.anexos.map((a, i) => (
-                              <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-[10px] font-black uppercase bg-white/5 px-4 py-2 rounded-xl border border-white/10 hover:border-primary/40 transition-all text-white/80">
+                              <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-[10px] font-black uppercase bg-white/5 px-4 py-2 rounded-xl border border-white/10 hover:border-primary/40 transition-all text-white/80 shadow-sm">
                                 <Paperclip size={12} className="text-primary" /> {a.nome}
                               </a>
                             ))}
@@ -629,16 +622,17 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
             </Card>
           </div>
 
+          {/* COLUNA LATERAL: DOCUMENTOS E STATUS (Best of GabGestão/SAPL) */}
           <div className="space-y-8">
             <Card className="border-white/5 bg-white/5 shadow-2xl overflow-hidden">
               <CardHeader className="bg-white/5 border-b border-white/5 px-6 py-5">
-                <CardTitle className="text-[11px] font-black uppercase tracking-[0.3em] flex items-center gap-3 text-primary"><Gavel size={16} /> Pasta Digital</CardTitle>
+                <CardTitle className="text-[11px] font-black uppercase tracking-[0.3em] flex items-center gap-3 text-primary"><Gavel size={16} /> Pasta Digital de Documentos</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 p-6">
                 {allAttachments.map((a, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 bg-black/40 rounded-2xl border border-white/5 group hover:border-primary/40 transition-all">
+                  <div key={i} className="flex items-center justify-between p-4 bg-black/40 rounded-2xl border border-white/5 group hover:border-primary/40 transition-all shadow-inner">
                     <div className="flex items-center gap-4 overflow-hidden">
-                      <div className="p-3 bg-white/5 rounded-xl group-hover:bg-primary/10 transition-colors shadow-inner">
+                      <div className="p-3 bg-white/5 rounded-xl group-hover:bg-primary/10 transition-colors">
                         <FileText size={16} className="text-primary" />
                       </div>
                       <span className="text-[10px] font-black uppercase tracking-tight truncate pr-4 text-white group-hover:text-primary transition-colors">{a.nome}</span>
@@ -648,17 +642,17 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                     </a>
                   </div>
                 ))}
-                {allAttachments.length === 0 && <p className="text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground py-8 border border-dashed border-white/5 rounded-2xl">Sem documentos anexados.</p>}
+                {allAttachments.length === 0 && <p className="text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground py-8 border border-dashed border-white/5 rounded-2xl">Vazio.</p>}
               </CardContent>
             </Card>
 
             <Card className="border-white/5 bg-white/5 shadow-2xl overflow-hidden">
               <CardHeader className="bg-white/5 border-b border-white/5 px-6 py-5">
-                <CardTitle className="text-[11px] font-black uppercase tracking-[0.3em] text-primary">Indicadores Estratégicos</CardTitle>
+                <CardTitle className="text-[11px] font-black uppercase tracking-[0.3em] text-primary">Indicadores do Gabinete</CardTitle>
               </CardHeader>
               <CardContent className="space-y-8 p-8">
                 <div className="space-y-2">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Prazo Estimado</p>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Data Limite Estimada</p>
                   <div className="flex items-center gap-3 text-lg font-black uppercase tracking-tight text-white">
                     <Calendar size={18} className="text-primary" /> {new Date(demand.prazo).toLocaleDateString()}
                   </div>
@@ -666,12 +660,12 @@ export default function DemandDetailPage({ params }: { params: Promise<{ id: str
                 <div className="space-y-2">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Agente Responsável</p>
                   <div className="flex items-center gap-3 text-lg font-black uppercase tracking-tight text-white">
-                    <UserIcon size={18} className="text-primary" /> {allUsers.find(u => u.uid === demand.responsavelAtual || u.id === demand.responsavelAtual)?.nome || (demand.tipo === 'HELPDESK' ? 'Equipe TI' : 'Pendente')}
+                    <UserIcon size={18} className="text-primary" /> {allUsers.find(u => u.uid === demand.responsavelAtual || u.id === demand.responsavelAtual)?.nome || (demand.tipo === 'HELPDESK' ? 'Central de TI' : 'Não Atribuído')}
                   </div>
                 </div>
                 <div className="pt-4 border-t border-white/5">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Nível de Prioridade</span>
+                    <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Nível de Crise</span>
                     <Badge variant={demand.prioridade === "ALTA" ? "destructive" : "secondary"} className="text-[10px] font-black uppercase tracking-widest px-4 py-1.5 shadow-lg">
                       {demand.prioridade}
                     </Badge>
