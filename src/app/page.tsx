@@ -3,7 +3,7 @@
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useStorage } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { collection, query, doc, setDoc, where, updateDoc, serverTimestamp } from "firebase/firestore";
+import { collection, query, doc, setDoc, where, serverTimestamp } from "firebase/firestore";
 import { Demand, Leader, GlobalConfig } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,6 @@ import {
   Sparkles,
   ShieldCheck,
   ImageIcon,
-  UserPlus,
   Gavel
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
@@ -32,7 +31,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -246,7 +244,7 @@ export default function StrategicDashboard() {
       setUploadingLogo(true);
       
       const storageRef = ref(storage, `developer/branding_signature`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      const uploadTask = (await import("firebase/storage")).uploadBytesResumable(storageRef, file);
 
       uploadTask.on(
         'state_changed',
@@ -258,7 +256,7 @@ export default function StrategicDashboard() {
           setUploadingLogo(false);
         },
         async () => {
-          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          const downloadUrl = await (await import("firebase/storage")).getDownloadURL(uploadTask.snapshot.ref);
           if (db) {
             await setDoc(doc(db, "config", "global"), {
               developerLogoUrl: downloadUrl,
@@ -331,7 +329,6 @@ export default function StrategicDashboard() {
           </Dialog>
         )}
 
-        {/* INDICADORES PREMIUM (Inspirado em GabGestão) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           <Card className="bg-white/5 border-white/5 shadow-2xl overflow-hidden relative group hover:border-primary/40 transition-all">
              <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
@@ -397,7 +394,6 @@ export default function StrategicDashboard() {
           </Card>
         </div>
 
-        {/* ESTRUTURA HÍBRIDA (Mapeamento + Memória) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <section className="lg:col-span-2 space-y-8">
             <div className="flex items-center justify-between px-2">
@@ -470,7 +466,7 @@ export default function StrategicDashboard() {
                   <Link href="/atendimentos" className="block group">
                     <div className="flex justify-between items-center p-5 bg-white/5 rounded-2xl border border-white/5 transition-all group-hover:bg-primary/10 group-hover:border-primary/20">
                       <div className="flex items-center gap-3">
-                        <Users size={16} className="text-primary" />
+                        <ClipboardList size={16} className="text-primary" />
                         <span className="text-[10px] font-black text-white uppercase tracking-widest">Base de Munícipes</span>
                       </div>
                       <ChevronRight size={16} className="text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
@@ -501,7 +497,6 @@ export default function StrategicDashboard() {
         </div>
       </main>
 
-      {/* MODAL DE AJUSTE DE META (Inspirado em GabGestão) */}
       <Dialog open={isEditingMeta} onOpenChange={setIsEditingMeta}>
         <DialogContent className="bg-black border-white/10 w-[95vw] sm:max-w-md text-white shadow-2xl">
           <DialogHeader>
