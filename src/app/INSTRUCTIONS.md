@@ -24,3 +24,12 @@ allow read, write: if true;
 
 ## 5. Gestão de Equipe
 Agora você pode editar as permissões dos usuários diretamente na aba **Equipe**. Use o botão "Editar Poderes" para liberar ou restringir funções como "Finalizar Demandas" ou "Reabrir".
+
+## 6. Referências de Gestão (Memória do Projeto)
+Caso precise consultar sistemas similares para inspiração de novas funcionalidades, aqui estão as referências comuns do setor:
+- **SAPL (Interlegis)**: https://www.interlegis.leg.br/produtos/sapl
+- **GabGestão**: (Sistema de referência para fluxos de assessoria)
+- **Infoleg**: (Referência para transparência e processos legislativos)
+
+---
+*Dica do Desenvolvedor: Mantenha este arquivo atualizado com os links que você considerar importantes para o futuro do LegisTrac.*
