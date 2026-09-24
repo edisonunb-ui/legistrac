@@ -1,20 +1,20 @@
 # 📥 COMO BAIXAR SEU PROJETO AGORA
 
-Para retirar o código do Firebase Studio e salvar no seu computador, siga estes passos baseados na sua tela:
+Com base na sua tela, siga estes passos simples:
 
 ### 1. Localize o Explorer
 No painel à sua esquerda (onde aparecem os ícones de arquivos), procure o topo da lista.
 
-### 2. Clique com o Botão Direito
-Clique com o botão **DIREITO** do mouse sobre a palavra **legistrac** (que aparece logo abaixo da palavra STUDIO no menu lateral).
+### 2. Clique com o Botão Direito em STUDIO
+Clique com o botão **DIREITO** do mouse sobre a palavra **STUDIO** (que está no topo da árvore de arquivos, com uma setinha ao lado).
 
 ### 3. Selecione "Download"
-Uma opção chamada **Download** aparecerá no menu. Clique nela e o sistema vai gerar um arquivo `.zip` com tudo pronto.
+Uma opção chamada **Download** aparecerá no menu. Clique nela e o sistema vai gerar um arquivo comprimido com todo o seu código.
 
 ---
 
 ## 🛠️ Como rodar no seu PC após baixar:
-1. Extraia o arquivo `.zip`.
+1. Extraia o arquivo baixado.
 2. Instale o **Node.js** (versão 20 ou superior) em [nodejs.org](https://nodejs.org/).
 3. Abra o terminal na pasta do projeto e digite:
    ```bash
