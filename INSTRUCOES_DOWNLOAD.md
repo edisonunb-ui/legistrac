@@ -1,15 +1,15 @@
 # 📥 COMO BAIXAR SEU PROJETO AGORA
 
-Para retirar o código do Firebase Studio e salvar no seu computador, siga estes 3 passos simples:
+Para retirar o código do Firebase Studio e salvar no seu computador, siga estes passos baseados na sua tela:
 
-### 1. Localize a Pasta Raiz
-No painel à sua esquerda (onde aparecem os nomes dos arquivos), suba tudo até encontrar a pasta principal chamada **legistrac**.
+### 1. Localize o Explorer
+No painel à sua esquerda (onde aparecem os ícones de arquivos), procure o topo da lista.
 
 ### 2. Clique com o Botão Direito
-Clique com o botão direito do mouse sobre a palavra **legistrac**.
+Clique com o botão **DIREITO** do mouse sobre a palavra **legistrac** (que aparece logo abaixo da palavra STUDIO no menu lateral).
 
 ### 3. Selecione "Download"
-Uma opção chamada **Download** aparecerá no menu suspenso. Clique nela e o sistema vai gerar um arquivo `.zip` com tudo pronto para você.
+Uma opção chamada **Download** aparecerá no menu. Clique nela e o sistema vai gerar um arquivo `.zip` com tudo pronto.
 
 ---
 
