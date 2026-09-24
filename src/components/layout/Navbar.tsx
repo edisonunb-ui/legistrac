@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useUser, useFirestore, useAuthInstance, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { Button } from "@/components/ui/button";
-import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, ChevronDown, ChevronUp, Play, Plus, Minus, Settings, Award, ShieldCheck, LifeBuoy } from "lucide-react";
+import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, ChevronDown, ChevronUp, Play, Plus, Minus, Settings, Award, ShieldCheck, LifeBuoy, Download, Info } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -25,6 +26,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { useMemo, useState, useEffect } from "react";
 import { doc, collection, query, where } from "firebase/firestore";
@@ -162,6 +170,7 @@ export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDownloadGuideOpen, setIsDownloadGuideOpen] = useState(false);
 
   const userEmail = useMemo(() => user?.email?.toLowerCase().trim() || null, [user?.email]);
   const isSuperAdmin = useMemo(() => userEmail === MASTER_EMAIL, [userEmail]);
@@ -260,115 +269,174 @@ export function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-black/80 backdrop-blur-md">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-8">
-          <div className="md:hidden">
-            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-white/5 h-10 w-10">
-                  <Menu size={20} />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[300px] p-0 border-r border-white/5 bg-black">
-                <SheetHeader className="p-6 border-b border-white/5 text-left bg-white/5">
-                  <SheetTitle className="flex items-center gap-3">
-                    <BrandLogo />
-                    <div className="flex flex-col leading-none">
-                      <span className="font-black tracking-tight text-white uppercase">Legis<span className="text-primary">Trac</span></span>
-                      <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Gabinete Mobile</span>
-                    </div>
-                  </SheetTitle>
-                </SheetHeader>
-                <div className="flex flex-col py-6 space-y-1">
-                  {navItems.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={cn(
-                        "flex items-center gap-4 px-6 py-4 text-sm font-black transition-all uppercase tracking-widest",
-                        pathname === item.href 
-                          ? "text-primary bg-primary/10 border-l-4 border-primary" 
-                          : "text-muted-foreground hover:bg-white/5 hover:text-white"
-                      )}
+    <>
+      <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-black/80 backdrop-blur-md">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <div className="md:hidden">
+              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-white/5 h-10 w-10">
+                    <Menu size={20} />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[300px] p-0 border-r border-white/5 bg-black">
+                  <SheetHeader className="p-6 border-b border-white/5 text-left bg-white/5">
+                    <SheetTitle className="flex items-center gap-3">
+                      <BrandLogo />
+                      <div className="flex flex-col leading-none">
+                        <span className="font-black tracking-tight text-white uppercase">Legis<span className="text-primary">Trac</span></span>
+                        <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Gabinete Mobile</span>
+                      </div>
+                    </SheetTitle>
+                  </SheetHeader>
+                  <div className="flex flex-col py-6 space-y-1">
+                    {navItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={cn(
+                          "flex items-center gap-4 px-6 py-4 text-sm font-black transition-all uppercase tracking-widest",
+                          pathname === item.href 
+                            ? "text-primary bg-primary/10 border-l-4 border-primary" 
+                            : "text-muted-foreground hover:bg-white/5 hover:text-white"
+                        )}
+                      >
+                        <item.icon size={18} className={pathname === item.href ? "text-primary" : ""} />
+                        {item.label}
+                      </Link>
+                    ))}
+                    <button
+                      onClick={() => { setIsMobileMenuOpen(false); setIsDownloadGuideOpen(true); }}
+                      className="flex items-center gap-4 px-6 py-4 text-sm font-black transition-all uppercase tracking-widest text-primary/80 hover:bg-white/5"
                     >
-                      <item.icon size={18} className={pathname === item.href ? "text-primary" : ""} />
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
-
-          <Link href="/" className="flex items-center gap-3 group">
-            <BrandLogo />
-            <div className="flex flex-col leading-none">
-              <span className="text-lg font-black tracking-tighter text-white uppercase">Legis<span className="text-primary">Trac</span></span>
-              <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest truncate max-w-[150px]">
-                {isSuperAdmin ? "Central SuperAdmin" : (cabinet as any)?.vereador || "Gabinete"}
-              </span>
+                      <Download size={18} />
+                      Baixar Código
+                    </button>
+                  </div>
+                </SheetContent>
+              </Sheet>
             </div>
-          </Link>
 
-          <div className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "px-3 py-2 rounded-md text-[11px] font-black transition-all flex items-center gap-2 uppercase tracking-widest",
-                  pathname === item.href ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-white hover:bg-white/5"
-                )}
+            <Link href="/" className="flex items-center gap-3 group">
+              <BrandLogo />
+              <div className="flex flex-col leading-none">
+                <span className="text-lg font-black tracking-tighter text-white uppercase">Legis<span className="text-primary">Trac</span></span>
+                <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest truncate max-w-[150px]">
+                  {isSuperAdmin ? "Central SuperAdmin" : (cabinet as any)?.vereador || "Gabinete"}
+                </span>
+              </div>
+            </Link>
+
+            <div className="hidden md:flex items-center gap-1">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "px-3 py-2 rounded-md text-[11px] font-black transition-all flex items-center gap-2 uppercase tracking-widest",
+                    pathname === item.href ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-white hover:bg-white/5"
+                  )}
+                >
+                  <item.icon size={13} />
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden lg:block">
+              <Button 
+                variant="ghost" 
+                onClick={() => setIsDownloadGuideOpen(true)}
+                className="text-[10px] font-black uppercase tracking-widest text-primary/60 hover:text-primary hover:bg-primary/5 h-10 px-3 gap-2"
               >
-                <item.icon size={13} />
-                {item.label}
-              </Link>
-            ))}
+                <Download size={14} /> Baixar Sistema
+              </Button>
+            </div>
+
+            <ClockDisplay demandDates={demandDates} />
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full border border-white/10 p-0 overflow-hidden hover:bg-white/5 transition-all">
+                  <Avatar className="h-full w-full">
+                    <AvatarFallback className="bg-primary/20 text-primary font-black text-xs border border-primary/30">
+                      {(profile as any)?.nome?.[0]?.toUpperCase() || (isSuperAdmin ? "SA" : <User size={16} />)}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-64 bg-black border-white/10 shadow-2xl" align="end">
+                <DropdownMenuLabel className="p-4 bg-white/5">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-black text-white truncate uppercase">{(profile as any)?.nome || (isSuperAdmin ? "Super Admin" : "Usuário")}</p>
+                    <p className="text-[9px] text-primary font-black truncate uppercase tracking-widest">{(profile as any)?.perfil || (isSuperAdmin ? "SUPER_ADMIN" : "")}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-white/5" />
+                <DropdownMenuItem onClick={() => router.push("/usuarios")} className="p-3 hover:bg-white/5 cursor-pointer font-bold uppercase text-[10px] tracking-widest text-white/80 hover:text-primary">
+                  <Users size={14} className="mr-3 text-primary" /> Equipe do Gabinete
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push("/gabinete")} className="p-3 hover:bg-white/5 cursor-pointer font-bold uppercase text-[10px] tracking-widest text-white/80 hover:text-primary">
+                  <Settings size={14} className="mr-3 text-primary" /> Perfil do Gabinete
+                </DropdownMenuItem>
+                {isSuperAdmin && (
+                  <DropdownMenuItem onClick={() => router.push("/gabinetes")} className="p-3 hover:bg-white/5 cursor-pointer font-bold uppercase text-[10px] tracking-widest text-white/80 hover:text-primary">
+                    <Building2 size={14} className="mr-3 text-primary" /> Gabinetes Isolados
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator className="bg-white/5" />
+                <DropdownMenuItem onClick={handleLogout} className="p-3 text-destructive hover:bg-destructive/10 cursor-pointer font-bold uppercase text-[10px] tracking-widest">
+                  <LogOut size={14} className="mr-3" /> Encerrar Sessão
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
+      </nav>
 
-        <div className="flex items-center gap-3">
-          <ClockDisplay demandDates={demandDates} />
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-10 w-10 rounded-full border border-white/10 p-0 overflow-hidden hover:bg-white/5 transition-all">
-                <Avatar className="h-full w-full">
-                  <AvatarFallback className="bg-primary/20 text-primary font-black text-xs border border-primary/30">
-                    {(profile as any)?.nome?.[0]?.toUpperCase() || (isSuperAdmin ? "SA" : <User size={16} />)}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-64 bg-black border-white/10 shadow-2xl" align="end">
-              <DropdownMenuLabel className="p-4 bg-white/5">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-black text-white truncate uppercase">{(profile as any)?.nome || (isSuperAdmin ? "Super Admin" : "Usuário")}</p>
-                  <p className="text-[9px] text-primary font-black truncate uppercase tracking-widest">{(profile as any)?.perfil || (isSuperAdmin ? "SUPER_ADMIN" : "")}</p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-white/5" />
-              <DropdownMenuItem onClick={() => router.push("/usuarios")} className="p-3 hover:bg-white/5 cursor-pointer font-bold uppercase text-[10px] tracking-widest text-white/80 hover:text-primary">
-                <Users size={14} className="mr-3 text-primary" /> Equipe do Gabinete
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/gabinete")} className="p-3 hover:bg-white/5 cursor-pointer font-bold uppercase text-[10px] tracking-widest text-white/80 hover:text-primary">
-                <Settings size={14} className="mr-3 text-primary" /> Perfil do Gabinete
-              </DropdownMenuItem>
-              {isSuperAdmin && (
-                <DropdownMenuItem onClick={() => router.push("/gabinetes")} className="p-3 hover:bg-white/5 cursor-pointer font-bold uppercase text-[10px] tracking-widest text-white/80 hover:text-primary">
-                  <Building2 size={14} className="mr-3 text-primary" /> Gabinetes Isolados
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator className="bg-white/5" />
-              <DropdownMenuItem onClick={handleLogout} className="p-3 text-destructive hover:bg-destructive/10 cursor-pointer font-bold uppercase text-[10px] tracking-widest">
-                <LogOut size={14} className="mr-3" /> Encerrar Sessão
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-    </nav>
+      {/* GUIA DE DOWNLOAD (DIÁLOGO DE AJUDA) */}
+      <Dialog open={isDownloadGuideOpen} onOpenChange={setIsDownloadGuideOpen}>
+        <DialogContent className="bg-black border-white/10 text-white max-w-lg w-[95vw]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-3">
+              <Download size={24} /> Guia de Exportação
+            </DialogTitle>
+            <DialogDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-2">
+              Siga os passos visuais para baixar o código fonte.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-6 space-y-6">
+            <div className="space-y-4 bg-white/5 p-4 rounded-2xl border border-white/5">
+              <div className="flex items-start gap-4">
+                <div className="h-6 w-6 rounded-full bg-primary text-black flex items-center justify-center font-black text-xs shrink-0 mt-0.5">1</div>
+                <p className="text-sm font-bold leading-relaxed">No painel da esquerda (EXPLORER), localize o nome <span className="text-primary">STUDIO</span>.</p>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="h-6 w-6 rounded-full bg-primary text-black flex items-center justify-center font-black text-xs shrink-0 mt-0.5">2</div>
+                <p className="text-sm font-bold leading-relaxed">Clique na **setinha** {'\'>\''} ao lado de STUDIO para mostrar as pastas internas.</p>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="h-6 w-6 rounded-full bg-primary text-black flex items-center justify-center font-black text-xs shrink-0 mt-0.5">3</div>
+                <p className="text-sm font-bold leading-relaxed">Clique com o botão **DIREITO** do mouse na pasta do projeto (ex: `legistrac`) que apareceu e selecione **Download**.</p>
+              </div>
+            </div>
+            
+            <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl flex items-center gap-3">
+              <Info size={18} className="text-primary shrink-0" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-primary">
+                Atenção: Não clique no cabeçalho onde aparece "STUDIO" (onde você tirou o print). Clique na pasta que aparece **dentro** dele após expandir!
+              </p>
+            </div>
+          </div>
+          <Button onClick={() => setIsDownloadGuideOpen(false)} className="w-full bg-primary text-black font-black uppercase h-12 tracking-widest">
+            Entendi, vou baixar!
+          </Button>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

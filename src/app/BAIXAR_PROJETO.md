@@ -3,10 +3,12 @@
 Este projeto está pronto para ambiente de produção e local.
 
 ## 💾 Para Baixar o Código
-1. No menu lateral esquerdo (Explorador), localize a primeira pasta chamada **STUDIO**.
-2. Clique com o **botão DIREITO** nela.
-3. Escolha a opção **Download**.
-4. O arquivo `studio.zip` (ou `legistrac.zip`) será baixado no seu computador.
+1. No menu lateral esquerdo (EXPLORER), localize a primeira seção chamada **STUDIO**.
+2. Clique na **setinha** `>` ao lado de STUDIO para expandir.
+3. Localize a pasta do projeto que apareceu logo abaixo.
+4. Clique com o **botão DIREITO** nesta pasta.
+5. Escolha a opção **Download**.
+6. O arquivo `studio.zip` será baixado no seu computador.
 
 ## 💻 Configuração no seu Computador
 1. **Node.js**: Baixe e instale a versão LTS do Node.js em [nodejs.org](https://nodejs.org/).

@@ -1,29 +1,23 @@
-# 📥 COMO BAIXAR SEU PROJETO AGORA
+# 📥 COMO BAIXAR SEU PROJETO (PASSO A PASSO FINAL)
 
-Com base na sua tela, siga estes passos simples:
+Pela sua imagem, você está clicando no **lugar errado** (no cabeçalho da seção). Siga estes 3 passos:
 
-### 1. Localize o Explorer
-No painel à sua esquerda (onde aparecem os ícones de arquivos), procure o topo da lista.
+### 1. Expanda a Seção
+No painel à esquerda, você vê escrito `> STUDIO`. 
+- Clique na **setinha** `>` para ela apontar para baixo `v`.
+- Agora vai aparecer uma pasta (geralmente chamada **legistrac**) logo abaixo do nome STUDIO.
 
-### 2. Clique com o Botão Direito em STUDIO
-Clique com o botão **DIREITO** do mouse sobre a palavra **STUDIO** (que está no topo da árvore de arquivos, com uma setinha ao lado).
+### 2. Clique no Nome da Pasta (e não no título STUDIO)
+- Coloque o mouse em cima do nome da pasta que apareceu **abaixo** de STUDIO.
+- Clique com o botão **DIREITO** do mouse em cima dela.
 
-### 3. Selecione "Download"
-Uma opção chamada **Download** aparecerá no menu. Clique nela e o sistema vai gerar um arquivo comprimido com todo o seu código.
+### 3. Selecione Download
+- Agora sim, no menu que abrir, você verá a opção **Download**.
+- O sistema vai gerar o arquivo `.zip` com tudo.
 
 ---
 
-## 🛠️ Como rodar no seu PC após baixar:
+## 🛠️ Como rodar no seu PC:
 1. Extraia o arquivo baixado.
-2. Instale o **Node.js** (versão 20 ou superior) em [nodejs.org](https://nodejs.org/).
-3. Abra o terminal na pasta do projeto e digite:
-   ```bash
-   npm install
-   ```
-4. Para iniciar o sistema, digite:
-   ```bash
-   npm run dev
-   ```
-5. O sistema abrirá em `http://localhost:3000`.
-
-**Dica:** Seus dados (demandas e munícipes) continuarão funcionando normalmente pois o banco de dados está na nuvem do Google!
+2. Instale o **Node.js** (versão 20+) em [nodejs.org](https://nodejs.org/).
+3. No terminal da pasta, digite: `npm install` e depois `npm run dev`.
