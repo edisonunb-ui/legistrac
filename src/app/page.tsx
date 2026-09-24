@@ -5,7 +5,6 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useStora
 import { Navbar } from "@/components/layout/Navbar";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { collection, query, doc, setDoc, where, updateDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { Demand, Leader, GlobalConfig } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
@@ -42,6 +41,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 const MASTER_EMAIL = "edisonunb@gmail.com";
 const AUDITOR_EMAIL = "alemao@gmail.com";
