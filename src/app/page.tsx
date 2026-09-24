@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useStorage } from "@/firebase";
@@ -7,6 +6,7 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { collection, query, doc, setDoc, where, updateDoc, serverTimestamp } from "firebase/firestore";
 import { Demand, Leader, GlobalConfig } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { 
   Users, 
   TrendingUp,
