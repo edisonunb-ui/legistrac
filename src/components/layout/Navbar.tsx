@@ -406,34 +406,34 @@ export function Navbar() {
               <Download size={24} /> Guia de Exportação
             </DialogTitle>
             <DialogDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-2">
-              Siga os passos visuais para baixar o código fonte.
+              Siga os passos exatos para baixar o código fonte no seu PC.
             </DialogDescription>
           </DialogHeader>
           <div className="py-6 space-y-6">
             <div className="space-y-4 bg-white/5 p-4 rounded-2xl border border-white/5">
               <div className="flex items-start gap-4">
                 <div className="h-6 w-6 rounded-full bg-primary text-black flex items-center justify-center font-black text-xs shrink-0 mt-0.5">1</div>
-                <p className="text-sm font-bold leading-relaxed">No painel da esquerda (EXPLORER), localize o nome <span className="text-primary">STUDIO</span>.</p>
+                <p className="text-sm font-bold leading-relaxed">No painel da esquerda (EXPLORER), localize a palavra <span className="text-primary">STUDIO</span>.</p>
               </div>
               <div className="flex items-start gap-4">
                 <div className="h-6 w-6 rounded-full bg-primary text-black flex items-center justify-center font-black text-xs shrink-0 mt-0.5">2</div>
-                <p className="text-sm font-bold leading-relaxed">Clique na **setinha** {'\'>\''} ao lado de STUDIO para mostrar as pastas internas.</p>
+                <p className="text-sm font-bold leading-relaxed">Logo abaixo de STUDIO, existe uma pasta (ex: <span className="text-primary">legistrac</span>). Clique nela com o botão **DIREITO** do mouse.</p>
               </div>
               <div className="flex items-start gap-4">
                 <div className="h-6 w-6 rounded-full bg-primary text-black flex items-center justify-center font-black text-xs shrink-0 mt-0.5">3</div>
-                <p className="text-sm font-bold leading-relaxed">Clique com o botão **DIREITO** do mouse na pasta do projeto (ex: `legistrac`) que apareceu e selecione **Download**.</p>
+                <p className="text-sm font-bold leading-relaxed">No menu que abrir, clique em **Download**.</p>
               </div>
             </div>
             
             <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl flex items-center gap-3">
               <Info size={18} className="text-primary shrink-0" />
               <p className="text-[10px] font-black uppercase tracking-widest text-primary">
-                Atenção: Não clique no cabeçalho onde aparece "STUDIO" (onde você tirou o print). Clique na pasta que aparece **dentro** dele após expandir!
+                Importante: Não clique no nome "STUDIO" (que é o cabeçalho), mas sim na pasta que aparece logo abaixo dele.
               </p>
             </div>
           </div>
           <Button onClick={() => setIsDownloadGuideOpen(false)} className="w-full bg-primary text-black font-black uppercase h-12 tracking-widest">
-            Entendi, vou baixar!
+            Entendi, vou baixar agora!
           </Button>
         </DialogContent>
       </Dialog>
