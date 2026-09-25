@@ -3,7 +3,30 @@
 
 import { useUser, useFirestore, useAuthInstance, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { Button } from "@/components/ui/button";
-import { LogOut, LayoutDashboard, ListTodo, Users, Target, PhoneIncoming, Building2, Gavel, Menu, User, Clock, ChevronDown, ChevronUp, Play, Plus, Minus, Settings, Award, ShieldCheck, LifeBuoy, Download, Info } from "lucide-react";
+import { 
+  LogOut, 
+  LayoutDashboard, 
+  ListTodo, 
+  Users, 
+  PhoneIncoming, 
+  Building2, 
+  Gavel, 
+  Menu, 
+  User, 
+  Clock, 
+  ChevronDown, 
+  ChevronUp, 
+  Play, 
+  Plus, 
+  Minus, 
+  Settings, 
+  ShieldCheck, 
+  LifeBuoy, 
+  Download, 
+  Info,
+  CalendarDays,
+  BarChart3
+} from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -86,11 +109,7 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
       <PopoverContent className="w-[340px] p-0 bg-[#1a1a1a] border-none shadow-2xl rounded-2xl overflow-hidden animate-in fade-in zoom-in-95" align="end">
         <div className="p-5 flex items-center justify-between">
           <span className="text-sm font-medium text-white/90">{fullDate}</span>
-          <div className="bg-white/10 p-1 rounded-md text-white/40">
-            <ChevronDown size={14} />
-          </div>
         </div>
-
         <div className="px-2 pb-2">
           {currentDate && (
             <Calendar
@@ -119,7 +138,7 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
                 head_row: "flex justify-between mb-2",
                 head_cell: "text-white/40 font-bold text-[11px] w-9 text-center uppercase",
                 row: "flex w-full justify-between mt-1",
-                cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
                 day: cn(
                   "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-white/5 rounded-full transition-all"
                 ),
@@ -133,30 +152,6 @@ function ClockDisplay({ demandDates }: { demandDates: Date[] }) {
               }}
             />
           )}
-        </div>
-
-        <div className="p-4 bg-black/20 flex items-center justify-between border-t border-white/5">
-          <div className="flex items-center gap-3 bg-white/5 rounded-lg p-1">
-            <button 
-              onClick={() => setMinutes(m => Math.max(5, m - 5))}
-              className="w-8 h-8 flex items-center justify-center text-white/40 hover:text-white"
-            >
-              <Minus size={14} />
-            </button>
-            <span className="text-sm font-bold text-white min-w-[70px] text-center">
-              {minutes} <span className="text-white/40 font-normal">minutos</span>
-            </span >
-            <button 
-              onClick={() => setMinutes(m => m + 5)}
-              className="w-8 h-8 flex items-center justify-center text-white/40 hover:text-white"
-            >
-              <Plus size={14} />
-            </button>
-          </div>
-          <button className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all">
-            <Play size={14} fill="currentColor" />
-            Foco
-          </button>
         </div>
       </PopoverContent>
     </Popover>
@@ -174,39 +169,36 @@ export function Navbar() {
 
   const userEmail = useMemo(() => user?.email?.toLowerCase().trim() || null, [user?.email]);
   const isSuperAdmin = useMemo(() => userEmail === MASTER_EMAIL, [userEmail]);
-  const isAuditor = useMemo(() => userEmail === AUDITOR_EMAIL, [userEmail]);
-  const hasGlobalView = isSuperAdmin || isAuditor;
-
+  
   const userProfileQuery = useMemoFirebase(() => (db && userEmail) ? doc(db, "users", userEmail) : null, [db, userEmail]);
   const { data: profile } = useDoc(userProfileQuery);
-
   const cabinetId = (profile as any)?.cabinetId;
-  const cabinetQuery = useMemoFirebase(() => (db && cabinetId) ? doc(db, "gabinetes", cabinetId) : null, [db, cabinetId]);
-  const { data: cabinet } = useDoc(cabinetQuery);
 
   const globalConfigRef = useMemoFirebase(() => (db) ? doc(db, "config", "global") : null, [db]);
   const { data: globalConfig } = useDoc<GlobalConfig>(globalConfigRef);
 
   const demandsQuery = useMemoFirebase(() => {
-    if (!db || (!cabinetId && !hasGlobalView)) return null;
-    if (hasGlobalView) return query(collection(db, "demandas"), where("deleted", "==", false));
-    return query(
-      collection(db, "demandas"), 
-      where("cabinetId", "==", cabinetId),
-      where("deleted", "==", false)
-    );
-  }, [db, cabinetId, hasGlobalView]);
-
+    if (!db || !cabinetId) return null;
+    return query(collection(db, "demandas"), where("cabinetId", "==", cabinetId), where("deleted", "==", false));
+  }, [db, cabinetId]);
   const { data: allDemands = [] } = useCollection<Demand>(demandsQuery);
 
   const demandDates = useMemo(() => {
-    return allDemands
-      .filter(d => d.prazo && d.status !== 'FINALIZADO')
-      .map(d => {
-        const [year, month, day] = d.prazo.split('-').map(Number);
-        return new Date(year, month - 1, day);
-      });
+    return allDemands.filter(d => d.prazo).map(d => {
+      const [year, month, day] = d.prazo.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    });
   }, [allDemands]);
+
+  const navItems = useMemo(() => [
+    { label: "Painel", icon: LayoutDashboard, href: "/" },
+    { label: "Agenda", icon: CalendarDays, href: "/agenda" },
+    { label: "Eleições IA", icon: BarChart3, href: "/analise-eleitoral" },
+    { label: "Munícipes", icon: PhoneIncoming, href: "/atendimentos" },
+    { label: "Protocolos", icon: ListTodo, href: "/demandas" },
+    { label: "Legislativo", icon: Gavel, href: "/legislativo" },
+    { label: "Lideranças", icon: Users, href: "/liderancas" },
+  ], []);
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -214,129 +206,35 @@ export function Navbar() {
     router.push("/login");
   };
 
-  const navItems = useMemo(() => [
-    { label: "Dashboard", icon: LayoutDashboard, href: "/" },
-    { label: "Atendimentos", icon: PhoneIncoming, href: "/atendimentos" },
-    { label: "Demandas", icon: ListTodo, href: "/demandas" },
-    { label: "Legislativo", icon: Gavel, href: "/legislativo" },
-    { label: "Lideranças", icon: Users, href: "/liderancas" },
-    { label: "HelpDesk TI", icon: LifeBuoy, href: "/helpdesk/new" },
-  ], []);
-
   const BrandLogo = () => {
     if (globalConfig?.developerLogoUrl) {
       return (
-        <div className="relative h-12 w-12 overflow-hidden rounded-full transition-transform">
-          <div 
-            className="relative w-full h-full"
-            style={{ transform: `scale(${globalConfig.developerLogoScale || 1.2})` }}
-          >
-            <Image 
-              src={globalConfig.developerLogoUrl} 
-              alt="Dev Signature" 
-              fill 
-              sizes="48px"
-              className="object-cover" 
-            />
-          </div>
+        <div className="relative h-10 w-10 overflow-hidden rounded-full border border-primary/20">
+          <Image src={globalConfig.developerLogoUrl} alt="Logo" fill sizes="40px" className="object-cover" />
         </div>
       );
     }
-    const carimboUrl = (cabinet as any)?.carimboUrl;
-    if (carimboUrl) {
-      return (
-        <div className="relative h-12 w-12 overflow-hidden rounded-full transition-transform">
-          <div 
-            className="relative w-full h-full"
-            style={{ transform: `scale(${(cabinet as any).carimboScale || 1.2})` }}
-          >
-            <Image 
-              src={carimboUrl} 
-              alt="Selo Oficial" 
-              fill 
-              sizes="48px"
-              className="object-cover" 
-            />
-          </div>
-        </div>
-      );
-    }
-    return (
-      <div className="p-1.5 bg-primary/10 rounded-md text-primary border border-primary/20 glow-primary">
-        <ShieldCheck size={18} />
-      </div>
-    );
+    return <ShieldCheck className="text-primary" size={24} />;
   };
 
   return (
     <>
       <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-black/80 backdrop-blur-md">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <div className="md:hidden">
-              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-white/5 h-10 w-10">
-                    <Menu size={20} />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-[300px] p-0 border-r border-white/5 bg-black">
-                  <SheetHeader className="p-6 border-b border-white/5 text-left bg-white/5">
-                    <SheetTitle className="flex items-center gap-3">
-                      <BrandLogo />
-                      <div className="flex flex-col leading-none">
-                        <span className="font-black tracking-tight text-white uppercase">Legis<span className="text-primary">Trac</span></span>
-                        <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Gabinete Mobile</span>
-                      </div>
-                    </SheetTitle>
-                  </SheetHeader>
-                  <div className="flex flex-col py-6 space-y-1">
-                    {navItems.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className={cn(
-                          "flex items-center gap-4 px-6 py-4 text-sm font-black transition-all uppercase tracking-widest",
-                          pathname === item.href 
-                            ? "text-primary bg-primary/10 border-l-4 border-primary" 
-                            : "text-muted-foreground hover:bg-white/5 hover:text-white"
-                        )}
-                      >
-                        <item.icon size={18} className={pathname === item.href ? "text-primary" : ""} />
-                        {item.label}
-                      </Link>
-                    ))}
-                    <button
-                      onClick={() => { setIsMobileMenuOpen(false); setIsDownloadGuideOpen(true); }}
-                      className="flex items-center gap-4 px-6 py-4 text-sm font-black transition-all uppercase tracking-widest text-primary/80 hover:bg-white/5"
-                    >
-                      <Download size={18} />
-                      Baixar Código
-                    </button>
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </div>
-
-            <Link href="/" className="flex items-center gap-3 group">
+          <div className="flex items-center gap-6">
+            <Link href="/" className="flex items-center gap-3">
               <BrandLogo />
-              <div className="flex flex-col leading-none">
-                <span className="text-lg font-black tracking-tighter text-white uppercase">Legis<span className="text-primary">Trac</span></span>
-                <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest truncate max-w-[150px]">
-                  {isSuperAdmin ? "Central SuperAdmin" : (cabinet as any)?.vereador || "Gabinete"}
-                </span>
-              </div>
+              <span className="hidden sm:inline font-black tracking-tighter text-white uppercase italic">Legis<span className="text-primary">Trac</span></span>
             </Link>
 
-            <div className="hidden md:flex items-center gap-1">
+            <div className="hidden lg:flex items-center gap-1">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "px-3 py-2 rounded-md text-[11px] font-black transition-all flex items-center gap-2 uppercase tracking-widest",
-                    pathname === item.href ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-white hover:bg-white/5"
+                    "px-3 py-2 rounded-md text-[10px] font-black transition-all flex items-center gap-2 uppercase tracking-widest",
+                    pathname === item.href ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-white"
                   )}
                 >
                   <item.icon size={13} />
@@ -347,96 +245,25 @@ export function Navbar() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden lg:block">
-              <Button 
-                variant="ghost" 
-                onClick={() => setIsDownloadGuideOpen(true)}
-                className="text-[10px] font-black uppercase tracking-widest text-primary/60 hover:text-primary hover:bg-primary/5 h-10 px-3 gap-2"
-              >
-                <Download size={14} /> Baixar Sistema
-              </Button>
-            </div>
-
             <ClockDisplay demandDates={demandDates} />
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full border border-white/10 p-0 overflow-hidden hover:bg-white/5 transition-all">
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full border border-white/10 p-0 overflow-hidden">
                   <Avatar className="h-full w-full">
-                    <AvatarFallback className="bg-primary/20 text-primary font-black text-xs border border-primary/30">
-                      {(profile as any)?.nome?.[0]?.toUpperCase() || (isSuperAdmin ? "SA" : <User size={16} />)}
-                    </AvatarFallback>
+                    <AvatarFallback className="bg-primary/20 text-primary font-black text-xs">{(profile as any)?.nome?.[0] || "U"}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-64 bg-black border-white/10 shadow-2xl" align="end">
-                <DropdownMenuLabel className="p-4 bg-white/5">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-black text-white truncate uppercase">{(profile as any)?.nome || (isSuperAdmin ? "Super Admin" : "Usuário")}</p>
-                    <p className="text-[9px] text-primary font-black truncate uppercase tracking-widest">{(profile as any)?.perfil || (isSuperAdmin ? "SUPER_ADMIN" : "")}</p>
-                  </div>
-                </DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => router.push("/usuarios")} className="p-3 font-bold uppercase text-[10px] tracking-widest">Equipe</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push("/gabinete")} className="p-3 font-bold uppercase text-[10px] tracking-widest">Configurações</DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-white/5" />
-                <DropdownMenuItem onClick={() => router.push("/usuarios")} className="p-3 hover:bg-white/5 cursor-pointer font-bold uppercase text-[10px] tracking-widest text-white/80 hover:text-primary">
-                  <Users size={14} className="mr-3 text-primary" /> Equipe do Gabinete
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push("/gabinete")} className="p-3 hover:bg-white/5 cursor-pointer font-bold uppercase text-[10px] tracking-widest text-white/80 hover:text-primary">
-                  <Settings size={14} className="mr-3 text-primary" /> Perfil do Gabinete
-                </DropdownMenuItem>
-                {isSuperAdmin && (
-                  <DropdownMenuItem onClick={() => router.push("/gabinetes")} className="p-3 hover:bg-white/5 cursor-pointer font-bold uppercase text-[10px] tracking-widest text-white/80 hover:text-primary">
-                    <Building2 size={14} className="mr-3 text-primary" /> Gabinetes Isolados
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator className="bg-white/5" />
-                <DropdownMenuItem onClick={handleLogout} className="p-3 text-destructive hover:bg-destructive/10 cursor-pointer font-bold uppercase text-[10px] tracking-widest">
-                  <LogOut size={14} className="mr-3" /> Encerrar Sessão
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout} className="p-3 text-destructive font-bold uppercase text-[10px] tracking-widest">Sair</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
       </nav>
-
-      {/* GUIA DE DOWNLOAD (DIÁLOGO DE AJUDA) */}
-      <Dialog open={isDownloadGuideOpen} onOpenChange={setIsDownloadGuideOpen}>
-        <DialogContent className="bg-black border-white/10 text-white max-w-lg w-[95vw]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-3">
-              <Download size={24} /> Guia de Exportação
-            </DialogTitle>
-            <DialogDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-2">
-              Siga os passos exatos para baixar o código fonte no seu PC.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-6 space-y-6">
-            <div className="space-y-4 bg-white/5 p-4 rounded-2xl border border-white/5">
-              <div className="flex items-start gap-4">
-                <div className="h-6 w-6 rounded-full bg-primary text-black flex items-center justify-center font-black text-xs shrink-0 mt-0.5">1</div>
-                <p className="text-sm font-bold leading-relaxed">No painel da esquerda (EXPLORER), localize a palavra <span className="text-primary">STUDIO</span>.</p>
-              </div>
-              <div className="flex items-start gap-4">
-                <div className="h-6 w-6 rounded-full bg-primary text-black flex items-center justify-center font-black text-xs shrink-0 mt-0.5">2</div>
-                <p className="text-sm font-bold leading-relaxed">Logo abaixo de STUDIO, existe uma pasta (ex: <span className="text-primary">legistrac</span>). Clique nela com o botão **DIREITO** do mouse.</p>
-              </div>
-              <div className="flex items-start gap-4">
-                <div className="h-6 w-6 rounded-full bg-primary text-black flex items-center justify-center font-black text-xs shrink-0 mt-0.5">3</div>
-                <p className="text-sm font-bold leading-relaxed">No menu que abrir, clique em **Download**.</p>
-              </div>
-            </div>
-            
-            <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl flex items-center gap-3">
-              <Info size={18} className="text-primary shrink-0" />
-              <p className="text-[10px] font-black uppercase tracking-widest text-primary">
-                Importante: Não clique no nome "STUDIO" (que é o cabeçalho), mas sim na pasta que aparece logo abaixo dele.
-              </p>
-            </div>
-          </div>
-          <Button onClick={() => setIsDownloadGuideOpen(false)} className="w-full bg-primary text-black font-black uppercase h-12 tracking-widest">
-            Entendi, vou baixar agora!
-          </Button>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

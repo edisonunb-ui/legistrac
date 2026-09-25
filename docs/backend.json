@@ -10,6 +10,9 @@
         "nome": { "type": "string" },
         "vereador": { "type": "string" },
         "ativo": { "type": "boolean" },
+        "isTI": { "type": "boolean" },
+        "carimboUrl": { "type": "string" },
+        "carimboScale": { "type": "number" },
         "createdAt": { "type": "object" }
       },
       "required": ["nome", "vereador"]
@@ -25,6 +28,7 @@
         "perfil": { "type": "string", "enum": ["SUPER_ADMIN", "ADMIN", "ASSESSOR", "ESTAGIARIO"] },
         "cabinetId": { "type": "string" },
         "ativo": { "type": "boolean" },
+        "permissoes": { "type": "object" },
         "createdAt": { "type": "object" }
       },
       "required": ["uid", "nome", "email", "perfil"]
@@ -42,7 +46,9 @@
         "responsavelAtual": { "type": "string" },
         "status": { "type": "string", "enum": ["ABERTO", "EM_ANDAMENTO", "AGUARDANDO_VEREADORA", "FINALIZADO"] },
         "prazo": { "type": "string" },
-        "prioridade": { "type": "string", "enum": ["BAIXA", "MEDIA", "ALTA"] }
+        "prioridade": { "type": "string", "enum": ["BAIXA", "MEDIA", "ALTA"] },
+        "tipo": { "type": "string" },
+        "atendimentoId": { "type": "string" }
       }
     },
     "CitizenService": {
@@ -55,6 +61,7 @@
         "municipeNome": { "type": "string" },
         "municipeEndereco": { "type": "string" },
         "municipeTelefone": { "type": "string" },
+        "municipeEmail": { "type": "string" },
         "descricaoSolicitacao": { "type": "string" }
       }
     },
@@ -67,20 +74,35 @@
         "cabinetId": { "type": "string" },
         "nome": { "type": "string" },
         "bairro": { "type": "string" },
-        "potencialVotos": { "type": "number" }
+        "potencialVotos": { "type": "number" },
+        "influencia": { "type": "string" }
       }
     },
-    "Notification": {
-      "title": "Notification",
-      "description": "Real-time user notification",
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Cabinet agenda appointment",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "mensagem": { "type": "string" },
-        "demandaId": { "type": "string" },
-        "lida": { "type": "boolean" },
-        "data": { "type": "object" }
+        "cabinetId": { "type": "string" },
+        "titulo": { "type": "string" },
+        "descricao": { "type": "string" },
+        "data": { "type": "string" },
+        "hora": { "type": "string" },
+        "local": { "type": "string" },
+        "tipo": { "type": "string", "enum": ["REUNIAO", "EVENTO", "SESSAO", "VISITA"] }
+      }
+    },
+    "ElectionResult": {
+      "title": "ElectionResult",
+      "description": "Regional vote data from TSE",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "cabinetId": { "type": "string" },
+        "regiao": { "type": "string" },
+        "votosGanhos": { "type": "number" },
+        "ano": { "type": "number" }
       }
     }
   },
@@ -88,29 +110,12 @@
     "providers": ["password"]
   },
   "firestore": {
-    "/gabinetes/{cabinetId}": {
-      "schema": "Cabinet",
-      "description": "Cabinets list"
-    },
-    "/users/{userId}": {
-      "schema": "UserProfile",
-      "description": "User profiles"
-    },
-    "/demandas/{demandaId}": {
-      "schema": "Demand",
-      "description": "Cabinet demands"
-    },
-    "/atendimentos/{atendimentoId}": {
-      "schema": "CitizenService",
-      "description": "Citizen service records"
-    },
-    "/liderancas/{leaderId}": {
-      "schema": "Leader",
-      "description": "Political leaders"
-    },
-    "/notificacoes/{notificationId}": {
-      "schema": "Notification",
-      "description": "User notifications"
-    }
+    "/gabinetes/{cabinetId}": { "schema": "Cabinet", "description": "Cabinets list" },
+    "/users/{userId}": { "schema": "UserProfile", "description": "User profiles" },
+    "/demandas/{demandaId}": { "schema": "Demand", "description": "Cabinet demands" },
+    "/atendimentos/{atendimentoId}": { "schema": "CitizenService", "description": "Citizen services" },
+    "/liderancas/{leaderId}": { "schema": "Leader", "description": "Political leaders" },
+    "/agenda/{appointmentId}": { "schema": "Appointment", "description": "Cabinet agenda" },
+    "/eleicoes/{resultId}": { "schema": "ElectionResult", "description": "TSE regional results" }
   }
 }
