@@ -3,28 +3,25 @@
 
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useMemo } from "react";
-import { collection, query, where, addDoc, serverTimestamp } from "firebase/firestore";
+import { useState } from "react";
+import { collection, query, where, addDoc, serverTimestamp, doc } from "firebase/firestore";
 import { ElectionResult, Leader } from "@/lib/types";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  BarChart3, 
   ChevronLeft, 
   Plus, 
   Sparkles, 
-  Target, 
-  TrendingDown, 
-  TrendingUp, 
   Loader2,
   MapPin
 } from "lucide-react";
 import Link from "next/link";
 import { analyzeElectionPerformance, TSEAnalysisOutput } from "@/ai/flows/tse-analysis-flow";
+import { cn } from "@/lib/utils";
 
 export default function ElectionAnalysisPage() {
   const { user } = useUser();

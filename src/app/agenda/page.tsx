@@ -3,8 +3,8 @@
 
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase } from "@/firebase";
 import { Navbar } from "@/components/layout/Navbar";
-import { useState, useMemo } from "react";
-import { collection, query, where, addDoc, serverTimestamp, orderBy } from "firebase/firestore";
+import { useState } from "react";
+import { collection, query, where, addDoc, serverTimestamp, orderBy, doc } from "firebase/firestore";
 import { Appointment } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Plus, Loader2, ChevronLeft, Briefcase, Users, Home } from "lucide-react";
+import { Calendar, Clock, MapPin, Loader2, ChevronLeft, Briefcase, Users, Home } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -161,7 +161,7 @@ export default function AgendaPage() {
                              </div>
                           </div>
                           <div className="flex items-center gap-2">
-                             <Button variant="ghost" size="sm" className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-white">Concluir</Badge>
+                             <Button variant="ghost" size="sm" className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-white">Concluir</Button>
                           </div>
                        </div>
                     </Card>
