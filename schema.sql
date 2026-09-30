@@ -1,0 +1,31 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE TABLE IF NOT EXISTS gabinetes (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), nome text NOT NULL UNIQUE, ativo boolean NOT NULL DEFAULT true);
+CREATE TABLE IF NOT EXISTS membros (email text PRIMARY KEY, gabinete_id uuid NOT NULL REFERENCES gabinetes(id), papel text NOT NULL CHECK (papel IN ('GESTOR','VEREADOR','ASSESSOR','CONSULTA')), ativo boolean NOT NULL DEFAULT true, UNIQUE(gabinete_id,email));
+CREATE TABLE IF NOT EXISTS atendimentos (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), gabinete_id uuid NOT NULL REFERENCES gabinetes(id), protocolo text NOT NULL UNIQUE, nome text NOT NULL, telefone text, bairro text, descricao text NOT NULL, criado_por text NOT NULL, criado_em timestamptz NOT NULL DEFAULT now());
+CREATE UNIQUE INDEX IF NOT EXISTS atendimentos_tenant_id ON atendimentos(gabinete_id,id);
+CREATE TABLE IF NOT EXISTS demandas (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), gabinete_id uuid NOT NULL REFERENCES gabinetes(id), atendimento_id uuid, titulo text NOT NULL, descricao text NOT NULL, responsavel_email text, status text NOT NULL DEFAULT 'ABERTA' CHECK (status IN ('ABERTA','EM_ANDAMENTO','AGUARDANDO_REVISAO','CONCLUIDA','REABERTA')), criada_por text NOT NULL, criada_em timestamptz NOT NULL DEFAULT now(), atualizada_em timestamptz NOT NULL DEFAULT now(), FOREIGN KEY (gabinete_id,atendimento_id) REFERENCES atendimentos(gabinete_id,id), FOREIGN KEY (gabinete_id,responsavel_email) REFERENCES membros(gabinete_id,email));
+CREATE UNIQUE INDEX IF NOT EXISTS demandas_tenant_id ON demandas(gabinete_id,id);
+CREATE TABLE IF NOT EXISTS historico (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), gabinete_id uuid NOT NULL, demanda_id uuid NOT NULL, autor text NOT NULL, acao text NOT NULL, observacao text NOT NULL, criado_em timestamptz NOT NULL DEFAULT now(), FOREIGN KEY (gabinete_id,demanda_id) REFERENCES demandas(gabinete_id,id));
+CREATE TABLE IF NOT EXISTS administracao_auditoria (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), autor text NOT NULL, acao text NOT NULL, objeto text NOT NULL, antes jsonb, depois jsonb, criado_em timestamptz NOT NULL DEFAULT now());
+ALTER TABLE gabinetes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE membros ENABLE ROW LEVEL SECURITY;
+ALTER TABLE atendimentos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE demandas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE historico ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gabinetes FORCE ROW LEVEL SECURITY;
+ALTER TABLE membros FORCE ROW LEVEL SECURITY;
+ALTER TABLE atendimentos FORCE ROW LEVEL SECURITY;
+ALTER TABLE demandas FORCE ROW LEVEL SECURITY;
+ALTER TABLE historico FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS gabinete_tenant ON gabinetes;
+DROP POLICY IF EXISTS membro_tenant ON membros;
+DROP POLICY IF EXISTS atendimento_tenant ON atendimentos;
+DROP POLICY IF EXISTS demanda_tenant ON demandas;
+DROP POLICY IF EXISTS historico_tenant ON historico;
+CREATE POLICY gabinete_tenant ON gabinetes USING (id = nullif(current_setting('app.gabinete_id',true),'')::uuid);
+CREATE POLICY membro_tenant ON membros USING (gabinete_id = nullif(current_setting('app.gabinete_id',true),'')::uuid) WITH CHECK (gabinete_id = nullif(current_setting('app.gabinete_id',true),'')::uuid);
+CREATE POLICY atendimento_tenant ON atendimentos USING (gabinete_id = nullif(current_setting('app.gabinete_id',true),'')::uuid) WITH CHECK (gabinete_id = nullif(current_setting('app.gabinete_id',true),'')::uuid);
+CREATE POLICY demanda_tenant ON demandas USING (gabinete_id = nullif(current_setting('app.gabinete_id',true),'')::uuid) WITH CHECK (gabinete_id = nullif(current_setting('app.gabinete_id',true),'')::uuid);
+CREATE POLICY historico_tenant ON historico USING (gabinete_id = nullif(current_setting('app.gabinete_id',true),'')::uuid) WITH CHECK (gabinete_id = nullif(current_setting('app.gabinete_id',true),'')::uuid);
+-- Aplicar migração como proprietário e conceder DML a um papel sem BYPASSRLS.
+-- O usuário DATABASE_URL da aplicação NÃO pode ser dono das tabelas nem superuser.
